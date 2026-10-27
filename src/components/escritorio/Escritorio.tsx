@@ -2,26 +2,49 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Canvas } from "@react-three/fiber";
-import { CameraControls, ContactShadows } from "@react-three/drei";
-import { Eye, Pause, Play, Radio, X } from "lucide-react";
+import { Canvas, useFrame } from "@react-three/fiber";
+import { CameraControls, Environment, Lightformer, PerformanceMonitor } from "@react-three/drei";
+import * as THREE from "three";
+import { Archive, Eye, Pause, Play, Radio, Tv, UserRound, X } from "lucide-react";
 import {
-  GRUPO_COR, MESAS, aplicarEvento, cadeira, conferirTravadas, estadoVazio, hora, viagemDoEvento,
+  CADEIRA_RAFAEL, GRUPO_COR, MESAS, PREDIO, SALA, TV, aplicarEvento, cadeira, conferirTravadas, estadoVazio, hora,
+  viagemDoEvento,
   type AgenteInfo, type DemandaResumo, type EstadoAgente, type EventoCentral, type SetorInfo, type Viagem,
 } from "@/lib/escritorio/modelo";
 import { DEMO_AGENTES, DEMO_CONTAGEM, DEMO_DEMANDAS, DEMO_SETORES, demoEventos } from "@/lib/escritorio/demo";
 import { supabaseNavegador } from "@/lib/supabase/browser";
-import { Arquivo, MesaAgente, MesaRafael, Sala } from "./Cena";
-import { Boneco } from "./Boneco";
+import { Arquivo, MesaAgente, Predio, SalaRafael, SalaReuniao } from "./Cena";
+import { Boneco, Rafael } from "./Boneco";
+import { Efeitos } from "./Efeitos";
+import type { PainelTV } from "./tv";
 
 const ATUALIZAR_MS = 8000;
 const PASSO_REPRODUCAO_MS = 1100;
-// Enquadramento geral: em telas estreitas (celular) a câmera sobe e se afasta para caber o escritório inteiro.
-function visaoGeralPara(largura: number, altura: number): [number, number, number, number, number, number] {
-  const aspecto = largura / Math.max(altura, 1);
-  const k = aspecto >= 1.5 ? 1 : Math.min(2.4, 1.5 / Math.max(aspecto, 0.45));
-  return [0.5, 17 * k, 20 * k * 0.92, 0.5, 0, 1];
+type Vista = [number, number, number, number, number, number];
+
+// Avisa quando o primeiro quadro foi desenhado (a compilação dos shaders pode levar alguns segundos).
+function PrimeiroQuadro({ onPronto }: { onPronto: () => void }) {
+  const quadros = useRef(0);
+  useFrame(() => {
+    quadros.current += 1;
+    if (quadros.current === 2) onPronto();
+  });
+  return null;
 }
+
+// Enquadramento geral: em telas estreitas (celular) a câmera sobe e se afasta para caber o prédio inteiro.
+function visaoGeralPara(largura: number, altura: number): Vista {
+  const aspecto = largura / Math.max(altura, 1);
+  const k = aspecto >= 1.6 ? 1 : Math.min(3.4, 1.6 / Math.max(aspecto, 0.45));
+  return [0, 23 * k, 30 * k, 0, 0, 0.4];
+}
+
+// Vistas das salas: posição da câmera e para onde ela olha.
+const VISTAS: Record<"reuniao" | "rafael" | "arquivo", Vista> = {
+  reuniao: [TV.x + 0.4, 2.3, SALA.reuniao.z1 - 2.2, TV.x, TV.y - 0.15, TV.z],
+  rafael: [CADEIRA_RAFAEL[0] + 1.2, 3.3, SALA.rafael.z1 - 0.6, CADEIRA_RAFAEL[0], 0.9, CADEIRA_RAFAEL[1] + 0.3],
+  arquivo: [(SALA.arquivo.x0 + SALA.arquivo.x1) / 2, 3.0, SALA.arquivo.z1 + 1.5, (SALA.arquivo.x0 + SALA.arquivo.x1) / 2, 1.1, SALA.arquivo.z0],
+};
 
 type Dados = {
   agentes: AgenteInfo[];
@@ -209,6 +232,10 @@ export default function Escritorio({ modo }: { modo: "real" | "demo" }) {
     setSelecionado(null);
     camera.current?.setLookAt(...visaoGeralPara(window.innerWidth, window.innerHeight - 57), animar);
   };
+  const irPara = (vista: keyof typeof VISTAS) => {
+    setSelecionado(null);
+    camera.current?.setLookAt(...VISTAS[vista], true);
+  };
 
   // enquadra quando a janela muda de tamanho (a posição inicial já sai certa em `inicial`)
   useEffect(() => {
@@ -220,27 +247,68 @@ export default function Escritorio({ modo }: { modo: "real" | "demo" }) {
 
   const pendentes = (dados?.demandas ?? []).filter((d) => d.estado === "aguardando-rafael").length;
   const trabalhando = Object.values(estados).filter((e) => e.status === "trabalhando").length;
+
+  // TV da sala de reunião: o que está acontecendo agora (na reprodução, até o ponto reproduzido).
+  const painel = useMemo<PainelTV>(() => {
+    const nomes = new Map((dados?.agentes ?? []).map((a) => [a.id, a.nome]));
+    const visiveis = (dados?.eventos ?? []).slice(0, reproduzindo ? reproduzindo.i : undefined);
+    return {
+      trabalhando: Object.entries(estados)
+        .filter(([, e]) => e.status === "trabalhando")
+        .map(([id, e]) => ({ nome: nomes.get(id) ?? id, texto: e.passo ?? e.rotina ?? "trabalhando" })),
+      pendentes,
+      abertas: (dados?.demandas ?? []).filter((d) => !["feita", "cancelada"].includes(d.estado)).length,
+      documentos: Object.values(dados?.contagem ?? {}).reduce((a, b) => a + b, 0),
+      eventos: visiveis
+        .filter((e) => e.tipo !== "passo")
+        .slice(-6)
+        .map((e) => ({
+          hora: hora(e.ts),
+          nome: nomes.get(e.agente) ?? e.agente,
+          tipo: e.tipo,
+          texto: e.tipo === "inicio" ? `começou ${e.rotina}` : e.tipo === "fim" ? (e.resumo || `terminou ${e.rotina}`) : e.tipo === "demanda" ? e.rotina : e.resumo || e.rotina,
+        })),
+    };
+  }, [dados, estados, pendentes, reproduzindo]);
+
+  // Qualidade: começa alta em tela grande e baixa sozinha se o aparelho não der conta.
+  const [qualidade, setQualidade] = useState<"alta" | "baixa">(() => (window.innerWidth >= 900 ? "alta" : "baixa"));
+  const [pronto, setPronto] = useState(false);
+  const marcarPronto = useCallback(() => setPronto(true), []);
   const agSel = selecionado ? agentesMap.get(selecionado) : null;
   const estSel = selecionado ? estados[selecionado] : null;
 
   return (
     <div className="relative h-[calc(100vh-57px)] w-full overflow-hidden bg-[#dfe3e8]">
-      <Canvas shadows dpr={[1, 2]} camera={{ position: [inicial[0], inicial[1], inicial[2]], fov: 42 }}
+      <Canvas shadows dpr={qualidade === "alta" ? [1, 2] : [1, 1.25]}
+        camera={{ position: [inicial[0], inicial[1], inicial[2]], fov: 40, near: 0.1, far: 400 }}
+        gl={{ antialias: true, toneMapping: THREE.AgXToneMapping, toneMappingExposure: 1.05 }}
         onPointerMissed={() => setSelecionado(null)}>
-        <color attach="background" args={["#dfe3e8"]} />
-        <hemisphereLight args={["#ffffff", "#b9aa98", 0.85]} />
-        <directionalLight position={[8, 16, 10]} intensity={1.6} castShadow
-          shadow-mapSize={[2048, 2048]} shadow-camera-left={-18} shadow-camera-right={18}
-          shadow-camera-top={14} shadow-camera-bottom={-14} />
-        <CameraControls ref={camera} minDistance={3} maxDistance={60} maxPolarAngle={Math.PI / 2.15} />
-        <Sala />
-        <ContactShadows position={[0.5, 0.01, 1]} scale={32} blur={2.2} opacity={0.25} far={6} />
+        <PerformanceMonitor onDecline={() => setQualidade("baixa")} />
+        <PrimeiroQuadro onPronto={marcarPronto} />
+        <color attach="background" args={["#dfe5ea"]} />
+        <fog attach="fog" args={["#dfe5ea", 70, 190]} />
+        <hemisphereLight args={["#f4f7fb", "#a89a88", 0.55]} />
+        {/* sol entrando pela frente aberta, com sombras justas no prédio */}
+        <directionalLight position={[-14, 26, 18]} intensity={2.4} color="#fff3e2" castShadow
+          shadow-mapSize={qualidade === "alta" ? [4096, 4096] : [2048, 2048]} shadow-bias={-0.0003} shadow-normalBias={0.025}
+          shadow-camera-left={-24} shadow-camera-right={24} shadow-camera-top={20} shadow-camera-bottom={-20}
+          shadow-camera-near={5} shadow-camera-far={80} />
+        <directionalLight position={[10, 8, -20]} intensity={0.35} color="#cfe3ff" />
+        {/* reflexos: painéis de luz como num teto de escritório */}
+        <Environment resolution={256} frames={1} environmentIntensity={0.7}>
+          <Lightformer form="rect" intensity={2.2} position={[0, 8, 0]} rotation-x={Math.PI / 2} scale={[40, 26, 1]} />
+          <Lightformer form="rect" intensity={1.2} color="#dbeaff" position={[0, 3, PREDIO.z0 - 6]} scale={[40, 5, 1]} />
+          <Lightformer form="rect" intensity={0.8} color="#fff1dc" position={[0, 3, PREDIO.z1 + 8]} rotation-y={Math.PI} scale={[40, 5, 1]} />
+        </Environment>
+        <CameraControls ref={camera} minDistance={2} maxDistance={70} maxPolarAngle={Math.PI / 2.1} />
+        <Predio />
         {dados && (
           <>
-            {dados.agentes.filter((a) => MESAS[a.id]).map((a) => (
+            {dados.agentes.filter((a) => MESAS[a.id]).map((a, i) => (
               <MesaAgente key={`mesa-${a.id}`} posicao={MESAS[a.id]} nome={a.nome}
                 estado={estados[a.id] ?? estadoVazio()} cor={GRUPO_COR[a.grupo] ?? "#888780"}
-                selecionado={selecionado === a.id} onClick={() => focar(a.id)} />
+                selecionado={selecionado === a.id} onClick={() => focar(a.id)} semente={i} />
             ))}
             {dados.agentes.filter((a) => MESAS[a.id]).map((a) => (
               <Boneco key={a.id} id={a.id} nome={a.nome} cor={GRUPO_COR[a.grupo] ?? "#888780"}
@@ -250,9 +318,12 @@ export default function Escritorio({ modo }: { modo: "real" | "demo" }) {
             ))}
             <Arquivo setores={dados.setores} contagem={dados.contagem}
               onAbrir={(s) => modo === "real" && router.push(`/arquivo/${s}`)} />
-            <MesaRafael pendentes={pendentes} onClick={() => modo === "real" && router.push("/")} />
+            <SalaRafael pendentes={pendentes} onClick={() => modo === "real" && router.push("/")} />
+            <Rafael pendentes={pendentes} onClick={() => modo === "real" && router.push("/")} />
+            <SalaReuniao painel={painel} />
           </>
         )}
+        {qualidade === "alta" && <Efeitos />}
       </Canvas>
 
       {/* painel de cima */}
@@ -271,7 +342,7 @@ export default function Escritorio({ modo }: { modo: "real" | "demo" }) {
             {erro && <span className="ml-1 text-bad">· sem conexão ({erro.slice(0, 60)})</span>}
           </div>
         </div>
-        <div className="pointer-events-auto flex gap-2">
+        <div className="pointer-events-auto flex flex-wrap gap-2">
           {reproduzindo ? (
             <button onClick={pararReproducao} className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-card/95 px-3 py-2 text-sm shadow-sm">
               <Pause size={15} /> Voltar ao vivo
@@ -283,6 +354,15 @@ export default function Escritorio({ modo }: { modo: "real" | "demo" }) {
           )}
           <button onClick={() => visaoGeral()} className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-card/95 px-3 py-2 text-sm shadow-sm">
             <Eye size={15} /> Visão geral
+          </button>
+          <button onClick={() => irPara("reuniao")} className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-card/95 px-3 py-2 text-sm shadow-sm">
+            <Tv size={15} /> Reunião
+          </button>
+          <button onClick={() => irPara("rafael")} className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-card/95 px-3 py-2 text-sm shadow-sm">
+            <UserRound size={15} /> Sua sala
+          </button>
+          <button onClick={() => irPara("arquivo")} className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-card/95 px-3 py-2 text-sm shadow-sm">
+            <Archive size={15} /> Arquivo
           </button>
         </div>
       </div>
@@ -305,7 +385,7 @@ export default function Escritorio({ modo }: { modo: "real" | "demo" }) {
             })}
           </div>
           <div className="hidden px-1 text-[11px] text-muted sm:block">
-            Toque num agente para ver o terminal · estante abre o arquivo · sua mesa abre a Mesa · arraste para girar, role para aproximar
+            Toque num agente para ver o terminal · estante abre o arquivo · você ou sua mesa abrem a Mesa · arraste para girar, role para aproximar
           </div>
         </div>
       )}
@@ -358,8 +438,8 @@ export default function Escritorio({ modo }: { modo: "real" | "demo" }) {
         </aside>
       )}
 
-      {!dados && !erro && (
-        <div className="absolute inset-0 flex items-center justify-center text-sm text-muted">Montando o escritório…</div>
+      {(!dados || !pronto) && !erro && (
+        <div className="absolute inset-0 flex items-center justify-center bg-[#dfe5ea] text-sm text-muted">Montando o escritório…</div>
       )}
     </div>
   );

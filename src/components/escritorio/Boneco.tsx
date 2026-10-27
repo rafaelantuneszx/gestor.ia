@@ -1,15 +1,17 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import * as THREE from "three";
-import type { EstadoAgente, Vec2, Viagem } from "@/lib/escritorio/modelo";
+import { CADEIRA_RAFAEL, type EstadoAgente, type Vec2, type Viagem } from "@/lib/escritorio/modelo";
+import { aparenciaDe, Corpo, poseAndando, poseConversando, poseSentado, type Juntas } from "./Corpo";
+import { mat } from "./materiais";
 
-const PELES = ["#f1c7a5", "#e0ac84", "#c68a62", "#8d5a3b", "#f5d3b8", "#b97a56"];
-const CABELOS = ["#2b1d14", "#4a3020", "#151515", "#7a4b28", "#b07a3c", "#3a3a3a"];
-const VELOCIDADE = 2.4; // m/s
-const PAUSA_DESTINO = 1.1; // s parado no destino
+const VELOCIDADE = 2.0; // m/s
+const PASSADA = 0.72; // m por meio ciclo de passo
+const PAUSA_DESTINO = 1.6; // s parado no destino
+const GIRO = 10; // quão rápido vira para a direção do passo
 
 type Fase = "sentado" | "indo" | "pausa" | "voltando";
 
@@ -42,6 +44,13 @@ function pontoEm(caminho: Vec2[], acum: number[], d: number): { p: Vec2; dir: Ve
   return { p: [x1 + (x2 - x1) * t, z1 + (z2 - z1) * t], dir: [x2 - x1, z2 - z1] };
 }
 
+function girarPara(atual: number, alvo: number, k: number) {
+  const d = Math.atan2(Math.sin(alvo - atual), Math.cos(alvo - atual));
+  return atual + d * k;
+}
+
+const PAPEL = new THREE.BoxGeometry(0.24, 0.32, 0.012);
+
 export function Boneco({
   id, nome, cor, cadeira, estado, viagem, selecionado, onClick, onViagemFim,
 }: {
@@ -56,15 +65,12 @@ export function Boneco({
   onViagemFim: (viagemId: string) => void;
 }) {
   const s = semente(id);
-  const pele = PELES[s % PELES.length];
-  const cabelo = CABELOS[(s >> 3) % CABELOS.length];
+  const ap = useMemo(() => aparenciaDe(id, cor), [id, cor]);
 
   const raiz = useRef<THREE.Group>(null);
-  const corpo = useRef<THREE.Group>(null);
-  const pernaE = useRef<THREE.Group>(null);
-  const pernaD = useRef<THREE.Group>(null);
-  const bracoE = useRef<THREE.Group>(null);
-  const bracoD = useRef<THREE.Group>(null);
+  const rotulo = useRef<THREE.Group>(null);
+  const anel = useRef<THREE.Mesh>(null);
+  const juntas = useRef<Juntas>({});
   const papel = useRef<THREE.Mesh>(null);
 
   const fase = useRef<Fase>("sentado");
@@ -74,7 +80,7 @@ export function Boneco({
   const viagemAtual = useRef<Viagem | null>(null);
   const [andando, setAndando] = useState(false);
 
-  // Nova viagem: começa a andar a partir da cadeira.
+  // Nova viagem: levanta e começa a andar a partir da cadeira.
   useEffect(() => {
     if (viagem && viagemAtual.current?.id !== viagem.id) {
       viagemAtual.current = viagem;
@@ -85,9 +91,11 @@ export function Boneco({
     }
   }, [viagem]);
 
-  useFrame(({ clock }, dt) => {
+  useFrame(({ clock }, dtBruto) => {
     const g = raiz.current;
+    const j = juntas.current;
     if (!g) return;
+    const dt = Math.min(dtBruto, 0.1); // aba em segundo plano: não teleporta ao voltar
     const t = clock.elapsedTime + (s % 100) * 0.13;
     const v = viagemAtual.current;
     const trabalhando = estado.status === "trabalhando";
@@ -95,13 +103,9 @@ export function Boneco({
     if (fase.current === "sentado" || !v) {
       g.position.set(cadeira[0], 0, cadeira[1]);
       g.rotation.y = Math.PI; // de frente para o monitor
-      if (corpo.current) corpo.current.position.y = 0.5 + Math.sin(t * 1.6) * 0.006;
-      pernaE.current?.rotation.set(-Math.PI / 2, 0, 0.05);
-      pernaD.current?.rotation.set(-Math.PI / 2, 0, -0.05);
-      const digita = trabalhando ? Math.sin(t * 18) * 0.12 : 0;
-      bracoE.current?.rotation.set(trabalhando ? -1.15 + digita : -0.35, 0, 0.12);
-      bracoD.current?.rotation.set(trabalhando ? -1.15 - digita : -0.35, 0, -0.12);
+      poseSentado(j, trabalhando ? "digitando" : "relaxado", t);
       if (papel.current) papel.current.visible = false;
+      if (rotulo.current) rotulo.current.position.y = 1.95;
       return;
     }
 
@@ -131,25 +135,19 @@ export function Boneco({
     g.position.set(p[0], 0, p[1]);
     const sentido = fase.current === "voltando" ? -1 : 1;
     if (fase.current !== "pausa" && (dir[0] !== 0 || dir[1] !== 0)) {
-      g.rotation.y = Math.atan2(dir[0] * sentido, dir[1] * sentido);
+      const alvo = Math.atan2(dir[0] * sentido, dir[1] * sentido);
+      g.rotation.y = girarPara(g.rotation.y, alvo, 1 - Math.exp(-GIRO * dt));
     }
-    const passo = fase.current === "pausa" ? 0 : Math.sin(t * 9);
-    if (corpo.current) corpo.current.position.y = 0.9 + Math.abs(passo) * 0.04;
-    pernaE.current?.rotation.set(passo * 0.55, 0, 0);
-    pernaD.current?.rotation.set(-passo * 0.55, 0, 0);
     // leva o papel na ida (documento/demanda) ou na volta (buscar decisão)
     const levando = (v.tipo !== "buscar" && fase.current === "indo") || (v.tipo === "buscar" && fase.current === "voltando");
     if (papel.current) papel.current.visible = levando;
-    if (levando) {
-      bracoE.current?.rotation.set(-1.0, 0, 0.15);
-      bracoD.current?.rotation.set(-1.0, 0, -0.15);
-    } else if (fase.current === "pausa") {
-      bracoE.current?.rotation.set(-0.9 + Math.sin(t * 6) * 0.2, 0, 0.15);
-      bracoD.current?.rotation.set(-0.2, 0, -0.1);
-    } else {
-      bracoE.current?.rotation.set(-passo * 0.5, 0, 0.08);
-      bracoD.current?.rotation.set(passo * 0.5, 0, -0.08);
-    }
+    if (fase.current === "pausa") poseConversando(j, t);
+    else poseAndando(j, (dist.current / PASSADA) * Math.PI, levando);
+    if (rotulo.current) rotulo.current.position.y = 2.12;
+  });
+
+  useFrame(({ clock }) => {
+    if (anel.current) anel.current.scale.setScalar(1 + Math.sin(clock.elapsedTime * 4) * 0.06);
   });
 
   const corStatus = estado.status === "trabalhando" ? "#2563eb" : estado.status === "erro" ? "#c0362c" : "#12805c";
@@ -162,78 +160,19 @@ export function Boneco({
       onClick={(e) => { e.stopPropagation(); onClick(); }}
       onPointerOver={(e) => { e.stopPropagation(); document.body.style.cursor = "pointer"; }}
       onPointerOut={() => { document.body.style.cursor = ""; }}>
-      <group ref={corpo} position={[0, 0.5, 0]}>
-        {/* quadril e tronco */}
-        <mesh position={[0, 0.05, 0]} castShadow>
-          <boxGeometry args={[0.34, 0.14, 0.2]} />
-          <meshStandardMaterial color="#2f3640" />
+      <Corpo ap={ap} juntas={juntas}
+        noTronco={
+          <mesh ref={papel} geometry={PAPEL} material={mat("#fbfaf7", 0.9)} position={[0, 0.22, 0.36]} rotation-x={-1.1}
+            visible={false} castShadow />
+        } />
+      {selecionado && (
+        <mesh ref={anel} position={[0, 0.012, 0]} rotation-x={-Math.PI / 2}>
+          <ringGeometry args={[0.45, 0.54, 40]} />
+          <meshBasicMaterial color="#2563eb" transparent opacity={0.85} />
         </mesh>
-        <mesh position={[0, 0.34, 0]} castShadow>
-          <capsuleGeometry args={[0.17, 0.3, 6, 12]} />
-          <meshStandardMaterial color={cor} />
-        </mesh>
-        {/* cabeça, cabelo e olhos (rosto para +z) */}
-        <mesh position={[0, 0.8, 0]} castShadow>
-          <sphereGeometry args={[0.14, 20, 16]} />
-          <meshStandardMaterial color={pele} />
-        </mesh>
-        <mesh position={[0, 0.85, -0.02]} castShadow>
-          <sphereGeometry args={[0.145, 20, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
-          <meshStandardMaterial color={cabelo} />
-        </mesh>
-        {[-0.05, 0.05].map((x) => (
-          <mesh key={x} position={[x, 0.81, 0.128]}>
-            <sphereGeometry args={[0.018, 8, 8]} />
-            <meshStandardMaterial color="#1b1f24" />
-          </mesh>
-        ))}
-        {/* braços: pivô no ombro */}
-        <group ref={bracoE} position={[-0.23, 0.55, 0]}>
-          <mesh position={[0, -0.26, 0]} castShadow>
-            <capsuleGeometry args={[0.055, 0.4, 4, 8]} />
-            <meshStandardMaterial color={cor} />
-          </mesh>
-          <mesh position={[0, -0.52, 0]}>
-            <sphereGeometry args={[0.055, 10, 8]} />
-            <meshStandardMaterial color={pele} />
-          </mesh>
-        </group>
-        <group ref={bracoD} position={[0.23, 0.55, 0]}>
-          <mesh position={[0, -0.26, 0]} castShadow>
-            <capsuleGeometry args={[0.055, 0.4, 4, 8]} />
-            <meshStandardMaterial color={cor} />
-          </mesh>
-          <mesh position={[0, -0.52, 0]}>
-            <sphereGeometry args={[0.055, 10, 8]} />
-            <meshStandardMaterial color={pele} />
-          </mesh>
-        </group>
-        {/* pernas: pivô no quadril */}
-        <group ref={pernaE} position={[-0.09, 0, 0]}>
-          <mesh position={[0, -0.42, 0]} castShadow>
-            <capsuleGeometry args={[0.07, 0.7, 4, 8]} />
-            <meshStandardMaterial color="#323a4a" />
-          </mesh>
-        </group>
-        <group ref={pernaD} position={[0.09, 0, 0]}>
-          <mesh position={[0, -0.42, 0]} castShadow>
-            <capsuleGeometry args={[0.07, 0.7, 4, 8]} />
-            <meshStandardMaterial color="#323a4a" />
-          </mesh>
-        </group>
-        {/* papel carregado à frente do peito */}
-        <mesh ref={papel} position={[0, 0.3, 0.32]} rotation-x={-0.5} visible={false} castShadow>
-          <boxGeometry args={[0.3, 0.02, 0.4]} />
-          <meshStandardMaterial color="#ffffff" />
-        </mesh>
-        {/* anel de seleção no chão */}
-        {selecionado && (
-          <mesh position={[0, -0.48, 0]} rotation-x={-Math.PI / 2}>
-            <ringGeometry args={[0.42, 0.5, 32]} />
-            <meshBasicMaterial color="#2563eb" />
-          </mesh>
-        )}
-        <Html position={[0, 1.18, 0]} center zIndexRange={[20, 0]}>
+      )}
+      <group ref={rotulo} position={[0, 1.95, 0]}>
+        <Html center zIndexRange={[20, 0]}>
           <div onClick={onClick}
             style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, fontFamily: "system-ui", cursor: "pointer" }}>
             <div style={{
@@ -252,6 +191,39 @@ export function Boneco({
                 {legenda}
               </div>
             )}
+          </div>
+        </Html>
+      </group>
+    </group>
+  );
+}
+
+// ---------- o Rafael, na sala dele ----------
+
+export function Rafael({ pendentes, onClick }: { pendentes: number; onClick: () => void }) {
+  const ap = useMemo(() => aparenciaDe("rafael", "#1f2a44"), []);
+  const juntas = useRef<Juntas>({});
+  useFrame(({ clock }) => {
+    poseSentado(juntas.current, "lendo", clock.elapsedTime);
+  });
+  return (
+    <group position={[CADEIRA_RAFAEL[0], 0, CADEIRA_RAFAEL[1]]}
+      onClick={(e) => { e.stopPropagation(); onClick(); }}
+      onPointerOver={(e) => { e.stopPropagation(); document.body.style.cursor = "pointer"; }}
+      onPointerOut={() => { document.body.style.cursor = ""; }}>
+      <Corpo ap={ap} juntas={juntas}
+        noTronco={
+          <mesh geometry={PAPEL} material={mat("#fbfaf7", 0.9)} position={[0, 0.2, 0.42]} rotation-x={-1.15} castShadow />
+        } />
+      <group position={[0, 1.78, 0]}>
+        <Html center zIndexRange={[20, 0]}>
+          <div onClick={onClick} style={{
+            display: "flex", alignItems: "center", gap: 6, padding: "3px 10px", borderRadius: 999, whiteSpace: "nowrap",
+            fontFamily: "system-ui", fontSize: 12.5, fontWeight: 700, cursor: "pointer",
+            background: pendentes > 0 ? "#fdf2e1" : "rgba(255,255,255,0.95)", color: pendentes > 0 ? "#9a5b0a" : "#1b1f24",
+            border: "1px solid rgba(0,0,0,0.08)", boxShadow: "0 1px 3px rgba(0,0,0,0.15)",
+          }}>
+            Rafael · {pendentes > 0 ? `${pendentes} aguardando você` : "nada pendente"}
           </div>
         </Html>
       </group>
