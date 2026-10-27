@@ -13,7 +13,7 @@ export function Topo({ aba, pendentes }: { aba: Aba; pendentes: number }) {
     <header className="sticky top-0 z-10 border-b border-line bg-card/95 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center gap-2 px-4 py-3">
         <Link href="/" className="mr-3 text-[15px] font-semibold tracking-tight">
-          Central <span className="text-muted font-normal">Rafael Enterprises</span>
+          Gestor.IA <span className="text-muted font-normal">Rafael Enterprises</span>
         </Link>
         <nav className="flex flex-1 items-center gap-1">
           <Link href="/" className={item(aba === "mesa")}>
@@ -39,8 +39,8 @@ export function Topo({ aba, pendentes }: { aba: Aba; pendentes: number }) {
 export function SemAcesso() {
   return (
     <main className="mx-auto max-w-md px-4 py-24 text-center">
-      <h1 className="text-xl font-semibold">Sem acesso à Central</h1>
-      <p className="mt-2 text-muted">Seu login existe, mas não está liberado para a Central. Peça ao Rafael para incluir seu e-mail.</p>
+      <h1 className="text-xl font-semibold">Sem acesso ao Gestor.IA</h1>
+      <p className="mt-2 text-muted">Seu login existe, mas não está liberado no Gestor.IA. Peça ao Rafael para incluir seu e-mail.</p>
       <form action={sair} className="mt-6">
         <button className="rounded-lg border border-line px-4 py-2 text-sm">Sair</button>
       </form>

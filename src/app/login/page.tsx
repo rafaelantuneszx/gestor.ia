@@ -8,7 +8,7 @@ export default function Login() {
   return (
     <main className="flex min-h-screen items-center justify-center px-4">
       <form action={acao} className="w-full max-w-sm rounded-2xl border border-line bg-card p-6">
-        <h1 className="text-lg font-semibold">Central</h1>
+        <h1 className="text-lg font-semibold">Gestor.IA</h1>
         <p className="mb-5 text-sm text-muted">Rafael Enterprises · use o mesmo login do PaviMax</p>
         <label className="mb-1 block text-sm font-medium" htmlFor="email">E-mail</label>
         <input id="email" name="email" type="email" autoComplete="email" required

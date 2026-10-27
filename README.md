@@ -1,6 +1,8 @@
-# Central · Rafael Enterprises
+# Gestor.IA · Rafael Enterprises
 
 Mesa de aprovações e arquivo por setor dos agentes da Rafael Enterprises.
+
+No banco, as tabelas e funções continuam com o prefixo `central_` (nome interno da primeira versão).
 
 - **Mesa** (`/`): demandas que os agentes mandaram para o Rafael decidir (aprovar, pedir ajuste, recusar).
 - **Arquivo** (`/arquivo`): relatórios, rascunhos e PDFs entregues pelos agentes, por setor.
