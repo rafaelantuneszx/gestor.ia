@@ -9,6 +9,8 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@react-three/drei": "^10.7.9",
+    "@react-three/fiber": "^9.8.2",
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.118.0",
     "lucide-react": "^1.61.0",
@@ -16,7 +18,8 @@
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-markdown": "^9.1.0",
-    "remark-gfm": "^4.0.1"
+    "remark-gfm": "^4.0.1",
+    "three": "^0.170.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
@@ -24,6 +27,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/three": "^0.170.0",
     "eslint": "^9",
     "eslint-config-next": "15.5.28",
     "tailwindcss": "^4",

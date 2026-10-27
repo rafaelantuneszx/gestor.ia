@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { Archive, Inbox, LogOut } from "lucide-react";
+import { Archive, Building2, Inbox, LogOut } from "lucide-react";
 import { sair } from "@/app/acoes";
 
-type Aba = "mesa" | "arquivo";
+type Aba = "mesa" | "arquivo" | "escritorio";
 
 export function Topo({ aba, pendentes }: { aba: Aba; pendentes: number }) {
   const item = (ativo: boolean) =>
@@ -21,6 +21,9 @@ export function Topo({ aba, pendentes }: { aba: Aba; pendentes: number }) {
             {pendentes > 0 && (
               <span className="rounded-full bg-warn-soft px-1.5 text-xs font-semibold text-warn">{pendentes}</span>
             )}
+          </Link>
+          <Link href="/escritorio" className={item(aba === "escritorio")}>
+            <Building2 size={16} /> Escritório
           </Link>
           <Link href="/arquivo" className={item(aba === "arquivo")}>
             <Archive size={16} /> Arquivo
