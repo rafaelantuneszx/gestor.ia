@@ -73,3 +73,4 @@ body {
 .md blockquote { border-left: 3px solid var(--line); padding-left: 0.8rem; color: var(--muted); margin: 0 0 0.75rem; }
 .md a { color: var(--accent); text-decoration: underline; }
 .md strong { font-weight: 650; }
+.md > :first-child { margin-top: 0; }

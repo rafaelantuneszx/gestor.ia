@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { FileText, History } from "lucide-react";
+import { CalendarClock, FileText, History } from "lucide-react";
 import { Topo, SemAcesso } from "@/components/Topo";
 import { Decisao } from "@/components/Decisao";
-import { autorizado, cadastros, haQuanto, nomeDe, quando, type Demanda, type Historico } from "@/lib/dados";
+import { autorizado, cadastros, haQuanto, nomeDe, quando, soHora, type Demanda, type Historico } from "@/lib/dados";
+import { hojeEmBrasilia, type Reuniao } from "@/lib/reunioes";
 import { supabaseServidor } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -23,11 +24,20 @@ const ESTADO = { aberta: "Aberta", andamento: "Em andamento", feita: "Feita", ca
 export default async function Mesa() {
   if (!(await autorizado())) return <SemAcesso />;
   const sb = await supabaseServidor();
-  const [{ agentes, setores }, dem, hist] = await Promise.all([
+  const hoje = hojeEmBrasilia();
+  const [{ agentes, setores }, dem, hist, reu] = await Promise.all([
     cadastros(),
     sb.from("central_demandas").select("*").order("id", { ascending: false }),
     sb.from("central_demanda_historico").select("*").order("ts"),
+    sb.from("central_reunioes").select("id, titulo, agendada_para")
+      .eq("estado", "agendada").gte("agendada_para", hoje.inicio).lt("agendada_para", hoje.fim)
+      .order("agendada_para"),
   ]);
+  // Reunião de hoje: a próxima que ainda não passou ou, se todas passaram, a última atrasada.
+  const reunioesHoje = (reu.data ?? []) as Pick<Reuniao, "id" | "titulo" | "agendada_para">[];
+  const agora = Date.now();
+  const reuniaoHoje = reunioesHoje.find((r) => new Date(r.agendada_para!).getTime() >= agora)
+    ?? reunioesHoje[reunioesHoje.length - 1] ?? null;
   const demandas = (dem.data ?? []) as Demanda[];
   const historico = (hist.data ?? []) as Historico[];
   const nomeSetor = new Map(setores.map((s) => [s.id, s.nome]));
@@ -45,6 +55,17 @@ export default async function Mesa() {
     <>
       <Topo aba="mesa" pendentes={aguardando.length} />
       <main className="mx-auto max-w-6xl px-4 py-6">
+        {reuniaoHoje && (
+          <Link href={`/reunioes/${reuniaoHoje.id}`}
+            className="mb-4 inline-flex max-w-full items-center gap-2 rounded-lg border border-line bg-card px-3 py-1.5 text-sm hover:border-accent">
+            <CalendarClock size={15} className="shrink-0 text-accent" />
+            <span className="truncate">
+              <span className="font-medium">Reunião agendada {soHora(reuniaoHoje.agendada_para!)}</span>
+              <span className="text-muted"> · {reuniaoHoje.titulo}</span>
+              {reunioesHoje.length > 1 && <span className="text-muted"> · +{reunioesHoje.length - 1} hoje</span>}
+            </span>
+          </Link>
+        )}
         <div className="mb-6 grid grid-cols-3 gap-3">
           {[
             [aguardando.length, "aguardando você"],

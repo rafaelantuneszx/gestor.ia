@@ -19,8 +19,9 @@ export async function middleware(req: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
   const publica = req.nextUrl.pathname.startsWith("/login") ||
-    // demonstração com dados fictícios, só fora de produção
-    (process.env.NODE_ENV !== "production" && req.nextUrl.pathname === "/escritorio/demo");
+    // demonstrações com dados fictícios, só fora de produção
+    (process.env.NODE_ENV !== "production" &&
+      (req.nextUrl.pathname === "/escritorio/demo" || req.nextUrl.pathname.startsWith("/reunioes/demo")));
   if (!user && !publica) {
     const url = req.nextUrl.clone();
     url.pathname = "/login";

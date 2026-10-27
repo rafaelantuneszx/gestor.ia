@@ -1,21 +1,21 @@
 import Link from "next/link";
-import { Archive, Building2, Inbox, LogOut } from "lucide-react";
+import { Archive, Building2, Inbox, LogOut, Users } from "lucide-react";
 import { sair } from "@/app/acoes";
 
-type Aba = "mesa" | "arquivo" | "escritorio";
+type Aba = "mesa" | "arquivo" | "escritorio" | "reunioes";
 
 export function Topo({ aba, pendentes }: { aba: Aba; pendentes: number }) {
   const item = (ativo: boolean) =>
-    `inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm ${
+    `inline-flex shrink-0 items-center gap-2 rounded-lg px-3 py-1.5 text-sm ${
       ativo ? "bg-accent-soft text-accent font-semibold" : "text-muted hover:bg-bg"
     }`;
   return (
     <header className="sticky top-0 z-10 border-b border-line bg-card/95 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center gap-2 px-4 py-3">
         <Link href="/" className="mr-3 text-[15px] font-semibold tracking-tight">
-          Gestor.IA <span className="text-muted font-normal">Rafael Enterprises</span>
+          Gestor.IA <span className="hidden text-muted font-normal md:inline">Rafael Enterprises</span>
         </Link>
-        <nav className="flex flex-1 items-center gap-1">
+        <nav className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
           <Link href="/" className={item(aba === "mesa")}>
             <Inbox size={16} /> Mesa
             {pendentes > 0 && (
@@ -24,6 +24,9 @@ export function Topo({ aba, pendentes }: { aba: Aba; pendentes: number }) {
           </Link>
           <Link href="/escritorio" className={item(aba === "escritorio")}>
             <Building2 size={16} /> Escritório
+          </Link>
+          <Link href="/reunioes" className={item(aba === "reunioes")}>
+            <Users size={16} /> Reuniões
           </Link>
           <Link href="/arquivo" className={item(aba === "arquivo")}>
             <Archive size={16} /> Arquivo

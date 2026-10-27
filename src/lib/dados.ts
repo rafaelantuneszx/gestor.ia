@@ -65,6 +65,34 @@ export function quando(iso: string) {
   return fmt.format(new Date(iso));
 }
 
+const fmtHora = new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit" });
+const fmtDia = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" });
+
+export function soHora(iso: string) {
+  return fmtHora.format(new Date(iso));
+}
+
+// "hoje às 14:30", "amanhã às 09:00" ou "28/10, 14:30"
+export function diaEHora(iso: string, agora = new Date()) {
+  const d = new Date(iso);
+  const hoje = fmtDia.format(agora);
+  const amanha = fmtDia.format(new Date(agora.getTime() + 86400000));
+  const ontem = fmtDia.format(new Date(agora.getTime() - 86400000));
+  const dia = fmtDia.format(d);
+  if (dia === hoje) return `hoje às ${soHora(iso)}`;
+  if (dia === amanha) return `amanhã às ${soHora(iso)}`;
+  if (dia === ontem) return `ontem às ${soHora(iso)}`;
+  return quando(iso);
+}
+
+// "em 25 min", "em 2 h", "atrasada 10 min"
+export function emQuanto(iso: string, agora = Date.now()) {
+  const s = (new Date(iso).getTime() - agora) / 1000;
+  const abs = Math.abs(s);
+  const t = abs < 3600 ? `${Math.max(1, Math.round(abs / 60))} min` : abs < 86400 ? `${Math.round(abs / 3600)} h` : `${Math.round(abs / 86400)} d`;
+  return s >= 0 ? `em ${t}` : `atrasada ${t}`;
+}
+
 export function haQuanto(iso: string) {
   const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
   if (s < 60) return "agora";

@@ -7,11 +7,12 @@ import { CameraControls, Environment, Lightformer, PerformanceMonitor } from "@r
 import * as THREE from "three";
 import { Archive, Eye, Pause, Play, Radio, Tv, UserRound, X } from "lucide-react";
 import {
-  CADEIRA_RAFAEL, GRUPO_COR, MESAS, PREDIO, SALA, TV, aplicarEvento, cadeira, conferirTravadas, estadoVazio, hora,
-  viagemDoEvento,
+  CADEIRA_RAFAEL, GRUPO_COR, MESAS, PREDIO, SALA, TV, aplicarEvento, casa, conferirTravadas, estadoVazio, hora,
+  lugaresReuniao, viagemDoEvento,
   type AgenteInfo, type DemandaResumo, type EstadoAgente, type EventoCentral, type SetorInfo, type Viagem,
 } from "@/lib/escritorio/modelo";
-import { DEMO_AGENTES, DEMO_CONTAGEM, DEMO_DEMANDAS, DEMO_SETORES, demoEventos } from "@/lib/escritorio/demo";
+import { DEMO_AGENTES, DEMO_CONTAGEM, DEMO_DEMANDAS, DEMO_SETORES, demoEventos, demoReunioes } from "@/lib/escritorio/demo";
+import { CAMPOS_RESUMO, eventoDeReuniao, itensPauta, proximaAgendada, type ReuniaoResumo } from "@/lib/reunioes";
 import { supabaseNavegador } from "@/lib/supabase/browser";
 import { Arquivo, MesaAgente, Predio, SalaRafael, SalaReuniao } from "./Cena";
 import { Boneco, Rafael } from "./Boneco";
@@ -36,7 +37,8 @@ function PrimeiroQuadro({ onPronto }: { onPronto: () => void }) {
 function visaoGeralPara(largura: number, altura: number): Vista {
   const aspecto = largura / Math.max(altura, 1);
   const k = aspecto >= 1.6 ? 1 : Math.min(3.4, 1.6 / Math.max(aspecto, 0.45));
-  return [0, 23 * k, 30 * k, 0, 0, 0.4];
+  const cx = (PREDIO.x0 + PREDIO.x1) / 2;
+  return [cx, 26.5 * k, 34.5 * k, cx, 0, 0.4];
 }
 
 // Vistas das salas: posição da câmera e para onde ela olha.
@@ -52,6 +54,7 @@ type Dados = {
   eventos: EventoCentral[];
   demandas: DemandaResumo[];
   contagem: Record<string, number>;
+  reunioes: ReuniaoResumo[];
 };
 
 function estadosDe(eventos: EventoCentral[], agentes: AgenteInfo[]) {
@@ -66,10 +69,13 @@ async function carregar(desdeId: number | null): Promise<Partial<Dados> & { even
   const evQuery = desdeId === null
     ? sb.from("central_eventos").select("*").gte("ts", desde).order("id").limit(1000)
     : sb.from("central_eventos").select("*").gt("id", desdeId).order("id").limit(500);
-  const [ev, dem, docs, ag, st] = await Promise.all([
+  const [ev, dem, docs, reu, ag, st] = await Promise.all([
     evQuery,
     sb.from("central_demandas").select("id, de, para, estado, titulo, prioridade"),
     sb.from("central_documentos").select("setor"),
+    // abertas (agendada, em andamento) e as que mudaram nas últimas 24 h, para a reprodução do dia
+    sb.from("central_reunioes").select(CAMPOS_RESUMO)
+      .or(`estado.in.(agendada,em_andamento),atualizado_em.gte.${desde}`).order("id"),
     desdeId === null ? sb.from("central_agentes").select("*") : Promise.resolve({ data: null }),
     desdeId === null ? sb.from("central_setores").select("id, nome").order("ordem") : Promise.resolve({ data: null }),
   ]);
@@ -79,6 +85,7 @@ async function carregar(desdeId: number | null): Promise<Partial<Dados> & { even
     eventos: (ev.data ?? []) as EventoCentral[],
     demandas: (dem.data ?? []) as DemandaResumo[],
     contagem,
+    reunioes: (reu.data ?? []) as ReuniaoResumo[],
     ...(ag.data ? { agentes: ag.data as AgenteInfo[] } : {}),
     ...(st.data ? { setores: st.data as SetorInfo[] } : {}),
   };
@@ -119,8 +126,12 @@ export default function Escritorio({ modo }: { modo: "real" | "demo" }) {
     (async () => {
       try {
         if (modo === "demo") {
-          const eventos = demoEventos();
-          const d: Dados = { agentes: DEMO_AGENTES, setores: DEMO_SETORES, eventos, demandas: DEMO_DEMANDAS, contagem: DEMO_CONTAGEM };
+          const agora = Date.now();
+          const eventos = demoEventos(agora);
+          const d: Dados = {
+            agentes: DEMO_AGENTES, setores: DEMO_SETORES, eventos, demandas: DEMO_DEMANDAS, contagem: DEMO_CONTAGEM,
+            reunioes: demoReunioes(agora),
+          };
           if (!vivo) return;
           setDados(d);
           setEstados(estadosDe(eventos, d.agentes));
@@ -130,7 +141,7 @@ export default function Escritorio({ modo }: { modo: "real" | "demo" }) {
           if (!vivo) return;
           const d: Dados = {
             agentes: r.agentes ?? [], setores: r.setores ?? [], eventos: r.eventos,
-            demandas: r.demandas ?? [], contagem: r.contagem ?? {},
+            demandas: r.demandas ?? [], contagem: r.contagem ?? {}, reunioes: r.reunioes ?? [],
           };
           setDados(d);
           setEstados(estadosDe(d.eventos, d.agentes));
@@ -156,7 +167,10 @@ export default function Escritorio({ modo }: { modo: "real" | "demo" }) {
         const r = await carregar(ultimoId.current ?? 0);
         const d = dadosRef.current;
         if (!d) return;
-        const base = { ...d, demandas: r.demandas ?? d.demandas, contagem: r.contagem ?? d.contagem, eventos: [...d.eventos, ...r.eventos] };
+        const base = {
+          ...d, demandas: r.demandas ?? d.demandas, contagem: r.contagem ?? d.contagem, reunioes: r.reunioes ?? d.reunioes,
+          eventos: [...d.eventos, ...r.eventos],
+        };
         setDados(base);
         if (r.eventos.length) enfileirar(r.eventos, base);
         if (r.eventos.length) {
@@ -248,6 +262,27 @@ export default function Escritorio({ modo }: { modo: "real" | "demo" }) {
   const pendentes = (dados?.demandas ?? []).filter((d) => d.estado === "aguardando-rafael").length;
   const trabalhando = Object.values(estados).filter((e) => e.status === "trabalhando").length;
 
+  // Reuniões em andamento: ao vivo, pelo estado da tabela; na reprodução, pelos eventos "reuniao#<id>" já reproduzidos.
+  const reunioesAtivas = useMemo(() => {
+    const lista = dados?.reunioes ?? [];
+    if (!reproduzindo || !dados) {
+      return lista.filter((r) => r.estado === "em_andamento").map((r) => ({ r, desde: r.iniciada_em ?? r.agendada_para }));
+    }
+    const vistos = new Map<number, { estado: string; ts: string }>();
+    for (const ev of dados.eventos.slice(0, reproduzindo.i)) {
+      const m = eventoDeReuniao(ev);
+      if (m) vistos.set(m.id, { estado: m.estado, ts: ev.ts });
+    }
+    return lista
+      .filter((r) => vistos.get(r.id)?.estado === "em_andamento")
+      .map((r) => ({ r, desde: vistos.get(r.id)!.ts as string | null }));
+  }, [dados, reproduzindo]);
+  const lugares = useMemo(
+    () => lugaresReuniao(reunioesAtivas.map((x) => x.r), (id) => agentesMap.has(id)),
+    [reunioesAtivas, agentesMap],
+  );
+  const emReuniao = Object.keys(lugares).length;
+
   // TV da sala de reunião: o que está acontecendo agora (na reprodução, até o ponto reproduzido).
   const painel = useMemo<PainelTV>(() => {
     const nomes = new Map((dados?.agentes ?? []).map((a) => [a.id, a.nome]));
@@ -259,6 +294,22 @@ export default function Escritorio({ modo }: { modo: "real" | "demo" }) {
       pendentes,
       abertas: (dados?.demandas ?? []).filter((d) => !["feita", "cancelada"].includes(d.estado)).length,
       documentos: Object.values(dados?.contagem ?? {}).reduce((a, b) => a + b, 0),
+      reuniao: reunioesAtivas[0]
+        ? {
+          titulo: reunioesAtivas[0].r.titulo,
+          pauta: itensPauta(reunioesAtivas[0].r),
+          participantes: [reunioesAtivas[0].r.convocada_por, ...reunioesAtivas[0].r.participantes]
+            .filter((id, i, a) => a.indexOf(id) === i)
+            .map((id) => (id === "rafael" ? "Rafael" : nomes.get(id) ?? id)),
+          desde: reunioesAtivas[0].desde,
+          outras: reunioesAtivas.length - 1,
+        }
+        : null,
+      proxima: (() => {
+        const p = proximaAgendada(dados?.reunioes ?? []);
+        return p ? { hora: hora(p.agendada_para!), titulo: p.titulo } : null;
+      })(),
+      relogio: reproduzindo && reproduzindo.i > 0 ? dados?.eventos[reproduzindo.i - 1]?.ts ?? null : null,
       eventos: visiveis
         .filter((e) => e.tipo !== "passo")
         .slice(-6)
@@ -269,7 +320,7 @@ export default function Escritorio({ modo }: { modo: "real" | "demo" }) {
           texto: e.tipo === "inicio" ? `começou ${e.rotina}` : e.tipo === "fim" ? (e.resumo || `terminou ${e.rotina}`) : e.tipo === "demanda" ? e.rotina : e.resumo || e.rotina,
         })),
     };
-  }, [dados, estados, pendentes, reproduzindo]);
+  }, [dados, estados, pendentes, reproduzindo, reunioesAtivas]);
 
   // Qualidade: começa alta em tela grande e baixa sozinha se o aparelho não der conta.
   const [qualidade, setQualidade] = useState<"alta" | "baixa">(() => (window.innerWidth >= 900 ? "alta" : "baixa"));
@@ -292,7 +343,7 @@ export default function Escritorio({ modo }: { modo: "real" | "demo" }) {
         {/* sol entrando pela frente aberta, com sombras justas no prédio */}
         <directionalLight position={[-14, 26, 18]} intensity={2.4} color="#fff3e2" castShadow
           shadow-mapSize={qualidade === "alta" ? [4096, 4096] : [2048, 2048]} shadow-bias={-0.0003} shadow-normalBias={0.025}
-          shadow-camera-left={-24} shadow-camera-right={24} shadow-camera-top={20} shadow-camera-bottom={-20}
+          shadow-camera-left={-30} shadow-camera-right={30} shadow-camera-top={20} shadow-camera-bottom={-20}
           shadow-camera-near={5} shadow-camera-far={80} />
         <directionalLight position={[10, 8, -20]} intensity={0.35} color="#cfe3ff" />
         {/* reflexos: painéis de luz como num teto de escritório */}
@@ -310,10 +361,10 @@ export default function Escritorio({ modo }: { modo: "real" | "demo" }) {
                 estado={estados[a.id] ?? estadoVazio()} cor={GRUPO_COR[a.grupo] ?? "#888780"}
                 selecionado={selecionado === a.id} onClick={() => focar(a.id)} semente={i} />
             ))}
-            {dados.agentes.filter((a) => MESAS[a.id]).map((a) => (
+            {dados.agentes.map((a) => (
               <Boneco key={a.id} id={a.id} nome={a.nome} cor={GRUPO_COR[a.grupo] ?? "#888780"}
-                cadeira={cadeira(a.id)} estado={estados[a.id] ?? estadoVazio()}
-                viagem={filas[a.id]?.[0] ?? null} selecionado={selecionado === a.id}
+                cadeira={casa(a.id)} temMesa={!!MESAS[a.id]} estado={estados[a.id] ?? estadoVazio()}
+                viagem={filas[a.id]?.[0] ?? null} reuniao={lugares[a.id] ?? null} selecionado={selecionado === a.id}
                 onClick={() => focar(a.id)} onViagemFim={(vid) => fimViagem(a.id, vid)} />
             ))}
             <Arquivo setores={dados.setores} contagem={dados.contagem}
@@ -338,7 +389,7 @@ export default function Escritorio({ modo }: { modo: "real" | "demo" }) {
             )}
           </div>
           <div className="mt-0.5 text-xs text-muted">
-            {trabalhando} trabalhando agora · {pendentes} aguardando você
+            {trabalhando} trabalhando agora{emReuniao > 0 ? ` · ${emReuniao} em reunião` : ""} · {pendentes} aguardando você
             {erro && <span className="ml-1 text-bad">· sem conexão ({erro.slice(0, 60)})</span>}
           </div>
         </div>
@@ -398,6 +449,9 @@ export default function Escritorio({ modo }: { modo: "real" | "demo" }) {
             <div className="min-w-0 flex-1">
               <div className="font-semibold">{agSel.nome}</div>
               <div className="text-xs text-muted">{agSel.cargo} · {agSel.grupo}</div>
+              {lugares[agSel.id] && (
+                <div className="mt-1 text-xs font-medium text-warn">Em reunião: {lugares[agSel.id].titulo}</div>
+              )}
               <div className="mt-1 text-xs">
                 {estSel.status === "trabalhando"
                   ? <span className="text-accent">Trabalhando em {estSel.rotina}{estSel.desde ? ` desde ${hora(estSel.desde)}` : ""}</span>

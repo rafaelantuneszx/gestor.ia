@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import * as THREE from "three";
-import { CADEIRA_RAFAEL, type EstadoAgente, type Vec2, type Viagem } from "@/lib/escritorio/modelo";
+import { CADEIRA_RAFAEL, type EstadoAgente, type LugarReuniao, type Vec2, type Viagem } from "@/lib/escritorio/modelo";
 import { aparenciaDe, Corpo, poseAndando, poseConversando, poseSentado, type Juntas } from "./Corpo";
 import { mat } from "./materiais";
 
@@ -13,7 +13,8 @@ const PASSADA = 0.72; // m por meio ciclo de passo
 const PAUSA_DESTINO = 1.6; // s parado no destino
 const GIRO = 10; // quão rápido vira para a direção do passo
 
-type Fase = "sentado" | "indo" | "pausa" | "voltando";
+// sentado na própria mesa · viagem (ida, pausa, volta) · reunião (ida, sentado na sala, volta)
+type Fase = "sentado" | "indo" | "pausa" | "voltando" | "indoReuniao" | "naReuniao" | "voltandoReuniao";
 
 function semente(id: string) {
   let h = 0;
@@ -52,14 +53,16 @@ function girarPara(atual: number, alvo: number, k: number) {
 const PAPEL = new THREE.BoxGeometry(0.24, 0.32, 0.012);
 
 export function Boneco({
-  id, nome, cor, cadeira, estado, viagem, selecionado, onClick, onViagemFim,
+  id, nome, cor, cadeira, temMesa = true, estado, viagem, reuniao, selecionado, onClick, onViagemFim,
 }: {
   id: string;
   nome: string;
   cor: string;
-  cadeira: Vec2;
+  cadeira: Vec2; // onde o boneco fica quando não está andando (a cadeira da mesa, ou a entrada para quem não tem mesa)
+  temMesa?: boolean; // sem mesa: só aparece enquanto vai, fica ou volta da reunião ou de uma viagem
   estado: EstadoAgente;
   viagem: Viagem | null;
+  reuniao: LugarReuniao | null;
   selecionado: boolean;
   onClick: () => void;
   onViagemFim: (viagemId: string) => void;
@@ -76,20 +79,35 @@ export function Boneco({
   const fase = useRef<Fase>("sentado");
   const dist = useRef(0);
   const pausa = useRef(0);
+  const caminho = useRef<Vec2[]>([]);
   const acum = useRef<number[]>([0]);
   const viagemAtual = useRef<Viagem | null>(null);
-  const [andando, setAndando] = useState(false);
+  const viagemFeita = useRef<string | null>(null);
+  const reuniaoAtual = useRef<LugarReuniao | null>(null);
+  // as props mais recentes, lidas dentro do useFrame
+  const viagemProp = useRef(viagem);
+  const reuniaoProp = useRef(reuniao);
+  useEffect(() => { viagemProp.current = viagem; }, [viagem]);
+  useEffect(() => { reuniaoProp.current = reuniao; }, [reuniao]);
+  // legenda e visibilidade só mudam nas trocas de fase (não a cada quadro)
+  const [legendaFora, setLegendaFora] = useState<string | null>(null);
+  const [fora, setFora] = useState(false);
 
-  // Nova viagem: levanta e começa a andar a partir da cadeira.
-  useEffect(() => {
-    if (viagem && viagemAtual.current?.id !== viagem.id) {
-      viagemAtual.current = viagem;
-      acum.current = medir(viagem.caminho);
-      dist.current = 0;
-      fase.current = "indo";
-      setAndando(true);
-    }
-  }, [viagem]);
+  const comecar = (novaFase: Fase, rota: Vec2[], legenda: string) => {
+    fase.current = novaFase;
+    caminho.current = rota;
+    acum.current = medir(rota);
+    dist.current = 0;
+    setLegendaFora(legenda);
+    setFora(true);
+  };
+  const sentarEmCasa = () => {
+    fase.current = "sentado";
+    viagemAtual.current = null;
+    reuniaoAtual.current = null;
+    setLegendaFora(null);
+    setFora(false);
+  };
 
   useFrame(({ clock }, dtBruto) => {
     const g = raiz.current;
@@ -97,19 +115,78 @@ export function Boneco({
     if (!g) return;
     const dt = Math.min(dtBruto, 0.1); // aba em segundo plano: não teleporta ao voltar
     const t = clock.elapsedTime + (s % 100) * 0.13;
-    const v = viagemAtual.current;
     const trabalhando = estado.status === "trabalhando";
 
-    if (fase.current === "sentado" || !v) {
-      g.position.set(cadeira[0], 0, cadeira[1]);
-      g.rotation.y = Math.PI; // de frente para o monitor
-      poseSentado(j, trabalhando ? "digitando" : "relaxado", t);
+    // Na mesa: a reunião tem prioridade; depois, a próxima viagem da fila.
+    if (fase.current === "sentado") {
+      const r = reuniaoProp.current;
+      const v = viagemProp.current;
+      if (r && r.caminho.length > 1) {
+        reuniaoAtual.current = r;
+        comecar("indoReuniao", r.caminho, `em reunião: ${r.titulo}`);
+      } else if (v && v.id !== viagemFeita.current && v.caminho.length > 1) {
+        viagemAtual.current = v;
+        comecar("indo", v.caminho, v.rotulo);
+      } else {
+        g.visible = temMesa;
+        g.position.set(cadeira[0], 0, cadeira[1]);
+        g.rotation.y = Math.PI; // de frente para o monitor
+        poseSentado(j, trabalhando ? "digitando" : "relaxado", t);
+        if (papel.current) papel.current.visible = false;
+        if (rotulo.current) rotulo.current.position.y = 1.95;
+        return;
+      }
+    }
+    g.visible = true;
+    const total = acum.current[acum.current.length - 1];
+
+    // ---- reunião ----
+    if (fase.current === "indoReuniao" || fase.current === "naReuniao" || fase.current === "voltandoReuniao") {
+      const alvo = reuniaoProp.current;
+      const atual = reuniaoAtual.current;
+      const mesma = !!alvo && !!atual && alvo.chave === atual.chave;
+      if (fase.current !== "voltandoReuniao" && !mesma) {
+        // a reunião acabou (ou mudou de cadeira): volta para a mesa pelo mesmo caminho
+        if (fase.current === "naReuniao") dist.current = total;
+        fase.current = "voltandoReuniao";
+        setLegendaFora("voltando da reunião");
+      } else if (fase.current === "voltandoReuniao" && mesma) {
+        fase.current = "indoReuniao"; // recomeçou antes de chegar à mesa
+        setLegendaFora(`em reunião: ${atual!.titulo}`);
+      }
+
+      if (fase.current === "naReuniao") {
+        g.position.set(atual!.assento[0], 0, atual!.assento[1]);
+        g.rotation.y = girarPara(g.rotation.y, atual!.rotacao, 1 - Math.exp(-GIRO * dt));
+        poseSentado(j, (s + Math.floor(t / 9)) % 3 === 0 ? "lendo" : "relaxado", t);
+        if (papel.current) papel.current.visible = false;
+        if (rotulo.current) rotulo.current.position.y = 1.95;
+        return;
+      }
+      if (fase.current === "indoReuniao") {
+        dist.current += VELOCIDADE * dt;
+        if (dist.current >= total) {
+          dist.current = total;
+          fase.current = "naReuniao";
+        }
+      } else {
+        dist.current -= VELOCIDADE * dt;
+        if (dist.current <= 0) {
+          sentarEmCasa();
+          return;
+        }
+      }
+      andar(g, j, fase.current === "voltandoReuniao" ? -1 : 1, false, dt);
       if (papel.current) papel.current.visible = false;
-      if (rotulo.current) rotulo.current.position.y = 1.95;
       return;
     }
 
-    const total = acum.current[acum.current.length - 1];
+    // ---- viagem (documento, demanda, buscar decisão) ----
+    const v = viagemAtual.current;
+    if (!v) {
+      sentarEmCasa();
+      return;
+    }
     if (fase.current === "indo") {
       dist.current += VELOCIDADE * dt;
       if (dist.current >= total) {
@@ -123,40 +200,47 @@ export function Boneco({
     } else if (fase.current === "voltando") {
       dist.current -= VELOCIDADE * dt;
       if (dist.current <= 0) {
-        fase.current = "sentado";
-        viagemAtual.current = null;
-        setAndando(false);
+        viagemFeita.current = v.id;
+        sentarEmCasa();
         onViagemFim(v.id);
         return;
       }
     }
-
-    const { p, dir } = pontoEm(v.caminho, acum.current, dist.current);
-    g.position.set(p[0], 0, p[1]);
-    const sentido = fase.current === "voltando" ? -1 : 1;
-    if (fase.current !== "pausa" && (dir[0] !== 0 || dir[1] !== 0)) {
-      const alvo = Math.atan2(dir[0] * sentido, dir[1] * sentido);
-      g.rotation.y = girarPara(g.rotation.y, alvo, 1 - Math.exp(-GIRO * dt));
-    }
     // leva o papel na ida (documento/demanda) ou na volta (buscar decisão)
     const levando = (v.tipo !== "buscar" && fase.current === "indo") || (v.tipo === "buscar" && fase.current === "voltando");
     if (papel.current) papel.current.visible = levando;
-    if (fase.current === "pausa") poseConversando(j, t);
-    else poseAndando(j, (dist.current / PASSADA) * Math.PI, levando);
+    if (fase.current === "pausa") {
+      const { p } = pontoEm(caminho.current, acum.current, dist.current);
+      g.position.set(p[0], 0, p[1]);
+      poseConversando(j, t);
+    } else {
+      andar(g, j, fase.current === "voltando" ? -1 : 1, levando, dt);
+    }
     if (rotulo.current) rotulo.current.position.y = 2.12;
   });
+
+  // Um passo no caminho atual: posição, giro para a direção do passo e pose de caminhada.
+  function andar(g: THREE.Group, j: Juntas, sentido: 1 | -1, levando: boolean, dt: number) {
+    const { p, dir } = pontoEm(caminho.current, acum.current, dist.current);
+    g.position.set(p[0], 0, p[1]);
+    if (dir[0] !== 0 || dir[1] !== 0) {
+      const alvo = Math.atan2(dir[0] * sentido, dir[1] * sentido);
+      g.rotation.y = girarPara(g.rotation.y, alvo, 1 - Math.exp(-GIRO * dt));
+    }
+    poseAndando(j, (dist.current / PASSADA) * Math.PI, levando);
+    if (rotulo.current) rotulo.current.position.y = 2.12;
+  }
 
   useFrame(({ clock }) => {
     if (anel.current) anel.current.scale.setScalar(1 + Math.sin(clock.elapsedTime * 4) * 0.06);
   });
 
   const corStatus = estado.status === "trabalhando" ? "#2563eb" : estado.status === "erro" ? "#c0362c" : "#12805c";
-  const legenda = andando && viagemAtual.current
-    ? viagemAtual.current.rotulo
-    : estado.status === "trabalhando" ? estado.passo ?? estado.rotina ?? "trabalhando" : null;
+  const legenda = legendaFora ?? (estado.status === "trabalhando" ? estado.passo ?? estado.rotina ?? "trabalhando" : null);
+  const mostrar = temMesa || fora;
 
   return (
-    <group ref={raiz}
+    <group ref={raiz} visible={temMesa}
       onClick={(e) => { e.stopPropagation(); onClick(); }}
       onPointerOver={(e) => { e.stopPropagation(); document.body.style.cursor = "pointer"; }}
       onPointerOut={() => { document.body.style.cursor = ""; }}>
@@ -165,34 +249,36 @@ export function Boneco({
           <mesh ref={papel} geometry={PAPEL} material={mat("#fbfaf7", 0.9)} position={[0, 0.22, 0.36]} rotation-x={-1.1}
             visible={false} castShadow />
         } />
-      {selecionado && (
+      {selecionado && mostrar && (
         <mesh ref={anel} position={[0, 0.012, 0]} rotation-x={-Math.PI / 2}>
           <ringGeometry args={[0.45, 0.54, 40]} />
           <meshBasicMaterial color="#2563eb" transparent opacity={0.85} />
         </mesh>
       )}
       <group ref={rotulo} position={[0, 1.95, 0]}>
-        <Html center zIndexRange={[20, 0]}>
-          <div onClick={onClick}
-            style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, fontFamily: "system-ui", cursor: "pointer" }}>
-            <div style={{
-              display: "flex", alignItems: "center", gap: 5, padding: "2px 8px", borderRadius: 999, whiteSpace: "nowrap",
-              background: selecionado ? "#2563eb" : "rgba(255,255,255,0.95)", color: selecionado ? "#fff" : "#1b1f24",
-              fontSize: 12, fontWeight: 600, boxShadow: "0 1px 3px rgba(0,0,0,0.15)",
-            }}>
-              <span style={{ width: 7, height: 7, borderRadius: 999, background: corStatus }} />
-              {nome}
-            </div>
-            {legenda && (
+        {mostrar && (
+          <Html center zIndexRange={[20, 0]}>
+            <div onClick={onClick}
+              style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, fontFamily: "system-ui", cursor: "pointer" }}>
               <div style={{
-                maxWidth: 190, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 10.5,
-                padding: "1px 7px", borderRadius: 6, background: "rgba(13,17,23,0.85)", color: "#e3b341",
+                display: "flex", alignItems: "center", gap: 5, padding: "2px 8px", borderRadius: 999, whiteSpace: "nowrap",
+                background: selecionado ? "#2563eb" : "rgba(255,255,255,0.95)", color: selecionado ? "#fff" : "#1b1f24",
+                fontSize: 12, fontWeight: 600, boxShadow: "0 1px 3px rgba(0,0,0,0.15)",
               }}>
-                {legenda}
+                <span style={{ width: 7, height: 7, borderRadius: 999, background: corStatus }} />
+                {nome}
               </div>
-            )}
-          </div>
-        </Html>
+              {legenda && (
+                <div style={{
+                  maxWidth: 190, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 10.5,
+                  padding: "1px 7px", borderRadius: 6, background: "rgba(13,17,23,0.85)", color: "#e3b341",
+                }}>
+                  {legenda}
+                </div>
+              )}
+            </div>
+          </Html>
+        )}
       </group>
     </group>
   );

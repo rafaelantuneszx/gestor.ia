@@ -38,7 +38,7 @@ export type Viagem = {
 };
 
 // ---------- planta ----------
-// Prédio de 36 x 22 m visto de frente, em corte (sem a fachada da frente). Fileira do fundo: as salas
+// Prédio de 42 x 22 m visto de frente, em corte (sem a fachada da frente). Fileira do fundo: as salas
 // de trabalho, com as mesas encostadas no fundo e o agente de costas para a câmera, olhando o monitor.
 // No meio, o corredor. Na frente: a sua sala, a sala de reunião, o arquivo e a copa.
 
@@ -56,9 +56,10 @@ export const SETOR_COR: Record<string, string> = {
   suprimentos: "#D4537E",
   sistemas: "#D85A30",
   agenda: "#639922",
+  reunioes: "#64748b",
 };
 
-export const PREDIO = { x0: -18, x1: 18, z0: -11, z1: 11 };
+export const PREDIO = { x0: -18, x1: 24, z0: -11, z1: 11 };
 export const CORREDOR = { z0: -4, z1: 3 };
 export const CORREDOR_Z = -0.5; // linha por onde se anda no corredor
 export const ALTURA_PAREDE = 2.9;
@@ -85,14 +86,14 @@ const FRENTE = { z0: CORREDOR.z1, z1: PREDIO.z1 };
 export const SALAS: Sala[] = [
   { id: "direcao", nome: "Direção", cor: SETOR_COR.direcao, fileira: "fundo", x0: -18, x1: -10, ...FUNDO, porta: -10.9, piso: "madeira" },
   { id: "sistemas", nome: "Sistemas", cor: SETOR_COR.sistemas, fileira: "fundo", x0: -10, x1: 0, ...FUNDO, porta: -0.9, piso: "madeira" },
-  { id: "financeiro", nome: "Financeiro", cor: SETOR_COR.financeiro, fileira: "fundo", x0: 0, x1: 5, ...FUNDO, porta: 4.1, piso: "madeira" },
-  { id: "custos", nome: "Custos e Contratos", cor: SETOR_COR.custos, fileira: "fundo", x0: 5, x1: 10, ...FUNDO, porta: 9.1, piso: "madeira" },
-  { id: "frota-rh", nome: "Frota e RH", cor: SETOR_COR["frota-rh"], fileira: "fundo", x0: 10, x1: 14, ...FUNDO, porta: 13.1, piso: "madeira" },
-  { id: "suprimentos", nome: "Suprimentos", cor: SETOR_COR.suprimentos, fileira: "fundo", x0: 14, x1: 18, ...FUNDO, porta: 17.1, piso: "madeira" },
+  { id: "financeiro", nome: "Financeiro", cor: SETOR_COR.financeiro, fileira: "fundo", x0: 0, x1: 9.2, ...FUNDO, porta: 8.3, piso: "madeira" },
+  { id: "custos", nome: "Custos e Contratos", cor: SETOR_COR.custos, fileira: "fundo", x0: 9.2, x1: 16, ...FUNDO, porta: 15.1, piso: "madeira" },
+  { id: "frota-rh", nome: "Frota e RH", cor: SETOR_COR["frota-rh"], fileira: "fundo", x0: 16, x1: 20, ...FUNDO, porta: 19.1, piso: "madeira" },
+  { id: "suprimentos", nome: "Suprimentos", cor: SETOR_COR.suprimentos, fileira: "fundo", x0: 20, x1: 24, ...FUNDO, porta: 23.1, piso: "madeira" },
   { id: "rafael", nome: "Sala do Rafael", cor: "#b8875a", fileira: "frente", x0: -18, x1: -8, ...FRENTE, porta: -9.0, faixa: 7.4, piso: "carpete-quente" },
   { id: "reuniao", nome: "Sala de reunião", cor: "#4b5563", fileira: "frente", x0: -8, x1: 4, ...FRENTE, porta: -7.1, faixa: 9.6, piso: "carpete" },
-  { id: "arquivo", nome: "Arquivo", cor: "#888780", fileira: "frente", x0: 4, x1: 13, ...FRENTE, porta: 4.8, faixa: 5.3, piso: "madeira" },
-  { id: "copa", nome: "Copa", cor: "#0f766e", fileira: "frente", x0: 13, x1: 18, ...FRENTE, porta: 13.9, faixa: 5.0, piso: "porcelanato" },
+  { id: "arquivo", nome: "Arquivo", cor: "#888780", fileira: "frente", x0: 4, x1: 16, ...FRENTE, porta: 4.8, faixa: 5.3, piso: "madeira" },
+  { id: "copa", nome: "Copa", cor: "#0f766e", fileira: "frente", x0: 16, x1: 24, ...FRENTE, porta: 16.9, faixa: 5.0, piso: "porcelanato" },
 ];
 
 export const SALA = Object.fromEntries(SALAS.map((s) => [s.id, s])) as Record<string, Sala>;
@@ -107,10 +108,15 @@ export const MESAS: Record<string, Vec2> = {
   "otavio-pavimax": [-6.2, MESA_Z],
   "lucia-financeiro": [-4.0, MESA_Z],
   "paulo-rh": [-1.8, MESA_Z],
-  "bruno-financeiro": [2.2, MESA_Z],
-  "marina-custos": [7.2, MESA_Z],
-  "sofia-adm-rh-frota": [11.9, MESA_Z],
-  "caio-suprimentos": [15.9, MESA_Z],
+  "bruno-financeiro": [1.3, MESA_Z],
+  "davi-faturas": [3.5, MESA_Z],
+  "igor-folha-financeiro": [5.7, MESA_Z],
+  "beatriz-fiscal": [7.9, MESA_Z],
+  "marina-custos": [10.4, MESA_Z],
+  "henrique-analise-custos": [12.6, MESA_Z],
+  "laura-calculos-custos": [14.8, MESA_Z],
+  "sofia-adm-rh-frota": [17.9, MESA_Z],
+  "caio-suprimentos": [21.9, MESA_Z],
 };
 
 // Sua sala: a mesa fica de frente para a câmera; você senta atrás dela (z menor), olhando para nós.
@@ -132,9 +138,18 @@ export function cadeira(agente: string): Vec2 {
   return [m[0], m[1] + 0.7];
 }
 
+// Uma estante por setor, com o passo normal enquanto couber; com setores demais, elas estreitam para caber na sala.
+const ARQUIVO_LIVRE: [number, number] = [ARQUIVO_X0 - 0.5, SALA.arquivo.x1 - 1.0];
+const ARQUIVO_CABEM = Math.floor((ARQUIVO_LIVRE[1] - ARQUIVO_LIVRE[0] + 0.1) / ARQUIVO_PASSO);
+export function estante(i: number, n: number): { x: number; escala: number } {
+  if (n <= ARQUIVO_CABEM) return { x: ARQUIVO_X0 + i * ARQUIVO_PASSO, escala: 1 };
+  const passo = (ARQUIVO_LIVRE[1] - ARQUIVO_LIVRE[0]) / n;
+  return { x: ARQUIVO_LIVRE[0] + passo * (i + 0.5), escala: Math.min(1, passo - 0.08) };
+}
+
 export function prateleira(setores: SetorInfo[], setor: string): Vec2 {
   const i = Math.max(0, setores.findIndex((s) => s.id === setor));
-  return [ARQUIVO_X0 + i * ARQUIVO_PASSO, ARQUIVO_Z];
+  return [estante(i, setores.length).x, ARQUIVO_Z];
 }
 
 export function salaDoPonto(p: Vec2): Sala | null {
@@ -165,6 +180,71 @@ function destinoAgente(id: string): Vec2 {
   if (id === "rafael") return VISITA_RAFAEL;
   const c = cadeira(id);
   return [c[0] + 0.85, c[1] + 0.15]; // ao lado da cadeira do colega
+}
+
+// ---------- reuniões ----------
+// Cadeiras da mesa de reunião (no chão) e para onde o boneco fica virado ao sentar (rotação y do boneco:
+// 0 olha para +z, π para -z). A primeira é a cabeceira perto da porta, para quem convocou.
+const [RX, RZ] = MESA_REUNIAO;
+const LADO_A = RZ - 1.0; // lado da TV
+const LADO_B = RZ + 1.0; // lado de quem olha a TV
+export const ASSENTOS_REUNIAO: { p: Vec2; rotacao: number }[] = [
+  { p: [RX - 2.85, RZ], rotacao: Math.PI / 2 },
+  ...[-1.65, -0.55, 0.55, 1.65].flatMap((dx) => [
+    { p: [RX + dx, LADO_B] as Vec2, rotacao: Math.PI },
+    { p: [RX + dx, LADO_A] as Vec2, rotacao: 0 },
+  ]),
+  { p: [RX + 2.85, RZ], rotacao: -Math.PI / 2 },
+];
+const PASSAGEM_TV = 5.2; // entre o aparador da TV e as cadeiras do lado A
+
+// Quem não tem mesa no escritório (agentes novos) chega pelo fim do corredor.
+export const ENTRADA: Vec2 = [PREDIO.x1 - 0.6, CORREDOR_Z];
+export function casa(agente: string): Vec2 {
+  return MESAS[agente] ? cadeira(agente) : ENTRADA;
+}
+
+// Da mesa até a cadeira da reunião: sai pela porta, anda no corredor, entra na sala de reunião e
+// contorna a mesa pela passagem do lado certo (lado A pela frente da TV, lado B pelo fundo).
+export function rotaReuniao(de: Vec2, assento: Vec2): Vec2[] {
+  const sala = SALA.reuniao;
+  const ate = rota(de, [sala.porta, CORREDOR_Z]);
+  const faixa = assento[1] > RZ ? sala.faixa : PASSAGEM_TV;
+  const pts: Vec2[] = [...ate, [sala.porta, faixa], [assento[0], faixa], assento];
+  return pts.filter((p, i) => i === 0 || p[0] !== pts[i - 1][0] || p[1] !== pts[i - 1][1]);
+}
+
+export type LugarReuniao = {
+  chave: string; // reunião + cadeira: se mudar, o boneco volta e vai de novo
+  reuniaoId: number;
+  titulo: string;
+  assento: Vec2;
+  rotacao: number;
+  caminho: Vec2[];
+};
+
+// Distribui as cadeiras entre quem está em reunião agora (uma cadeira por agente, quem convocou primeiro).
+export function lugaresReuniao(
+  reunioes: { id: number; titulo: string; convocada_por: string; participantes: string[] }[],
+  existe: (agente: string) => boolean,
+): Record<string, LugarReuniao> {
+  const out: Record<string, LugarReuniao> = {};
+  let k = 0;
+  for (const r of reunioes) {
+    for (const a of [r.convocada_por, ...(r.participantes ?? [])]) {
+      if (out[a] || !existe(a) || k >= ASSENTOS_REUNIAO.length) continue;
+      const lugar = ASSENTOS_REUNIAO[k++];
+      out[a] = {
+        chave: `${r.id}:${k}`,
+        reuniaoId: r.id,
+        titulo: r.titulo,
+        assento: lugar.p,
+        rotacao: lugar.rotacao,
+        caminho: rotaReuniao(casa(a), lugar.p),
+      };
+    }
+  }
+  return out;
 }
 
 // ---------- eventos → estado e viagens ----------

@@ -6,8 +6,8 @@ import { Html } from "@react-three/drei";
 import * as THREE from "three";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 import {
-  ALTURA_PAREDE, ARQUIVO_PASSO, ARQUIVO_X0, ARQUIVO_Z, CADEIRA_RAFAEL, CORREDOR, MESA_RAFAEL, MESA_REUNIAO, PREDIO,
-  SALA, SALAS, SETOR_COR, TV,
+  ALTURA_PAREDE, ARQUIVO_Z, CADEIRA_RAFAEL, CORREDOR, MESA_RAFAEL, MESA_REUNIAO, PREDIO,
+  SALA, SALAS, SETOR_COR, TV, estante,
   type EstadoAgente, type Sala, type SetorInfo,
 } from "@/lib/escritorio/modelo";
 import { desenharTerminal, TELA_H, TELA_W } from "./terminal";
@@ -244,7 +244,7 @@ function Corredor() {
   const logo = texturaLogo();
   return (
     <group>
-      <Tapete posicao={[0, -0.5]} tamanho={[31, 1.7]} cor="#4b5059" borda="#31353b" />
+      <Tapete posicao={[(PREDIO.x0 + PREDIO.x1) / 2, -0.5]} tamanho={[PREDIO.x1 - PREDIO.x0 - 5, 1.7]} cor="#4b5059" borda="#31353b" />
       {/* recepção */}
       <group position={[-15.6, 0, 1.75]}>
         <Caixa p={[0, 0.53, 0]} s={[3.2, 1.06, 0.7]} m={mat("#f1efea", 0.5)} sombra recebe />
@@ -259,12 +259,13 @@ function Corredor() {
       <Planta posicao={[-17.4, -3.45]} tipo="baixa" semente={3} />
       <Planta posicao={[-6.0, -3.45]} semente={4} />
       <Planta posicao={[6.6, -3.45]} tipo="baixa" semente={5} />
-      <Planta posicao={[15.2, -3.45]} semente={6} />
+      <Planta posicao={[12.2, -3.45]} semente={6} />
+      <Planta posicao={[21.0, -3.45]} tipo="baixa" semente={9} />
       <Planta posicao={[-4.2, 2.5]} tipo="baixa" semente={7} />
       <Planta posicao={[10.7, 2.5]} semente={1} />
-      <Planta posicao={[17.4, 2.5]} tipo="baixa" semente={8} />
+      <Planta posicao={[PREDIO.x1 - 0.6, 2.5]} tipo="baixa" semente={8} />
       {/* bancos de espera */}
-      {[1.2, 15.5].map((x) => (
+      {[1.2, 13.2].map((x) => (
         <group key={x} position={[x, 0, 2.55]}>
           <Caixa p={[0, 0.44, 0]} s={[1.8, 0.06, 0.45]} m={mat("#7a5a40", 0.5)} sombra recebe />
           {[-0.8, 0.8].map((dx) => <Caixa key={dx} p={[dx, 0.21, 0]} s={[0.05, 0.42, 0.4]} m={acoPreto()} />)}
@@ -444,7 +445,7 @@ export function Arquivo({
   return (
     <group>
       {setores.map((st, i) => (
-        <Estante key={st.id} x={ARQUIVO_X0 + i * ARQUIVO_PASSO} setor={st} quantidade={contagem[st.id] ?? 0}
+        <Estante key={st.id} {...estante(i, setores.length)} setor={st} quantidade={contagem[st.id] ?? 0}
           onClick={() => onAbrir(st.id)} alturaRotulo={i % 2 ? 2.75 : 2.35} />
       ))}
       {/* mesa de consulta com caixas */}
@@ -463,9 +464,10 @@ export function Arquivo({
 }
 
 function Estante({
-  x, setor, quantidade, onClick, alturaRotulo,
+  x, escala = 1, setor, quantidade, onClick, alturaRotulo,
 }: {
   x: number;
+  escala?: number;
   setor: SetorInfo;
   quantidade: number;
   onClick: () => void;
@@ -478,7 +480,7 @@ function Estante({
   const pastas = Math.min(quantidade, PRAT * POR_PRAT);
   const madeira = mat(hover ? cor : "#5a4230", 0.55);
   return (
-    <group position={[x, 0, ARQUIVO_Z]}
+    <group position={[x, 0, ARQUIVO_Z]} scale={[escala, 1, 1]}
       onClick={(e) => { e.stopPropagation(); onClick(); }}
       onPointerOver={(e) => { e.stopPropagation(); setHover(true); document.body.style.cursor = "pointer"; }}
       onPointerOut={() => { setHover(false); document.body.style.cursor = ""; }}>
@@ -655,7 +657,8 @@ function Televisao({ painel }: { painel: PainelTV }) {
   const ultimo = useRef(painel);
   ultimo.current = painel;
 
-  // redesenha quando os dados mudam e a cada 20 s, para o relógio andar
+  // redesenha quando os dados mudam e a cada 20 s, para o relógio andar (a cada 1 s com reunião, pelo cronômetro)
+  const comReuniao = !!painel.reuniao && !painel.relogio;
   useEffect(() => {
     const desenhar = () => {
       const ctx = canvas.getContext("2d");
@@ -664,9 +667,9 @@ function Televisao({ painel }: { painel: PainelTV }) {
       textura.needsUpdate = true;
     };
     desenhar();
-    const t = setInterval(desenhar, 20000);
+    const t = setInterval(desenhar, comReuniao ? 1000 : 20000);
     return () => clearInterval(t);
-  }, [painel, canvas, textura]);
+  }, [painel, canvas, textura, comReuniao]);
 
   return (
     <group position={[TV.x, TV.y, TV.z]}>
@@ -716,7 +719,7 @@ function Copa() {
         </mesh>
       </group>
       {/* mesa alta com banquetas */}
-      <group position={[15.3, 0, 7.4]}>
+      <group position={[s.x0 + 2.3, 0, 7.4]}>
         <mesh position={[0, 1.05, 0]} material={mat("#efe9df", 0.35)} castShadow receiveShadow>
           <cylinderGeometry args={[0.45, 0.45, 0.04, 32]} />
         </mesh>
