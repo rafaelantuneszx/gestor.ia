@@ -4,6 +4,10 @@
 //   ELEVENLABS_API_KEY=... node scripts/vozes-elevenlabs.mjs            escolhe e grava
 //   ELEVENLABS_API_KEY=... node scripts/vozes-elevenlabs.mjs --listar   só mostra as opções, com o link da amostra
 //
+// Plano grátis: a API não usa vozes da biblioteca. Por isso o mapa atual usa as vozes padrão da ElevenLabs
+// (multilíngues, falam português); as escolhas da biblioteca ficam em scripts/vozes-biblioteca-plano-pago.json.
+// Com plano pago: cp scripts/vozes-biblioteca-plano-pago.json src/lib/vozes-reais.json e rode este script.
+//
 // Para trocar a voz de alguém: rode de novo com --trocar <agente> (pega a próxima opção da lista) ou escolha à mão com
 // --usar agente=<voice_id da biblioteca>[,agente=<voice_id>...]. Uma escolha que o plano não libera fica em "desejada"
 // no JSON e é aplicada na próxima rodada.
