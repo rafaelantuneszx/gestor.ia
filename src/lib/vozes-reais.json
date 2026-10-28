@@ -57,7 +57,13 @@
     "voice_id": "WFSxKvz27RguNRD3Phoq",
     "nome": "Wesley Bessa - Narration Storyteller",
     "origem": "WFSxKvz27RguNRD3Phoq",
-    "preview_url": "https://storage.googleapis.com/eleven-public-prod/database/workspace/a1e4d296920843238c86463764269203/voices/WFSxKvz27RguNRD3Phoq/0jtAjFpnvgjhrcCjPV1Q.mp3"
+    "preview_url": "https://storage.googleapis.com/eleven-public-prod/database/workspace/a1e4d296920843238c86463764269203/voices/WFSxKvz27RguNRD3Phoq/0jtAjFpnvgjhrcCjPV1Q.mp3",
+    "desejada": {
+      "origem": "lvkgCBi6spByiTZMPJEK",
+      "nome": "Gabriel",
+      "public_owner_id": "695123f7b1a8ef0f0869ac6e3ffd5b2be1af46d4f9be19f5847178865912c795",
+      "preview_url": "https://storage.googleapis.com/eleven-public-prod/database/workspace/de492322bd704062958833a36075b9f6/voices/lvkgCBi6spByiTZMPJEK/LTIeFq0rp5CdmNbV6DLO.mp3"
+    }
   },
   "davi-faturas": {
     "voice_id": "F7823wtD50WK1gnmgBk5",
@@ -72,10 +78,10 @@
     "preview_url": "https://storage.googleapis.com/eleven-public-prod/custom/voices/36rVQA1AOIPwpA3Hg1tC/ewP6z1S1gE5Mb9nBSNaV.mp3"
   },
   "beatriz-fiscal": {
-    "voice_id": "33B4UnXyTNbgLmdEDh5P",
-    "nome": "Keren - Sweet, Vibrant and Rhythmic",
-    "origem": "33B4UnXyTNbgLmdEDh5P",
-    "preview_url": "https://storage.googleapis.com/eleven-public-prod/custom/voices/33B4UnXyTNbgLmdEDh5P/ArnzDsFaz6KDoDcDD8V2.mp3"
+    "voice_id": "mPDAoQyGzxBSkE0OAOKw",
+    "nome": "Carla - Energetic and Confident",
+    "origem": "mPDAoQyGzxBSkE0OAOKw",
+    "preview_url": "https://api.us.elevenlabs.io/v1/voices/mPDAoQyGzxBSkE0OAOKw/previews/audio?payload=eyJ2b2ljZV9zb3VyY2UiOiJjdXN0b20iLCJ3b3Jrc3BhY2VfaWQiOiIzZTJlODg4MGMxOTU0ZGFlODM1NWFkYWY1ZWNhZjY0YSIsImZpbGVuYW1lIjoiWG9nVERYbmJuSjlQMHZWclpHV2subXAzIiwidGltZXN0YW1wIjoxNzkzMTg4ODAwMDAwMDAwfQ%3D%3D"
   },
   "henrique-analise-custos": {
     "voice_id": "Qrdut83w0Cr152Yb4Xn3",

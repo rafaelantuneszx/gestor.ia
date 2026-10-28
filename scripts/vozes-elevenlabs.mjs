@@ -5,7 +5,8 @@
 //   ELEVENLABS_API_KEY=... node scripts/vozes-elevenlabs.mjs --listar   só mostra as opções, com o link da amostra
 //
 // Para trocar a voz de alguém: rode de novo com --trocar <agente> (pega a próxima opção da lista) ou escolha à mão com
-// --usar agente=<voice_id da biblioteca>[,agente=<voice_id>...].
+// --usar agente=<voice_id da biblioteca>[,agente=<voice_id>...]. Uma escolha que o plano não libera fica em "desejada"
+// no JSON e é aplicada na próxima rodada.
 import { readFileSync, writeFileSync } from "node:fs";
 
 const CHAVE = process.env.ELEVENLABS_API_KEY;
@@ -85,6 +86,18 @@ const usadas = new Set(Object.values(atual).map((v) => v.origem));
 const bloqueadas = new Set(); // vozes que o plano atual não libera
 const minhas = (await api("/voices")).voices ?? [];
 const novo = { ...atual };
+// escolhas que o plano grátis bloqueou ("desejada"): tenta de novo, agora que o plano pode ter mudado
+for (const [id, nome] of AGENTES) {
+  const d = novo[id]?.desejada;
+  if (!d) continue;
+  try {
+    const r = await api(`/voices/add/${d.public_owner_id}/${d.origem}`, { method: "POST", body: JSON.stringify({ new_name: `GIA ${nome} 2` }) });
+    novo[id] = { voice_id: r.voice_id, nome: d.nome, origem: d.origem, preview_url: d.preview_url };
+    console.log(`${nome.padEnd(9)} → ${d.nome} (escolha pendente aplicada)`);
+  } catch (e) {
+    console.log(`${nome.padEnd(9)} → ${d.nome} ainda bloqueada: ${String(e).slice(0, 120)}`);
+  }
+}
 for (const [id, nome, genero, idade] of AGENTES) {
   const escolhida = usar[id];
   if (novo[id] && id !== trocar && !escolhida) continue;
