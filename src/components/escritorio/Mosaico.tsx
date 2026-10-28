@@ -48,8 +48,12 @@ export function Mosaico({ visoes, topo, porQuadro = 2 }: { visoes: string[]; top
     });
     const tela = new THREE.Scene();
     const orto = new THREE.OrthographicCamera(0, 1, 0, 1, -1, 1);
+    // DoubleSide: a câmera ortográfica tem o eixo y invertido (top 0, bottom altura), o que vira a face dos quadros
+    // para trás; com FrontSide eles eram descartados e as visões ficavam pretas.
     const quadros = alvos.map((rt) => {
-      const m = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: rt.texture, toneMapped: false }));
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(1, 1),
+        new THREE.MeshBasicMaterial({ map: rt.texture, toneMapped: false, side: THREE.DoubleSide }));
+      m.frustumCulled = false;
       tela.add(m);
       return m;
     });
