@@ -4,8 +4,8 @@
 //   ELEVENLABS_API_KEY=... node scripts/vozes-elevenlabs.mjs            escolhe e grava
 //   ELEVENLABS_API_KEY=... node scripts/vozes-elevenlabs.mjs --listar   só mostra as opções, com o link da amostra
 //
-// Para trocar a voz de alguém: edite o voice_id no JSON (pegue na biblioteca da ElevenLabs) ou rode de novo com
-// --trocar <agente>, que pega a próxima opção da lista.
+// Para trocar a voz de alguém: rode de novo com --trocar <agente> (pega a próxima opção da lista) ou escolha à mão com
+// --usar agente=<voice_id da biblioteca>[,agente=<voice_id>...].
 import { readFileSync, writeFileSync } from "node:fs";
 
 const CHAVE = process.env.ELEVENLABS_API_KEY;
@@ -66,6 +66,8 @@ async function opcoes(genero) {
 const args = process.argv.slice(2);
 const listar = args.includes("--listar");
 const trocar = args.includes("--trocar") ? args[args.indexOf("--trocar") + 1] : null;
+const usar = Object.fromEntries((args.includes("--usar") ? args[args.indexOf("--usar") + 1] : "")
+  .split(",").filter(Boolean).map((par) => par.split("=")));
 
 const atual = JSON.parse(readFileSync(ARQUIVO, "utf8"));
 const porGenero = { female: await opcoes("female"), male: await opcoes("male") };
@@ -80,24 +82,46 @@ if (listar) {
 }
 
 const usadas = new Set(Object.values(atual).map((v) => v.origem));
+const bloqueadas = new Set(); // vozes que o plano atual não libera
 const minhas = (await api("/voices")).voices ?? [];
 const novo = { ...atual };
 for (const [id, nome, genero, idade] of AGENTES) {
-  if (novo[id] && id !== trocar) continue;
-  const lista = porGenero[genero];
-  const v = lista.find((x) => !usadas.has(x.voice_id) && x.age === idade) ?? lista.find((x) => !usadas.has(x.voice_id));
-  if (!v) {
-    console.log(`sem voz disponível para ${nome}`);
-    continue;
-  }
-  usadas.add(v.voice_id);
+  const escolhida = usar[id];
+  if (novo[id] && id !== trocar && !escolhida) continue;
   const rotulo = `GIA ${nome}`;
   const existente = minhas.find((m) => m.name === rotulo);
-  let voiceId;
-  if (existente && id !== trocar) voiceId = existente.voice_id;
-  else voiceId = (await api(`/voices/add/${v.public_owner_id}/${v.voice_id}`, { method: "POST", body: JSON.stringify({ new_name: rotulo }) })).voice_id;
-  novo[id] = { voice_id: voiceId, nome: v.name, origem: v.voice_id, preview_url: v.preview_url };
-  console.log(`${nome.padEnd(9)} → ${v.name} (${v.age ?? "?"}, ${v.accent ?? "?"})  amostra: ${v.preview_url}`);
+  const lista = porGenero[genero];
+  // já adicionada numa rodada anterior: reaproveita (a não ser que seja para trocar)
+  if (existente && id !== trocar) {
+    const origem = lista.find((x) => x.voice_id === escolhida) ?? lista.find((x) => x.name && existente.name === rotulo && x.voice_id === novo[id]?.origem);
+    novo[id] = { voice_id: existente.voice_id, nome: origem?.name ?? novo[id]?.nome ?? rotulo, origem: origem?.voice_id ?? novo[id]?.origem ?? "", preview_url: origem?.preview_url ?? novo[id]?.preview_url };
+    if (origem) usadas.add(origem.voice_id);
+    console.log(`${nome.padEnd(9)} → ${novo[id].nome} (já estava na conta)`);
+    writeFileSync(ARQUIVO, JSON.stringify(novo, null, 2) + "\n");
+    continue;
+  }
+  const livres = (x) => !usadas.has(x.voice_id) && !bloqueadas.has(x.voice_id);
+  const candidatas = [
+    ...lista.filter((x) => x.voice_id === escolhida),
+    ...lista.filter((x) => livres(x) && x.age === idade),
+    ...lista.filter((x) => livres(x) && x.age !== idade),
+  ];
+  let feito = false;
+  for (const v of candidatas.slice(0, 15)) {
+    try {
+      const voiceId = (await api(`/voices/add/${v.public_owner_id}/${v.voice_id}`, { method: "POST", body: JSON.stringify({ new_name: rotulo }) })).voice_id;
+      usadas.add(v.voice_id);
+      novo[id] = { voice_id: voiceId, nome: v.name, origem: v.voice_id, preview_url: v.preview_url };
+      console.log(`${nome.padEnd(9)} → ${v.name} (${v.age ?? "?"}, ${v.accent ?? "?"})${v.voice_id === escolhida || !escolhida ? "" : " [substituta]"}  amostra: ${v.preview_url}`);
+      writeFileSync(ARQUIVO, JSON.stringify(novo, null, 2) + "\n");
+      feito = true;
+      break;
+    } catch (e) {
+      bloqueadas.add(v.voice_id);
+      if (!/paid_plan_required|free_users_not_allowed/.test(String(e))) console.log(`  ${v.name}: ${String(e).slice(0, 160)}`);
+    }
+  }
+  if (!feito) console.log(`${nome.padEnd(9)} → sem voz liberada no plano atual`);
 }
 writeFileSync(ARQUIVO, JSON.stringify(novo, null, 2) + "\n");
 console.log(`\nmapa gravado em src/lib/vozes-reais.json (${Object.keys(novo).length} agentes)`);

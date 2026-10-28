@@ -1,1 +1,98 @@
-{}
+{
+  "helena": {
+    "voice_id": "7iqXtOF3wl3pomwXFY7G",
+    "nome": "Fernanda - Formal, Polite and Direct",
+    "origem": "7iqXtOF3wl3pomwXFY7G",
+    "preview_url": "https://storage.googleapis.com/eleven-public-prod/database/user/BAqGwxf43saRGWZUvf1nwRV90pF3/voices/7iqXtOF3wl3pomwXFY7G/fh2csCFsxKrzB0zHZIY0.mp3"
+  },
+  "ricardo-diretor-sistemas": {
+    "voice_id": "TY3h8ANhQUsJaa0Bga5F",
+    "nome": "Cassio Cruz - Confident and Direct",
+    "origem": "TY3h8ANhQUsJaa0Bga5F",
+    "preview_url": "https://storage.googleapis.com/eleven-public-prod/database/user/zS4znyN2fGapbm3981qXAck20x23/voices/TY3h8ANhQUsJaa0Bga5F/9uB5cwJ7SkMFXfVqrFQV.mp3"
+  },
+  "lucia-financeiro": {
+    "voice_id": "cyD08lEy76q03ER1jZ7y",
+    "nome": "Scheila - Serious and Direct",
+    "origem": "cyD08lEy76q03ER1jZ7y",
+    "preview_url": "https://storage.googleapis.com/eleven-public-prod/UfR91GZFReU9KE7HWeOrpPEKpG73/voices/cyD08lEy76q03ER1jZ7y/4cb10850-1932-48bf-a88d-600839c19c80.mp3"
+  },
+  "otavio-pavimax": {
+    "voice_id": "bJrNspxJVFovUxNBQ0wh",
+    "nome": "Marcelo Costa - Articulate and Balanced",
+    "origem": "bJrNspxJVFovUxNBQ0wh",
+    "preview_url": "https://storage.googleapis.com/eleven-public-prod/custom/voices/bJrNspxJVFovUxNBQ0wh/k1wJc8R1M5yWiJpx9fBm.mp3"
+  },
+  "paulo-rh": {
+    "voice_id": "5p9IbzcK4R8rN1fpGdMF",
+    "nome": "Davi - Friendly, Warm and Diplomatic",
+    "origem": "5p9IbzcK4R8rN1fpGdMF",
+    "preview_url": "https://storage.googleapis.com/eleven-public-prod/custom/voices/5p9IbzcK4R8rN1fpGdMF/nYf5UhxkV9NCj9RgrR5Q.mp3"
+  },
+  "clara-assistente": {
+    "voice_id": "RGymW84CSmfVugnA5tvA",
+    "nome": "Roberta - Smooth and Confident",
+    "origem": "RGymW84CSmfVugnA5tvA",
+    "preview_url": "https://storage.googleapis.com/eleven-public-prod/database/workspace/d2d6d8fb79be40a2a3a1599d78da8346/voices/RGymW84CSmfVugnA5tvA/3vmILerGd3NQICCWM4Wa.mp3"
+  },
+  "marina-custos": {
+    "voice_id": "GDzHdQOi6jjf8zaXhCYD",
+    "nome": "Raquel - Expressive and Energetic",
+    "origem": "GDzHdQOi6jjf8zaXhCYD",
+    "preview_url": "https://storage.googleapis.com/eleven-public-prod/database/user/t1nBFVlw8ahi8WVJ0bXtyohGNAI2/voices/GDzHdQOi6jjf8zaXhCYD/LCt0ufE4oVO5zb1QbhsQ.mp3"
+  },
+  "bruno-financeiro": {
+    "voice_id": "xWdpADtEio43ew1zGxUQ",
+    "nome": "Matheus Santos - Friendly and Calm",
+    "origem": "xWdpADtEio43ew1zGxUQ",
+    "preview_url": "https://api.us.elevenlabs.io/v1/voices/xWdpADtEio43ew1zGxUQ/previews/audio?payload=eyJ2b2ljZV9zb3VyY2UiOiJjdXN0b20iLCJ1c2VyX2lkIjoiTmFWOWlWOWRSVVpGR2t1T1NXZ1hYc0dKODByMSIsImZpbGVuYW1lIjoiNDFkZTQ4MDEtY2Q3Yi00MmUyLTkyMmMtMzk1N2NmOTQ0MWU1Lm1wMyIsInRpbWVzdGFtcCI6MTc5MzE4ODgwMDAwMDAwMH0%3D"
+  },
+  "sofia-adm-rh-frota": {
+    "voice_id": "GM2UA3fbsIaLHcswCDX9",
+    "nome": "Nina M.",
+    "origem": "GM2UA3fbsIaLHcswCDX9",
+    "preview_url": "https://api.us.elevenlabs.io/v1/voices/GM2UA3fbsIaLHcswCDX9/previews/audio?payload=eyJ2b2ljZV9zb3VyY2UiOiJjdXN0b20iLCJ3b3Jrc3BhY2VfaWQiOiIxNzJhZjBiYTBjMjM0YzNhYWVhZGExZDFlYWIyYzBmMSIsImZpbGVuYW1lIjoieFFDZzNuTUw2bklPV2tTNlY2amoubXAzIiwidGltZXN0YW1wIjoxNzkzMTg4ODAwMDAwMDAwfQ%3D%3D"
+  },
+  "caio-suprimentos": {
+    "voice_id": "WFSxKvz27RguNRD3Phoq",
+    "nome": "Wesley Bessa - Narration Storyteller",
+    "origem": "WFSxKvz27RguNRD3Phoq",
+    "preview_url": "https://storage.googleapis.com/eleven-public-prod/database/workspace/a1e4d296920843238c86463764269203/voices/WFSxKvz27RguNRD3Phoq/0jtAjFpnvgjhrcCjPV1Q.mp3"
+  },
+  "davi-faturas": {
+    "voice_id": "F7823wtD50WK1gnmgBk5",
+    "nome": "Matheus Moretti - Urgent and Firm",
+    "origem": "F7823wtD50WK1gnmgBk5",
+    "preview_url": "https://api.us.elevenlabs.io/v1/voices/F7823wtD50WK1gnmgBk5/previews/audio?payload=eyJ2b2ljZV9zb3VyY2UiOiJjdXN0b20iLCJ1c2VyX2lkIjoieWk1b2VUY3hyQWQzYzJOS011c0h4ODNaOEd3MSIsImZpbGVuYW1lIjoiZ0pDQml2MUR3ejRzM3hPcTBMNlkubXAzIiwidGltZXN0YW1wIjoxNzkzMTg4ODAwMDAwMDAwfQ%3D%3D"
+  },
+  "igor-folha-financeiro": {
+    "voice_id": "36rVQA1AOIPwpA3Hg1tC",
+    "nome": "Matheus - Friendly and Energetic",
+    "origem": "36rVQA1AOIPwpA3Hg1tC",
+    "preview_url": "https://storage.googleapis.com/eleven-public-prod/custom/voices/36rVQA1AOIPwpA3Hg1tC/ewP6z1S1gE5Mb9nBSNaV.mp3"
+  },
+  "beatriz-fiscal": {
+    "voice_id": "33B4UnXyTNbgLmdEDh5P",
+    "nome": "Keren - Sweet, Vibrant and Rhythmic",
+    "origem": "33B4UnXyTNbgLmdEDh5P",
+    "preview_url": "https://storage.googleapis.com/eleven-public-prod/custom/voices/33B4UnXyTNbgLmdEDh5P/ArnzDsFaz6KDoDcDD8V2.mp3"
+  },
+  "henrique-analise-custos": {
+    "voice_id": "Qrdut83w0Cr152Yb4Xn3",
+    "nome": "Paulo - Expressive and Confident",
+    "origem": "Qrdut83w0Cr152Yb4Xn3",
+    "preview_url": "https://storage.googleapis.com/eleven-public-prod/database/user/9BSPmhBJkheqxBPDvE6kddOa9rF3/voices/Qrdut83w0Cr152Yb4Xn3/qIxIJ5ey8adKPaB8poOW.mp3"
+  },
+  "laura-calculos-custos": {
+    "voice_id": "GOkMqfyKMLVUcYfO2WbB",
+    "nome": "Jenifer",
+    "origem": "GOkMqfyKMLVUcYfO2WbB",
+    "preview_url": "https://storage.googleapis.com/eleven-public-prod/database/workspace/2df14998aae3469b884bde71c860576c/voices/GOkMqfyKMLVUcYfO2WbB/ufoI3jubdu5lI6iMW3Qp.mp3"
+  },
+  "rafael": {
+    "voice_id": "dX7gRq1dIvLTgUaWpEFn",
+    "nome": "Rafael Valente - Smooth and Captivating",
+    "origem": "dX7gRq1dIvLTgUaWpEFn",
+    "preview_url": "https://storage.googleapis.com/eleven-public-prod/database/user/6Z0iuYpOwYUNFHMhXpl60tcbmW22/voices/dX7gRq1dIvLTgUaWpEFn/FhvGi5c9jKtEJ5MZCxxh.mp3"
+  }
+}
