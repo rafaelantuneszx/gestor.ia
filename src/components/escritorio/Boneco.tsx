@@ -6,7 +6,7 @@ import { Html } from "@react-three/drei";
 import * as THREE from "three";
 import { CADEIRA_RAFAEL, type EstadoAgente, type LugarReuniao, type Vec2, type Viagem } from "@/lib/escritorio/modelo";
 import { aparenciaDe, Corpo, poseAndando, poseConversando, poseSentado, type Juntas } from "./Corpo";
-import { mat } from "./materiais";
+import { mat, materialSombra } from "./materiais";
 
 const VELOCIDADE = 2.0; // m/s
 const PASSADA = 0.72; // m por meio ciclo de passo
@@ -52,8 +52,10 @@ function girarPara(atual: number, alvo: number, k: number) {
 
 const PAPEL = new THREE.BoxGeometry(0.24, 0.32, 0.012);
 
+const SOMBRA = new THREE.PlaneGeometry(0.9, 0.9).rotateX(-Math.PI / 2);
+
 export function Boneco({
-  id, nome, cor, cadeira, temMesa = true, estado, viagem, reuniao, selecionado, onClick, onViagemFim,
+  id, nome, cor, cadeira, temMesa = true, estado, viagem, reuniao, selecionado, onClick, onViagemFim, falando = null, rotulos = true,
 }: {
   id: string;
   nome: string;
@@ -66,8 +68,12 @@ export function Boneco({
   selecionado: boolean;
   onClick: () => void;
   onViagemFim: (viagemId: string) => void;
+  falando?: string | null; // o que está dizendo agora (balão sobre a cabeça)
+  rotulos?: boolean; // nome e legenda em HTML (o mosaico desliga)
 }) {
   const s = semente(id);
+  const falandoRef = useRef(falando);
+  falandoRef.current = falando;
   const ap = useMemo(() => aparenciaDe(id, cor), [id, cor]);
 
   const raiz = useRef<THREE.Group>(null);
@@ -108,6 +114,21 @@ export function Boneco({
     setLegendaFora(null);
     setFora(false);
   };
+
+  // Em câmeras baixas (dentro das salas), esconde os nomes de quem está longe, para não poluir a imagem.
+  const caixaRotulo = useRef<HTMLDivElement>(null);
+  const longe = useRef(false);
+  const v = useMemo(() => new THREE.Vector3(), []);
+  useFrame(({ camera }) => {
+    const g = raiz.current;
+    if (!g || !caixaRotulo.current) return;
+    g.getWorldPosition(v);
+    const esconder = camera.position.y < 6 && camera.position.distanceTo(v) > 15;
+    if (esconder !== longe.current) {
+      longe.current = esconder;
+      caixaRotulo.current.style.visibility = esconder ? "hidden" : "visible";
+    }
+  });
 
   useFrame(({ clock }, dtBruto) => {
     const g = raiz.current;
@@ -158,7 +179,8 @@ export function Boneco({
       if (fase.current === "naReuniao") {
         g.position.set(atual!.assento[0], 0, atual!.assento[1]);
         g.rotation.y = girarPara(g.rotation.y, atual!.rotacao, 1 - Math.exp(-GIRO * dt));
-        poseSentado(j, (s + Math.floor(t / 9)) % 3 === 0 ? "lendo" : "relaxado", t);
+        poseSentado(j, falandoRef.current ? "relaxado" : (s + Math.floor(t / 9)) % 3 === 0 ? "lendo" : "relaxado", t);
+        if (falandoRef.current) gesticular(j, t);
         if (papel.current) papel.current.visible = false;
         if (rotulo.current) rotulo.current.position.y = 1.95;
         return;
@@ -237,7 +259,7 @@ export function Boneco({
 
   const corStatus = estado.status === "trabalhando" ? "#2563eb" : estado.status === "erro" ? "#c0362c" : "#12805c";
   const legenda = legendaFora ?? (estado.status === "trabalhando" ? estado.passo ?? estado.rotina ?? "trabalhando" : null);
-  const mostrar = temMesa || fora;
+  const mostrar = (temMesa || fora) && rotulos;
 
   return (
     <group ref={raiz} visible={temMesa}
@@ -249,6 +271,7 @@ export function Boneco({
           <mesh ref={papel} geometry={PAPEL} material={mat("#fbfaf7", 0.9)} position={[0, 0.22, 0.36]} rotation-x={-1.1}
             visible={false} castShadow />
         } />
+      <mesh geometry={SOMBRA} material={materialSombra()} position={[0, 0.007, 0]} />
       {selecionado && mostrar && (
         <mesh ref={anel} position={[0, 0.012, 0]} rotation-x={-Math.PI / 2}>
           <ringGeometry args={[0.45, 0.54, 40]} />
@@ -256,10 +279,11 @@ export function Boneco({
         </mesh>
       )}
       <group ref={rotulo} position={[0, 1.95, 0]}>
-        {mostrar && (
-          <Html center zIndexRange={[20, 0]}>
-            <div onClick={onClick}
-              style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, fontFamily: "system-ui", cursor: "pointer" }}>
+        {(
+          <Html zIndexRange={[20, 0]}>
+            <div onClick={onClick} ref={caixaRotulo}
+              style={{ display: mostrar ? "flex" : "none", flexDirection: "column", alignItems: "center", gap: 3, fontFamily: "system-ui", cursor: "pointer",
+                transform: "translate(-50%, -100%)", width: "max-content" }}>
               <div style={{
                 display: "flex", alignItems: "center", gap: 5, padding: "2px 8px", borderRadius: 999, whiteSpace: "nowrap",
                 background: selecionado ? "#2563eb" : "rgba(255,255,255,0.95)", color: selecionado ? "#fff" : "#1b1f24",
@@ -268,7 +292,17 @@ export function Boneco({
                 <span style={{ width: 7, height: 7, borderRadius: 999, background: corStatus }} />
                 {nome}
               </div>
-              {legenda && (
+              {falando && (
+                <div style={{
+                  position: "relative", maxWidth: 260, minWidth: 140, padding: "7px 11px", borderRadius: 14, marginBottom: 2,
+                  background: "#ffffff", color: "#111827", fontSize: 12.5, lineHeight: 1.35, fontWeight: 500,
+                  boxShadow: "0 6px 18px rgba(0,0,0,0.22)", border: "2px solid #22c55e", order: -1,
+                  display: "-webkit-box", WebkitLineClamp: 4, WebkitBoxOrient: "vertical", overflow: "hidden",
+                }}>
+                  {falando}
+                </div>
+              )}
+              {legenda && !falando && (
                 <div style={{
                   maxWidth: 190, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 10.5,
                   padding: "1px 7px", borderRadius: 6, background: "rgba(13,17,23,0.85)", color: "#e3b341",
@@ -284,9 +318,16 @@ export function Boneco({
   );
 }
 
+// Sentado e falando: mexe a mão e a cabeça, como quem explica.
+function gesticular(j: Juntas, t: number) {
+  j.ombroD?.rotation.set(-0.75 + Math.sin(t * 4.2) * 0.18, 0, -0.25);
+  j.cotoveloD?.rotation.set(-1.1 + Math.sin(t * 5.1) * 0.25, 0, 0.3);
+  if (j.cabeca) j.cabeca.rotation.set(Math.sin(t * 3.3) * 0.06, Math.sin(t * 1.4) * 0.18, 0);
+}
+
 // ---------- o Rafael, na sala dele ----------
 
-export function Rafael({ pendentes, onClick }: { pendentes: number; onClick: () => void }) {
+export function Rafael({ pendentes, onClick, rotulos = true }: { pendentes: number; onClick: () => void; rotulos?: boolean }) {
   const ap = useMemo(() => aparenciaDe("rafael", "#1f2a44"), []);
   const juntas = useRef<Juntas>({});
   useFrame(({ clock }) => {
@@ -301,10 +342,11 @@ export function Rafael({ pendentes, onClick }: { pendentes: number; onClick: () 
         noTronco={
           <mesh geometry={PAPEL} material={mat("#fbfaf7", 0.9)} position={[0, 0.2, 0.42]} rotation-x={-1.15} castShadow />
         } />
+      <mesh geometry={SOMBRA} material={materialSombra()} position={[0, 0.007, 0]} />
       <group position={[0, 1.78, 0]}>
         <Html center zIndexRange={[20, 0]}>
           <div onClick={onClick} style={{
-            display: "flex", alignItems: "center", gap: 6, padding: "3px 10px", borderRadius: 999, whiteSpace: "nowrap",
+            display: rotulos ? "flex" : "none", alignItems: "center", gap: 6, padding: "3px 10px", borderRadius: 999, whiteSpace: "nowrap",
             fontFamily: "system-ui", fontSize: 12.5, fontWeight: 700, cursor: "pointer",
             background: pendentes > 0 ? "#fdf2e1" : "rgba(255,255,255,0.95)", color: pendentes > 0 ? "#9a5b0a" : "#1b1f24",
             border: "1px solid rgba(0,0,0,0.08)", boxShadow: "0 1px 3px rgba(0,0,0,0.15)",

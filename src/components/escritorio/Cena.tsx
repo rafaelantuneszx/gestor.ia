@@ -1,382 +1,256 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+// Mobília e detalhes de cada sala, a tela (terminal) de cada agente, o arquivo, a sua sala e a sala de reunião.
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import * as THREE from "three";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 import {
-  ALTURA_PAREDE, ARQUIVO_Z, CADEIRA_RAFAEL, CORREDOR, MESA_RAFAEL, MESA_REUNIAO, PREDIO,
-  SALA, SALAS, SETOR_COR, TV, estante,
-  type EstadoAgente, type Sala, type SetorInfo,
+  ARQUIVO_Z, CADEIRA_RAFAEL, ESPINHA, MESAS, MESA_RAFAEL, MESA_REUNIAO, SALA, SETOR_COR, TV,
+  ASSENTOS_REUNIAO, cadeira, estante,
+  type EstadoAgente, type SetorInfo,
 } from "@/lib/escritorio/modelo";
 import { desenharTerminal, TELA_H, TELA_W } from "./terminal";
 import { desenharTV, TV_H, TV_W, type PainelTV } from "./tv";
-import {
-  acoPreto, aluminio, emissivo, mat, materialPiso, parede, texturaCeu, texturaLogo, texturaPlaca, texturaQuadro,
-  vidro, vidroFosco,
-} from "./materiais";
-import {
-  CadeiraEscritorio, EstanteLivros, geometriaCaixa as CAIXA, Luminaria, MesaCentro, Planta, Sofa, Tapete,
-} from "./Moveis";
+import { acoPreto, aluminio, brancoFosco, emissivo, mat, texturaArte, texturaLogoRecepcao, texturaQuadro, vidro } from "./materiais";
+import { Caixa } from "./Predio";
+import { Lote, type Item } from "./kit";
+import { EstanteLivros, KITS, MesaCentro, Quadro, Tapete, geometriaPlano as plano, tecidoColorivel } from "./Moveis";
 
-const H = ALTURA_PAREDE;
-const ESPESSURA = 0.12;
-const PORTA = 1.0;
-const ALTURA_PORTA = 2.15;
+const TAMPO_REUNIAO = new RoundedBoxGeometry(6.4, 0.06, 1.6, 4, 0.03);
+const TAMPO_RAFAEL = new RoundedBoxGeometry(2.8, 0.06, 1.05, 3, 0.025);
+const BALCAO = new RoundedBoxGeometry(4.2, 1.1, 0.8, 4, 0.06);
+const CIL = new THREE.CylinderGeometry(0.5, 0.5, 1, 32);
+const ALT = 2.75; // parede do logo da recepção
 
-// Uma caixa com a geometria compartilhada: posição no centro e tamanho por escala.
-function Caixa({
-  p, s, m, sombra = false, recebe = false, r,
-}: {
-  p: [number, number, number];
-  s: [number, number, number];
-  m: THREE.Material;
-  sombra?: boolean;
-  recebe?: boolean;
-  r?: [number, number, number];
-}) {
-  return <mesh geometry={CAIXA} material={m} position={p} scale={s} rotation={r} castShadow={sombra} receiveShadow={recebe} />;
-}
+// ---------- mobília repetida (instanciada) ----------
+export const Mobilia = memo(function Mobilia() {
+  const d = useMemo(() => {
+    const cadeiras: Item[] = [];
+    const mesas: Item[] = [];
+    const sombras: Item[] = [];
+    for (const id of Object.keys(MESAS)) {
+      const [x, z] = MESAS[id];
+      const [cx, cz] = cadeira(id);
+      mesas.push({ x, z });
+      cadeiras.push({ x: cx, z: cz, r: 0, cor: "#2f3a4a" });
+      sombras.push({ x: x - 0.1, z: z + 0.35, s: [2.4, 1, 1.9] });
+    }
+    // sala de reunião
+    const [rx, rz] = MESA_REUNIAO;
+    for (const a of ASSENTOS_REUNIAO) cadeiras.push({ x: a.p[0], z: a.p[1], r: a.rotacao + Math.PI, cor: "#2b3340" });
+    sombras.push({ x: rx, z: rz, s: [7.6, 1, 3.2] });
+    // sua sala: a sua cadeira (de frente para nós) e duas de visita
+    cadeiras.push({ x: CADEIRA_RAFAEL[0], z: CADEIRA_RAFAEL[1], r: Math.PI, cor: "#1a1d22", s: 1.08 });
+    cadeiras.push({ x: MESA_RAFAEL[0] - 0.7, z: MESA_RAFAEL[1] + 1.15, r: 0, cor: "#7a5a40" });
+    cadeiras.push({ x: MESA_RAFAEL[0] + 0.7, z: MESA_RAFAEL[1] + 1.15, r: 0, cor: "#7a5a40" });
+    sombras.push({ x: MESA_RAFAEL[0], z: MESA_RAFAEL[1], s: [3.6, 1, 2.2] });
+    // Direção: mesa redonda; Financeiro: mesinha; arquivo: consulta; copa
+    for (const [x, z, r] of [[-21.5 - 0.95, -11, Math.PI / 2], [-21.5 + 0.95, -11, -Math.PI / 2], [-21.5, -11 + 0.95, 0]] as const) {
+      cadeiras.push({ x, z, r: r + Math.PI, cor: "#5b4b3f" });
+    }
+    for (const [x, z, r] of [[7 - 0.9, -10.8, Math.PI / 2], [7 + 0.9, -10.8, -Math.PI / 2]] as const) cadeiras.push({ x, z, r: r + Math.PI, cor: "#285e4f" });
+    cadeiras.push({ x: 12.4, z: 3.35, r: 0, cor: "#4b5563" });
+    cadeiras.push({ x: 13.8, z: 3.35, r: 0, cor: "#4b5563" });
+    for (const [x, z, r] of [[21.5, 1.1, Math.PI], [21.5, 3.1, 0], [20.5, 2.1, Math.PI / 2], [22.5, 2.1, -Math.PI / 2]] as const) {
+      cadeiras.push({ x, z, r: r + Math.PI, cor: "#c2410c", s: 0.92 });
+    }
 
-// ---------- prédio: pisos, paredes, janelas e divisórias ----------
+    const plantasAltas: Item[] = [
+      [-25.4, -18.4], [-14.6, -18.4], [-13.4, -8.6], [0.6, -8.6], [10.4, -8.6], [25.4, -18.4], [-25.4, -3.4], [-13.4, 5.4],
+      [2.4, -3.4], [16.4, 5.4], [25.4, 5.4], [-10.6, 16.4], [25.4, 16.4], [-9.4, 10.6],
+    ].map(([x, z], i) => ({ x, z, r: i * 1.7, s: 0.9 + (i % 3) * 0.08 }));
+    const plantasLargas: Item[] = [
+      [-13.3, -18.3], [14.6, -18.3], [-11.4, -3.3], [3.6, -3.4], [6.4, 5.4], [17.6, -3.4], [-25.3, 10.6], [10.2, 16.3], [3.2, 10.7],
+    ].map(([x, z], i) => ({ x, z, r: i * 2.3 }));
+    const plantasBaixas: Item[] = [
+      [-25.6, -8.6], [25.6, -8.6], [-25.6, 9.6], [25.6, 9.6], [-6.6, 9.6], [12.6, 9.6], [-18.4, 5.4], [-12.6, 5.4], [-14.4, 10.6],
+    ].map(([x, z], i) => ({ x, z, r: i, s: 0.95 }));
+    for (const p of [...plantasAltas, ...plantasLargas]) sombras.push({ x: p.x, z: p.z, s: [1.1, 1, 1.1] });
 
-export function Predio() {
-  const w = PREDIO.x1 - PREDIO.x0;
-  const d = PREDIO.z1 - PREDIO.z0;
-  const cx = (PREDIO.x0 + PREDIO.x1) / 2;
-  const cz = (PREDIO.z0 + PREDIO.z1) / 2;
+    const sofas: Item[] = [
+      { x: 17, z: 12.0, r: 0, cor: "#4a5568" },
+      { x: 17, z: 15.9, r: Math.PI, cor: "#4a5568" },
+      { x: -25.3, z: -11, r: Math.PI / 2, cor: "#6b5b4d" },
+      { x: -25.2, z: 13.8, r: Math.PI / 2, cor: "#5a4636" },
+    ];
+    const poltronas: Item[] = [
+      { x: 14.6, z: 13.95, r: Math.PI / 2, cor: "#b45309" },
+      { x: 19.4, z: 13.95, r: -Math.PI / 2, cor: "#b45309" },
+      { x: -22.9, z: 12.7, r: -Math.PI / 2 - 0.4, cor: "#7c5a3a" },
+    ];
+    for (const s of sofas) sombras.push({ x: s.x, z: s.z, s: Math.abs(Math.sin(s.r ?? 0)) > 0.5 ? [1.4, 1, 2.6] : [2.6, 1, 1.4] });
+    for (const s of poltronas) sombras.push({ x: s.x, z: s.z, s: [1.2, 1, 1.2] });
+    const pendentes: Item[] = [
+      { x: MESA_REUNIAO[0] - 1.6, z: MESA_REUNIAO[1] }, { x: MESA_REUNIAO[0] + 1.6, z: MESA_REUNIAO[1] },
+      { x: MESA_RAFAEL[0], z: MESA_RAFAEL[1] }, { x: -1, z: 13.4 }, { x: 17, z: 13.95 },
+    ];
+    return { cadeiras, mesas, sombras, plantasAltas, plantasLargas, plantasBaixas, sofas, poltronas, pendentes };
+  }, []);
   return (
     <group>
-      {/* terreno e laje */}
-      <mesh rotation-x={-Math.PI / 2} position={[cx, -0.31, cz]} receiveShadow material={mat("#d5dbe0", 1)}>
-        <planeGeometry args={[220, 220]} />
-      </mesh>
-      <Caixa p={[cx, -0.15, cz + 0.2]} s={[w + 0.6, 0.3, d + 0.8]} m={mat("#bdb8b1", 0.9)} recebe />
-      {/* pisos */}
-      {SALAS.map((s) => (
-        <mesh key={s.id} rotation-x={-Math.PI / 2} position={[(s.x0 + s.x1) / 2, 0.002, (s.z0 + s.z1) / 2]} receiveShadow
-          material={materialPiso(s.piso, s.x1 - s.x0, s.z1 - s.z0)}>
-          <planeGeometry args={[s.x1 - s.x0, s.z1 - s.z0]} />
-        </mesh>
-      ))}
-      <mesh rotation-x={-Math.PI / 2} position={[cx, 0.002, (CORREDOR.z0 + CORREDOR.z1) / 2]} receiveShadow
-        material={materialPiso("porcelanato", w, CORREDOR.z1 - CORREDOR.z0)}>
-        <planeGeometry args={[w, CORREDOR.z1 - CORREDOR.z0]} />
-      </mesh>
-
-      <FachadaFundo />
-      {/* paredes laterais externas */}
-      {[PREDIO.x0 - 0.1, PREDIO.x1 + 0.1].map((x) => (
-        <group key={x}>
-          <Caixa p={[x, (H + 0.1) / 2, cz - 0.1]} s={[0.2, H + 0.1, d + 0.2]} m={parede()} sombra recebe />
-          <Caixa p={[x, H + 0.1, cz - 0.1]} s={[0.22, 0.02, d + 0.22]} m={mat("#9c968e", 0.8)} />
-        </group>
-      ))}
-      {/* divisórias entre as salas */}
-      {SALAS.filter((s) => s.x0 > PREDIO.x0).map((s) => (
-        <ParedeLateral key={`lat-${s.id}`} x={s.x0} z0={s.z0} z1={s.z1} />
-      ))}
-      {/* frente das salas do fundo: vidro com porta */}
-      {SALAS.filter((s) => s.fileira === "fundo").map((s) => (
-        <Divisoria key={`div-${s.id}`} sala={s} z={CORREDOR.z0} abreParaMenos />
-      ))}
-      {/* parede do corredor das salas da frente: vidro, com trechos de parede onde há estante ou TV */}
-      <Divisoria sala={SALA.rafael} z={CORREDOR.z1} solidos={[[-15, -11]]} />
-      <Divisoria sala={SALA.reuniao} z={CORREDOR.z1} solidos={[[TV.x - 1.6, TV.x + 1.6]]} />
-      <Divisoria sala={SALA.arquivo} z={CORREDOR.z1} solidos={[[SALA.arquivo.porta + PORTA / 2, SALA.arquivo.x1]]} />
-      <Divisoria sala={SALA.copa} z={CORREDOR.z1} />
-
-      <Corredor />
-      <SalasDeTrabalho />
-      <Copa />
+      <Lote kit={KITS.mesaL()} itens={d.mesas} />
+      <Lote kit={KITS.cadeira()} itens={d.cadeiras} colorir={tecidoColorivel()} />
+      <Lote kit={KITS.plantaAlta()} itens={d.plantasAltas} />
+      <Lote kit={KITS.plantaLarga()} itens={d.plantasLargas} />
+      <Lote kit={KITS.plantaBaixa()} itens={d.plantasBaixas} />
+      <Lote kit={KITS.sofa()} itens={d.sofas} colorir={tecidoColorivel()} />
+      <Lote kit={KITS.poltrona()} itens={d.poltronas} colorir={tecidoColorivel()} />
+      <Lote kit={KITS.pendente()} itens={d.pendentes} />
+      <Lote kit={KITS.sombra()} itens={d.sombras} />
     </group>
   );
-}
+});
 
-// Parede do fundo com janelões, e a cidade lá fora.
-function FachadaFundo() {
-  const z = PREDIO.z0 - 0.1;
-  const w = PREDIO.x1 - PREDIO.x0 + 0.4;
-  const cx = (PREDIO.x0 + PREDIO.x1) / 2;
-  const pilares = [PREDIO.x0, ...SALAS.filter((s) => s.fileira === "fundo" && s.x0 > PREDIO.x0).map((s) => s.x0), PREDIO.x1];
-  const montantes: number[] = [];
-  for (let i = 0; i < pilares.length - 1; i++) {
-    const a = pilares[i] + 0.25;
-    const b = pilares[i + 1] - 0.25;
-    const n = Math.max(1, Math.round((b - a) / 2.2));
-    for (let k = 1; k < n; k++) montantes.push(a + ((b - a) * k) / n);
-  }
-  const ceu = texturaCeu();
+// ---------- detalhes vivos ----------
+
+// Relógio de parede com ponteiros de verdade (hora de Brasília).
+function Relogio({ p, rot = 0, raio = 0.22 }: { p: [number, number, number]; rot?: number; raio?: number }) {
+  const h = useRef<THREE.Mesh>(null);
+  const m = useRef<THREE.Mesh>(null);
+  const s = useRef<THREE.Mesh>(null);
+  useFrame(() => {
+    const agora = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
+    const seg = agora.getSeconds();
+    const min = agora.getMinutes() + seg / 60;
+    const hr = (agora.getHours() % 12) + min / 60;
+    if (h.current) h.current.rotation.z = -(hr / 12) * Math.PI * 2;
+    if (m.current) m.current.rotation.z = -(min / 60) * Math.PI * 2;
+    if (s.current) s.current.rotation.z = -(seg / 60) * Math.PI * 2;
+  });
   return (
-    <group>
-      <Caixa p={[cx, 0.45, z]} s={[w, 0.9, 0.2]} m={parede()} sombra recebe />
-      <Caixa p={[cx, 2.75, z]} s={[w, 0.5, 0.2]} m={parede()} sombra recebe />
-      <Caixa p={[cx, 3.0, z]} s={[w + 0.02, 0.02, 0.22]} m={mat("#9c968e", 0.8)} />
-      {pilares.map((x) => (
-        <Caixa key={x} p={[x, 1.7, z]} s={[0.5, 1.6, 0.22]} m={parede()} sombra />
+    <group position={p} rotation-y={rot}>
+      <mesh geometry={CIL} material={mat("#1d1f22", 0.4)} rotation-x={Math.PI / 2} scale={[raio * 2.1, 0.04, raio * 2.1]} />
+      <mesh geometry={CIL} material={mat("#fafaf9", 0.6)} rotation-x={Math.PI / 2} position={[0, 0, 0.021]} scale={[raio * 1.9, 0.002, raio * 1.9]} />
+      {Array.from({ length: 12 }).map((_, i) => (
+        <mesh key={i} geometry={plano()} material={mat("#1d1f22", 0.5)} rotation-z={(i / 12) * Math.PI * 2}
+          position={[Math.sin((i / 12) * Math.PI * 2) * raio * 0.8, Math.cos((i / 12) * Math.PI * 2) * raio * 0.8, 0.024]} scale={[0.012, i % 3 ? 0.03 : 0.05, 1]} />
       ))}
-      {montantes.map((x) => (
-        <Caixa key={x} p={[x, 1.7, z]} s={[0.05, 1.6, 0.08]} m={aluminio()} />
-      ))}
-      <Caixa p={[cx, 0.92, z + 0.16]} s={[w - 0.4, 0.04, 0.2]} m={mat("#ece9e3", 0.4)} recebe />
-      <Caixa p={[cx, 0.92, z - 0.02]} s={[w, 0.03, 0.1]} m={aluminio()} />
-      <Caixa p={[cx, 2.49, z - 0.02]} s={[w, 0.03, 0.1]} m={aluminio()} />
-      <mesh position={[cx, 1.7, z]} material={vidro()}>
-        <planeGeometry args={[w, 1.6]} />
-      </mesh>
-      <mesh position={[cx, 1.45, z - 0.55]}>
-        <planeGeometry args={[w + 1, 2.9]} />
-        <meshBasicMaterial map={ceu} toneMapped={false} />
-      </mesh>
-    </group>
-  );
-}
-
-function ParedeLateral({ x, z0, z1 }: { x: number; z0: number; z1: number }) {
-  const len = z1 - z0;
-  const zc = (z0 + z1) / 2;
-  return (
-    <group>
-      <Caixa p={[x, H / 2, zc]} s={[ESPESSURA, H, len]} m={parede()} sombra recebe />
-      <Caixa p={[x, 0.04, zc]} s={[ESPESSURA + 0.03, 0.08, len]} m={mat("#d6d0c6", 0.7)} />
-      <Caixa p={[x, H + 0.005, zc]} s={[ESPESSURA + 0.01, 0.01, len]} m={mat("#9c968e", 0.8)} />
-    </group>
-  );
-}
-
-// Divisória ao longo de x na parede do corredor de uma sala: vidro (ou parede nos trechos sólidos),
-// com a porta da sala. `abreParaMenos`: a folha da porta abre para dentro das salas do fundo (-z).
-function Divisoria({
-  sala, z, solidos = [], abreParaMenos = false,
-}: {
-  sala: Sala;
-  z: number;
-  solidos?: [number, number][];
-  abreParaMenos?: boolean;
-}) {
-  const p0 = sala.porta - PORTA / 2;
-  const p1 = sala.porta + PORTA / 2;
-  // corta o trecho [x0, x1] pela porta e pelos trechos sólidos
-  const cortes = [sala.x0 + ESPESSURA / 2, sala.x1 - ESPESSURA / 2, p0, p1, ...solidos.flat()]
-    .filter((v, i, a) => a.indexOf(v) === i)
-    .sort((a, b) => a - b);
-  const pedacos: { a: number; b: number; tipo: "vidro" | "solido" | "porta" }[] = [];
-  for (let i = 0; i < cortes.length - 1; i++) {
-    const a = cortes[i];
-    const b = cortes[i + 1];
-    if (b - a < 0.01 || a < sala.x0 || b > sala.x1) continue;
-    const meio = (a + b) / 2;
-    const tipo = meio > p0 && meio < p1 ? "porta" : solidos.some(([s0, s1]) => meio > s0 && meio < s1) ? "solido" : "vidro";
-    pedacos.push({ a, b, tipo });
-  }
-  const lado = abreParaMenos ? -1 : 1;
-  return (
-    <group>
-      {pedacos.map(({ a, b, tipo }) => {
-        const len = b - a;
-        const xc = (a + b) / 2;
-        if (tipo === "solido") {
-          return (
-            <group key={a}>
-              <Caixa p={[xc, H / 2, z]} s={[len, H, ESPESSURA]} m={parede()} sombra recebe />
-              <Caixa p={[xc, 0.04, z]} s={[len, 0.08, ESPESSURA + 0.03]} m={mat("#d6d0c6", 0.7)} />
-              <Caixa p={[xc, H + 0.005, z]} s={[len, 0.01, ESPESSURA + 0.01]} m={mat("#9c968e", 0.8)} />
-            </group>
-          );
-        }
-        if (tipo === "porta") {
-          return (
-            <group key={a}>
-              {[a, b].map((x) => <Caixa key={x} p={[x, ALTURA_PORTA / 2, z]} s={[0.05, ALTURA_PORTA, 0.1]} m={aluminio()} />)}
-              <Caixa p={[xc, (H + ALTURA_PORTA) / 2, z]} s={[len, H - ALTURA_PORTA, ESPESSURA]} m={parede()} />
-              <Caixa p={[xc, ALTURA_PORTA, z]} s={[len, 0.05, 0.1]} m={aluminio()} />
-              {/* folha de vidro aberta, presa na dobradiça da esquerda */}
-              <group position={[a + 0.03, 0, z]} rotation-y={lado * 1.25}>
-                <mesh position={[0.46, ALTURA_PORTA / 2 - 0.02, 0]} material={vidro()}>
-                  <planeGeometry args={[0.92, ALTURA_PORTA - 0.06]} />
-                </mesh>
-                <Caixa p={[0.46, 0.03, 0]} s={[0.92, 0.05, 0.04]} m={aluminio()} />
-                <Caixa p={[0.84, 1.05, 0.04 * lado]} s={[0.025, 0.5, 0.025]} m={inox()} />
-              </group>
-              <Placa nome={sala.nome} cor={sala.cor} x={xc} z={z + 0.07} />
-            </group>
-          );
-        }
-        const montantes = Math.max(1, Math.round(len / 1.3));
-        return (
-          <group key={a}>
-            <mesh position={[xc, H / 2 - 0.06, z]} material={vidro()}>
-              <planeGeometry args={[len, H - 0.12]} />
-            </mesh>
-            <mesh position={[xc, 1.2, z + 0.006]} material={vidroFosco()}>
-              <planeGeometry args={[len, 0.22]} />
-            </mesh>
-            <Caixa p={[xc, 0.03, z]} s={[len, 0.06, 0.07]} m={aluminio()} />
-            <Caixa p={[xc, H - 0.04, z]} s={[len, 0.08, 0.08]} m={aluminio()} />
-            {Array.from({ length: montantes + 1 }).map((_, k) => (
-              <Caixa key={k} p={[a + (len * k) / montantes, H / 2, z]} s={[0.04, H, 0.06]} m={aluminio()} />
-            ))}
-          </group>
-        );
-      })}
-    </group>
-  );
-}
-
-function inox() {
-  return mat("#c7ccd1", 0.25, 0.9);
-}
-
-function Placa({ nome, cor, x, z }: { nome: string; cor: string; x: number; z: number }) {
-  const t = texturaPlaca(nome, cor);
-  return (
-    <mesh position={[x, 2.48, z]}>
-      <planeGeometry args={[1.2, 0.24]} />
-      <meshStandardMaterial map={t} roughness={0.5} />
-    </mesh>
-  );
-}
-
-// ---------- corredor ----------
-
-function Corredor() {
-  const logo = texturaLogo();
-  return (
-    <group>
-      <Tapete posicao={[(PREDIO.x0 + PREDIO.x1) / 2, -0.5]} tamanho={[PREDIO.x1 - PREDIO.x0 - 5, 1.7]} cor="#4b5059" borda="#31353b" />
-      {/* recepção */}
-      <group position={[-15.6, 0, 1.75]}>
-        <Caixa p={[0, 0.53, 0]} s={[3.2, 1.06, 0.7]} m={mat("#f1efea", 0.5)} sombra recebe />
-        <Caixa p={[0, 1.08, -0.05]} s={[3.3, 0.04, 0.85]} m={mat("#6b4a33", 0.45)} sombra />
-        <mesh position={[0, 0.6, 0.352]}>
-          <planeGeometry args={[2.4, 0.6]} />
-          <meshStandardMaterial map={logo} roughness={0.4} />
-        </mesh>
-        <Caixa p={[0.9, 1.25, -0.1]} s={[0.4, 0.28, 0.02]} m={mat("#16181c", 0.3)} />
+      <group position={[0, 0, 0.027]}>
+        <mesh ref={h}><mesh geometry={plano()} material={mat("#1d1f22", 0.5)} position={[0, raio * 0.25, 0]} scale={[0.018, raio * 0.5, 1]} /></mesh>
+        <mesh ref={m} position={[0, 0, 0.002]}><mesh geometry={plano()} material={mat("#1d1f22", 0.5)} position={[0, raio * 0.36, 0]} scale={[0.012, raio * 0.72, 1]} /></mesh>
+        <mesh ref={s} position={[0, 0, 0.004]}><mesh geometry={plano()} material={mat("#dc2626", 0.5)} position={[0, raio * 0.36, 0]} scale={[0.005, raio * 0.8, 1]} /></mesh>
       </group>
-      <Planta posicao={[-17.4, 2.5]} semente={2} />
-      <Planta posicao={[-17.4, -3.45]} tipo="baixa" semente={3} />
-      <Planta posicao={[-6.0, -3.45]} semente={4} />
-      <Planta posicao={[6.6, -3.45]} tipo="baixa" semente={5} />
-      <Planta posicao={[12.2, -3.45]} semente={6} />
-      <Planta posicao={[21.0, -3.45]} tipo="baixa" semente={9} />
-      <Planta posicao={[-4.2, 2.5]} tipo="baixa" semente={7} />
-      <Planta posicao={[10.7, 2.5]} semente={1} />
-      <Planta posicao={[PREDIO.x1 - 0.6, 2.5]} tipo="baixa" semente={8} />
-      {/* bancos de espera */}
-      {[1.2, 13.2].map((x) => (
-        <group key={x} position={[x, 0, 2.55]}>
-          <Caixa p={[0, 0.44, 0]} s={[1.8, 0.06, 0.45]} m={mat("#7a5a40", 0.5)} sombra recebe />
-          {[-0.8, 0.8].map((dx) => <Caixa key={dx} p={[dx, 0.21, 0]} s={[0.05, 0.42, 0.4]} m={acoPreto()} />)}
+    </group>
+  );
+}
+
+// Rack de servidores com luzes piscando (Sistemas).
+function Rack({ x, z }: { x: number; z: number }) {
+  const luzes = useMemo(() => [
+    new THREE.MeshBasicMaterial({ color: "#22c55e", toneMapped: false }),
+    new THREE.MeshBasicMaterial({ color: "#38bdf8", toneMapped: false }),
+    new THREE.MeshBasicMaterial({ color: "#f59e0b", toneMapped: false }),
+  ], []);
+  const t = useRef(0);
+  useFrame((_, dt) => {
+    t.current += dt;
+    luzes.forEach((m, i) => { m.visible = Math.sin(t.current * (5 + i * 3.1) + i) > -0.2; });
+  });
+  return (
+    <group position={[x, 0, z]}>
+      <Caixa p={[0, 1.0, 0]} s={[0.66, 2.0, 1.0]} m={mat("#1b1d21", 0.4, 0.4)} sombra recebe />
+      <Caixa p={[0, 1.0, 0.503]} s={[0.6, 1.9, 0.01]} m={mat("#2a2e35", 0.3, 0.6)} />
+      {Array.from({ length: 9 }).map((_, i) => (
+        <group key={i} position={[0, 0.22 + i * 0.2, 0.51]}>
+          <Caixa p={[0, 0, 0]} s={[0.54, 0.14, 0.01]} m={mat("#0f1115", 0.5)} />
+          {[0, 1, 2, 3].map((k) => (
+            <mesh key={k} geometry={plano()} material={luzes[(i + k) % 3]} position={[-0.22 + k * 0.035, 0.03, 0.007]} scale={[0.014, 0.014, 1]} />
+          ))}
         </group>
       ))}
     </group>
   );
 }
 
-// ---------- salas de trabalho (sem as mesas dos agentes) ----------
+// Mesa redonda com tampo claro e base preta.
+function MesaRedonda({ x, z, raio = 0.55, alt = 0.74 }: { x: number; z: number; raio?: number; alt?: number }) {
+  return (
+    <group position={[x, 0, z]}>
+      <mesh geometry={CIL} material={mat("#efe9df", 0.35)} position={[0, alt, 0]} scale={[raio * 2, 0.04, raio * 2]} castShadow receiveShadow />
+      <Caixa p={[0, alt / 2, 0]} s={[0.07, alt, 0.07]} m={acoPreto()} />
+      <mesh geometry={CIL} material={acoPreto()} position={[0, 0.015, 0]} scale={[raio * 1.0, 0.03, raio * 1.0]} />
+    </group>
+  );
+}
 
-function SalasDeTrabalho() {
+// ---------- salas de trabalho ----------
+export const DetalhesSalas = memo(function DetalhesSalas() {
   const quadro = texturaQuadro();
   return (
     <group>
-      {SALAS.filter((s) => s.fileira === "fundo").map((s, i) => (
-        <group key={s.id}>
-          <Planta posicao={[s.x0 + 0.5, CORREDOR.z0 - 0.55]} tipo="baixa" semente={i + 2} escala={0.95} />
-          {/* gaveteiro de aço no canto do fundo */}
-          <group position={[s.x1 - 0.45, 0, PREDIO.z0 + 0.45]}>
-            <Caixa p={[0, 0.66, 0]} s={[0.48, 1.32, 0.6]} m={mat("#b8bcc2", 0.4, 0.4)} sombra recebe />
-            {[0.28, 0.6, 0.92, 1.24].map((y) => (
-              <Caixa key={y} p={[0, y, 0.302]} s={[0.2, 0.03, 0.02]} m={acoPreto()} />
-            ))}
-          </group>
-        </group>
-      ))}
-      {/* Direção: mesinha redonda de conversa */}
-      <group position={[-16.7, 0, -5.0]}>
-        <mesh position={[0, 0.73, 0]} material={mat("#efe9df", 0.4)} castShadow receiveShadow>
-          <cylinderGeometry args={[0.55, 0.55, 0.04, 32]} />
-        </mesh>
-        <Caixa p={[0, 0.36, 0]} s={[0.06, 0.72, 0.06]} m={acoPreto()} />
-        <mesh position={[0, 0.015, 0]} material={acoPreto()}>
-          <cylinderGeometry args={[0.28, 0.3, 0.03, 24]} />
-        </mesh>
-        <CadeiraEscritorio posicao={[-0.85, 0]} rotacao={-Math.PI / 2} cor="#6b5b4d" />
-        <CadeiraEscritorio posicao={[0.85, 0]} rotacao={Math.PI / 2} cor="#6b5b4d" />
-      </group>
-      {/* Sistemas: quadro branco na parede da esquerda */}
-      <group position={[SALA.sistemas.x0 + ESPESSURA / 2 + 0.02, 1.55, -7.0]} rotation-y={Math.PI / 2}>
-        <Caixa p={[0, 0, -0.005]} s={[2.3, 1.38, 0.03]} m={aluminio()} />
-        <mesh position={[0, 0, 0.012]}>
-          <planeGeometry args={[2.2, 1.29]} />
+      {/* Direção: mesa de conversa, estante e quadro */}
+      <MesaRedonda x={-21.5} z={-11} />
+      <Tapete posicao={[-23.3, -11]} tamanho={[4.8, 3.6]} cor="#c9bca8" borda="#a8977f" />
+      <MesaCentro posicao={[-24.1, -11]} tamanho={[0.55, 1.2]} />
+
+      {/* Sistemas: quadro branco, rack e mesa alta */}
+      <group position={[-0.1, 1.5, -11.2]} rotation-y={-Math.PI / 2}>
+        <Caixa p={[0, 0, -0.005]} s={[2.5, 1.45, 0.03]} m={aluminio()} />
+        <mesh geometry={plano()} position={[0, 0, 0.012]} scale={[2.4, 1.36, 1]}>
           <meshStandardMaterial map={quadro} roughness={0.25} />
         </mesh>
-        <Caixa p={[0, -0.72, 0.05]} s={[1.6, 0.03, 0.08]} m={aluminio()} />
+      </group>
+      <Rack x={-0.75} z={-18.2} />
+      <MesaRedonda x={-7.4} z={-11.2} raio={0.45} alt={1.05} />
+
+      {/* Financeiro: mesinha, arquivos de aço e painel com gráfico */}
+      <MesaRedonda x={7} z={-10.8} />
+      {[13.35, 12.8].map((x) => (
+        <group key={x} position={[x, 0, -18.45]}>
+          <Caixa p={[0, 0.66, 0]} s={[0.5, 1.32, 0.6]} m={mat("#b8bcc2", 0.4, 0.4)} sombra recebe />
+          {[0.28, 0.6, 0.92, 1.24].map((y) => <Caixa key={y} p={[0, y, 0.302]} s={[0.2, 0.03, 0.02]} m={acoPreto()} />)}
+        </group>
+      ))}
+
+      {/* Custos: mesa de projetos com plantas de obra */}
+      <group position={[20, 0, -10.8]}>
+        <Caixa p={[0, 0.94, 0]} s={[2.4, 0.05, 1.2]} m={mat("#e8e2d8", 0.5)} sombra recebe />
+        {[-1.1, 1.1].map((x) => <Caixa key={x} p={[x, 0.46, 0]} s={[0.06, 0.92, 1.0]} m={acoPreto()} />)}
+        <mesh geometry={plano()} position={[-0.3, 0.968, 0.05]} rotation-x={-Math.PI / 2} rotation-z={0.08} scale={[1.2, 0.85, 1]}>
+          <meshStandardMaterial map={texturaQuadro()} color="#cfe0f5" roughness={0.6} />
+        </mesh>
+        <Caixa p={[0.75, 0.975, -0.2]} s={[0.5, 0.01, 0.35]} m={mat("#f6f4ef", 0.9)} r={[0, -0.3, 0]} />
+        <mesh geometry={CIL} material={mat("#1e3a8a", 0.5)} position={[0.8, 1.0, 0.35]} rotation-z={Math.PI / 2} scale={[0.06, 0.7, 0.06]} />
+      </group>
+
+      {/* Frota e RH: quadro de chaves e mapa; Suprimentos: estante de caixas */}
+      <group position={[-12.32, 0, 3.4]} rotation-y={-Math.PI / 2}>
+        {[0.05, 0.6, 1.15, 1.7].map((y) => <Caixa key={y} p={[0, y, 0]} s={[2.6, 0.04, 0.45]} m={mat("#8b9097", 0.4, 0.6)} sombra />)}
+        {[-1.28, 1.28].map((x) => <Caixa key={x} p={[x, 0.9, 0]} s={[0.04, 1.8, 0.45]} m={acoPreto()} />)}
+        {Array.from({ length: 14 }).map((_, i) => (
+          <Caixa key={i} p={[-1.0 + (i % 5) * 0.5, 0.25 + Math.floor(i / 5) * 0.55, 0]} s={[0.4, 0.34, 0.36]} m={mat(i % 3 ? "#c9a77c" : "#b8946a", 0.9)} sombra />
+        ))}
+      </group>
+
+      {/* hall do meio: banco, bebedouro e quadros */}
+      <group position={[ESPINHA.x0 + 0.45, 0, 1.0]}>
+        <Caixa p={[0, 0.44, 0]} s={[0.5, 0.06, 2.0]} m={mat("#7a5a40", 0.5)} sombra recebe />
+        {[-0.85, 0.85].map((z) => <Caixa key={z} p={[0, 0.21, z]} s={[0.4, 0.42, 0.05]} m={acoPreto()} />)}
+      </group>
+      <Quadro posicao={[ESPINHA.x0 + 0.08, 1.0]} rotacao={Math.PI / 2} mapa={texturaArte(6)} largura={1.8} altura={1.1} />
+      <Quadro posicao={[ESPINHA.x1 - 0.08, 1.0]} rotacao={-Math.PI / 2} mapa={texturaArte(7)} largura={1.8} altura={1.1} />
+      <group position={[ESPINHA.x1 - 0.35, 0, -3.3]}>
+        <Caixa p={[0, 0.5, 0]} s={[0.32, 1.0, 0.32]} m={mat("#f2f2f0", 0.5)} sombra />
+        <mesh geometry={CIL} material={mat("#93c5fd", 0.1, 0.1)} position={[0, 1.24, 0]} scale={[0.26, 0.46, 0.26]} />
       </group>
     </group>
   );
-}
+});
 
-// ---------- mesa do agente com monitor ----------
-
-const TAMPO = new RoundedBoxGeometry(1.8, 0.04, 0.85, 2, 0.015);
+// ---------- tela do agente (monitor com o terminal) ----------
 
 export function MesaAgente({
-  posicao, nome, estado, cor, selecionado, onClick, semente = 0,
+  posicao, nome, estado, selecionado, onClick,
 }: {
   posicao: [number, number];
   nome: string;
   estado: EstadoAgente;
-  cor: string;
   selecionado: boolean;
   onClick: () => void;
-  semente?: number;
 }) {
   const [hover, setHover] = useState(false);
-  return (
-    <group position={[posicao[0], 0, posicao[1]]}>
-      <mesh geometry={TAMPO} material={mat("#d9c4a6", 0.5)} position={[0, 0.74, 0]} castShadow receiveShadow />
-      {/* pés em quadro de aço */}
-      {[-0.84, 0.84].map((x) => (
-        <group key={x}>
-          {[-0.36, 0.36].map((z) => <Caixa key={z} p={[x, 0.36, z]} s={[0.05, 0.72, 0.05]} m={acoPreto()} />)}
-          <Caixa p={[x, 0.02, 0]} s={[0.05, 0.04, 0.78]} m={acoPreto()} />
-          <Caixa p={[x, 0.69, 0]} s={[0.05, 0.04, 0.78]} m={acoPreto()} />
-        </group>
-      ))}
-      <Caixa p={[0, 0.5, -0.38]} s={[1.62, 0.34, 0.02]} m={mat("#8b9097", 0.95)} />
-      <Caixa p={[0.58, 0.29, -0.12]} s={[0.42, 0.56, 0.5]} m={mat("#eceae6", 0.5)} sombra />
-      {/* teclado, mouse, caneca e papéis */}
-      <Caixa p={[0, 0.772, 0.24]} s={[0.44, 0.018, 0.14]} m={mat("#e2e4e7", 0.6)} />
-      <Caixa p={[0, 0.782, 0.24]} s={[0.4, 0.004, 0.11]} m={mat("#9aa0a6", 0.7)} />
-      <Caixa p={[0.33, 0.775, 0.25]} s={[0.06, 0.025, 0.1]} m={mat("#2b2e33", 0.4)} />
-      <mesh position={[-0.58, 0.81, 0.18]} material={mat(cor, 0.4)} castShadow>
-        <cylinderGeometry args={[0.042, 0.038, 0.1, 16]} />
-      </mesh>
-      <Caixa p={[-0.36, 0.763, 0.0]} s={[0.21, 0.004, 0.29]} m={mat("#fbfaf7", 0.9)} r={[0, 0.25, 0]} />
-      <Caixa p={[-0.33, 0.767, 0.02]} s={[0.21, 0.004, 0.29]} m={mat("#f2efe8", 0.9)} r={[0, 0.05, 0]} />
-      <Luminaria posicao={[-0.74, 0.76, -0.26]} rotacao={0.2} />
-      {semente % 2 === 0 && (
-        <group position={[0, 0.76, 0]}>
-          <Planta posicao={[0.72, -0.28]} tipo="baixa" escala={0.3} semente={semente} />
-        </group>
-      )}
-      <Monitor nome={nome} estado={estado} selecionado={selecionado || hover} onClick={onClick} onHover={setHover} />
-      <CadeiraEscritorio posicao={[0, 0.72]} />
-    </group>
-  );
-}
-
-function Monitor({
-  nome, estado, selecionado, onClick, onHover,
-}: {
-  nome: string;
-  estado: EstadoAgente;
-  selecionado: boolean;
-  onClick: () => void;
-  onHover: (v: boolean) => void;
-}) {
   const canvas = useMemo(() => {
     const c = document.createElement("canvas");
     c.width = TELA_W;
@@ -392,17 +266,16 @@ function Monitor({
   useEffect(() => () => textura.dispose(), [textura]);
   const cursor = useRef(true);
   const acumulado = useRef(0);
+  const ultimo = useRef(estado);
+  ultimo.current = estado;
 
   const redesenhar = () => {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    desenharTerminal(ctx, nome, estado, cursor.current);
+    desenharTerminal(ctx, nome, ultimo.current, cursor.current);
     textura.needsUpdate = true;
   };
-
   useEffect(redesenhar, [estado, nome]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // cursor piscando (só redesenha 2x por segundo)
   useFrame((_, dt) => {
     acumulado.current += dt;
     if (acumulado.current > 0.5) {
@@ -412,22 +285,20 @@ function Monitor({
     }
   });
 
-  const brilho = estado.status === "trabalhando" ? 0.95 : 0.6;
+  const brilho = estado.status === "trabalhando" ? 1.0 : 0.62;
   return (
-    <group position={[0, 0.76, -0.24]}>
-      <Caixa p={[0, 0.008, 0]} s={[0.24, 0.016, 0.17]} m={aluminio()} />
-      <Caixa p={[0, 0.2, -0.04]} s={[0.05, 0.36, 0.025]} m={aluminio()} />
-      <group position={[0, 0.5, 0]}
-        onClick={(e) => { e.stopPropagation(); onClick(); }}
-        onPointerOver={(e) => { e.stopPropagation(); onHover(true); document.body.style.cursor = "pointer"; }}
-        onPointerOut={() => { onHover(false); document.body.style.cursor = ""; }}>
-        <Caixa p={[0, 0, 0]} s={[1.0, 0.6, 0.025]} m={selecionado ? mat("#2563eb", 0.4) : mat("#111214", 0.35)} sombra />
-        <mesh position={[0, 0.005, 0.0135]}>
-          <planeGeometry args={[0.97, 0.57]} />
-          <meshStandardMaterial map={textura} emissive="#ffffff" emissiveMap={textura} emissiveIntensity={brilho}
-            toneMapped={false} roughness={0.2} />
+    <group position={[posicao[0], 1.26, posicao[1] - 0.2265]}>
+      {(selecionado || hover) && (
+        <mesh geometry={plano()} position={[0, 0, -0.03]} scale={[1.1, 0.7, 1]}>
+          <meshBasicMaterial color="#3b82f6" toneMapped={false} />
         </mesh>
-      </group>
+      )}
+      <mesh geometry={plano()} scale={[0.97, 0.57, 1]}
+        onClick={(e) => { e.stopPropagation(); onClick(); }}
+        onPointerOver={(e) => { e.stopPropagation(); setHover(true); document.body.style.cursor = "pointer"; }}
+        onPointerOut={() => { setHover(false); document.body.style.cursor = ""; }}>
+        <meshStandardMaterial map={textura} emissive="#ffffff" emissiveMap={textura} emissiveIntensity={brilho} toneMapped={false} roughness={0.2} />
+      </mesh>
     </group>
   );
 }
@@ -435,43 +306,44 @@ function Monitor({
 // ---------- arquivo ----------
 
 export function Arquivo({
-  setores, contagem, onAbrir,
+  setores, contagem, onAbrir, rotulos = true,
 }: {
   setores: SetorInfo[];
   contagem: Record<string, number>;
   onAbrir: (setor: string) => void;
+  rotulos?: boolean;
 }) {
   const s = SALA.arquivo;
   return (
     <group>
       {setores.map((st, i) => (
         <Estante key={st.id} {...estante(i, setores.length)} setor={st} quantidade={contagem[st.id] ?? 0}
-          onClick={() => onAbrir(st.id)} alturaRotulo={i % 2 ? 2.75 : 2.35} />
+          onClick={() => onAbrir(st.id)} alturaRotulo={i % 2 ? 2.62 : 2.32} rotulos={rotulos} />
       ))}
       {/* mesa de consulta com caixas */}
-      <group position={[(s.x0 + s.x1) / 2 + 0.6, 0, 8.6]}>
-        <mesh geometry={TAMPO} material={mat("#d9c4a6", 0.5)} position={[0, 0.74, 0]} scale={[1.3, 1, 1.2]} castShadow receiveShadow />
+      <group position={[13.1, 0, 2.4]}>
+        <mesh geometry={TAMPO_RAFAEL} material={mat("#d6bf9c", 0.45)} position={[0, 0.74, 0]} scale={[0.85, 0.7, 1.0]} castShadow receiveShadow />
         {[-1.1, 1.1].map((x) => <Caixa key={x} p={[x, 0.36, 0]} s={[0.06, 0.72, 0.9]} m={acoPreto()} />)}
         <Caixa p={[-0.5, 0.88, 0.05]} s={[0.4, 0.24, 0.3]} m={mat("#c9a77c", 0.9)} sombra />
         <Caixa p={[-0.05, 0.85, -0.1]} s={[0.38, 0.18, 0.28]} m={mat("#b8946a", 0.9)} sombra r={[0, 0.3, 0]} />
         <Caixa p={[0.6, 0.77, 0.1]} s={[0.24, 0.02, 0.32]} m={mat("#f6f4ef", 0.9)} r={[0, -0.2, 0]} />
-        <CadeiraEscritorio posicao={[0, 0.95]} cor="#4b5563" />
       </group>
-      <Planta posicao={[s.x1 - 0.5, s.z1 - 0.6]} semente={9} />
-      <Tapete posicao={[(s.x0 + s.x1) / 2 + 0.6, 8.6]} tamanho={[4.4, 3.0]} cor="#7a7f86" borda="#5b6068" />
+      <Tapete posicao={[13.1, 2.6]} tamanho={[4.4, 3.0]} cor="#7a7f86" borda="#5b6068" />
+      <Quadro posicao={[s.x1 - 0.08, 1.5]} rotacao={-Math.PI / 2} mapa={texturaArte(4)} largura={1.6} altura={1.0} />
     </group>
   );
 }
 
 function Estante({
-  x, escala = 1, setor, quantidade, onClick, alturaRotulo,
+  x, escala = 1, setor, quantidade, onClick, alturaRotulo, rotulos,
 }: {
   x: number;
   escala?: number;
   setor: SetorInfo;
   quantidade: number;
   onClick: () => void;
-  alturaRotulo: number; // alternada, para os rótulos vizinhos não se sobreporem
+  alturaRotulo: number;
+  rotulos: boolean;
 }) {
   const [hover, setHover] = useState(false);
   const cor = SETOR_COR[setor.id] ?? "#888780";
@@ -486,27 +358,29 @@ function Estante({
       onPointerOut={() => { setHover(false); document.body.style.cursor = ""; }}>
       {[-0.49, 0.49].map((lx) => <Caixa key={lx} p={[lx, 1.05, 0]} s={[0.04, 2.1, 0.44]} m={madeira} sombra />)}
       <Caixa p={[0, 1.05, -0.2]} s={[1.0, 2.1, 0.02]} m={mat("#d9cbb8", 0.8)} />
+      <Caixa p={[0, 2.14, 0]} s={[1.0, 0.08, 0.46]} m={mat(cor, 0.5)} />
       {Array.from({ length: PRAT + 1 }).map((_, i) => (
         <Caixa key={i} p={[0, 0.08 + i * 0.5, 0]} s={[0.96, 0.03, 0.44]} m={mat("#c9ab86", 0.55)} sombra recebe />
       ))}
-      {/* pastas: uma por documento do setor */}
       {Array.from({ length: pastas }).map((_, i) => {
         const prat = Math.floor(i / POR_PRAT);
         const col = i % POR_PRAT;
         const tom = i % 3 === 0 ? cor : i % 3 === 1 ? tonalidade(cor, 0.8) : tonalidade(cor, 1.15);
         return (
           <Caixa key={i} p={[-0.4 + col * 0.11, 0.1 + prat * 0.5 + 0.17, 0.02]}
-            s={[0.085, 0.32 + ((i * 7) % 5) * 0.012, 0.3]} m={mat(tom, 0.7)} sombra />
+            s={[0.085, 0.32 + ((i * 7) % 5) * 0.012, 0.3]} m={mat(tom, 0.7)} />
         );
       })}
-      <Html position={[0, alturaRotulo, 0]} center pointerEvents="none" distanceFactor={13}>
-        <div style={{
-          fontFamily: "system-ui", fontSize: 13, fontWeight: 600, whiteSpace: "nowrap", padding: "2px 8px",
-          borderRadius: 999, background: "rgba(255,255,255,0.92)", color: "#1b1f24", borderBottom: `3px solid ${cor}`,
-        }}>
-          {setor.nome} · {quantidade}
-        </div>
-      </Html>
+      {(
+        <Html position={[0, alturaRotulo, 0.2]} center pointerEvents="none" distanceFactor={13} zIndexRange={[10, 0]}>
+          <div style={{ display: rotulos ? "block" : "none",
+            fontFamily: "system-ui", fontSize: 13, fontWeight: 600, whiteSpace: "nowrap", padding: "2px 8px",
+            borderRadius: 999, background: "rgba(255,255,255,0.94)", color: "#1b1f24", borderBottom: `3px solid ${cor}`,
+          }}>
+            {setor.nome} · {quantidade}
+          </div>
+        </Html>
+      )}
     </group>
   );
 }
@@ -530,56 +404,53 @@ export function SalaRafael({ pendentes, onClick }: { pendentes: number; onClick:
     }
   });
   const [mx, mz] = MESA_RAFAEL;
-  const nogueira = mat(hover ? "#7a5236" : "#5b3d2a", 0.45);
+  const nogueira = mat(hover ? "#7a5236" : "#4e3423", 0.4);
+  const s = SALA.rafael;
   return (
     <group>
-      <Tapete posicao={[mx, mz + 0.4]} tamanho={[5.4, 4.0]} cor="#b9ad9c" borda="#8b7d69" />
+      <Tapete posicao={[mx, mz + 0.5]} tamanho={[6.0, 4.4]} cor="#b9ad9c" borda="#8b7d69" />
       <group position={[mx, 0, mz]}
         onClick={(e) => { e.stopPropagation(); onClick(); }}
         onPointerOver={(e) => { e.stopPropagation(); setHover(true); document.body.style.cursor = "pointer"; }}
         onPointerOut={() => { setHover(false); document.body.style.cursor = ""; }}>
         {/* mesa executiva: você senta em -z; o painel da frente fica para nós */}
-        <Caixa p={[0, 0.75, 0]} s={[2.6, 0.05, 1.05]} m={nogueira} sombra recebe />
-        {[-1.27, 1.27].map((x) => <Caixa key={x} p={[x, 0.37, 0]} s={[0.06, 0.74, 1.0]} m={nogueira} sombra />)}
+        <mesh geometry={TAMPO_RAFAEL} material={nogueira} position={[0, 0.75, 0]} castShadow receiveShadow />
+        {[-1.3, 1.3].map((x) => <Caixa key={x} p={[x, 0.37, 0]} s={[0.08, 0.74, 1.0]} m={nogueira} sombra />)}
         <Caixa p={[0, 0.43, 0.47]} s={[2.5, 0.62, 0.04]} m={nogueira} sombra />
         <Caixa p={[0, 0.43, 0.495]} s={[2.3, 0.02, 0.01]} m={mat("#c8a46a", 0.3, 0.8)} />
-        {/* pilha de demandas aguardando você */}
         {Array.from({ length: pilha }).map((_, i) => (
-          <Caixa key={i} p={[-0.85 + (i % 2) * 0.02, 0.785 + i * 0.022, 0.05 + (i % 3) * 0.015]}
+          <Caixa key={i} p={[-0.85 + (i % 2) * 0.02, 0.795 + i * 0.022, 0.05 + (i % 3) * 0.015]}
             s={[0.3, 0.018, 0.42]} r={[0, (i % 4) * 0.06, 0]} m={mat(i % 2 ? "#fbfaf7" : "#f2efe6", 0.9)} sombra />
         ))}
-        <mesh ref={luz} position={[-0.85, 0.81 + pilha * 0.022, 0.05]}>
+        <mesh ref={luz} position={[-0.85, 0.82 + pilha * 0.022, 0.05]}>
           <sphereGeometry args={[0.035, 12, 12]} />
           <meshStandardMaterial color="#f0a43a" emissive="#f0a43a" toneMapped={false} />
         </mesh>
-        {/* notebook aberto, com a tela virada para você */}
-        <Caixa p={[0.4, 0.785, -0.12]} s={[0.36, 0.015, 0.25]} m={mat("#c7cbd1", 0.3, 0.6)} />
-        <group position={[0.4, 0.79, 0.0]} rotation-x={0.3}>
-          <Caixa p={[0, 0.12, 0]} s={[0.36, 0.24, 0.012]} m={mat("#c7cbd1", 0.3, 0.6)} />
-          <mesh position={[0, 0.12, -0.007]} rotation-y={Math.PI} material={emissivo("#bcd4f5", 0.5)}>
-            <planeGeometry args={[0.33, 0.21]} />
-          </mesh>
-        </group>
-        <Caixa p={[0, 0.8, 0.38]} s={[0.36, 0.07, 0.05]} r={[-0.4, 0, 0]} m={mat("#1f1f22", 0.4)} />
-        <mesh position={[0.95, 0.82, 0.15]} material={mat("#f5f5f4", 0.3)} castShadow>
-          <cylinderGeometry args={[0.042, 0.038, 0.1, 16]} />
-        </mesh>
-        <Luminaria posicao={[1.05, 0.775, -0.3]} rotacao={-0.6} />
+        {/* dois monitores virados para você e um notebook */}
+        {[0.5, 1.08].map((x, i) => (
+          <group key={x} position={[x, 0.78, 0.28 - i * 0.1]} rotation-y={Math.PI + (i ? -0.45 : -0.1)}>
+            <Caixa p={[0, 0.34, 0]} s={[0.62, 0.38, 0.025]} m={mat("#111214", 0.35)} />
+            <mesh geometry={plano()} material={emissivo(i ? "#a7c4f2" : "#c6e3d2", 0.55)} position={[0, 0.345, 0.0135]} scale={[0.59, 0.35, 1]} />
+            <Caixa p={[0, 0.1, -0.03]} s={[0.04, 0.2, 0.02]} m={aluminio()} />
+          </group>
+        ))}
+        <Caixa p={[0.2, 0.8, -0.05]} s={[0.4, 0.015, 0.14]} m={mat("#e2e4e7", 0.6)} />
+        <mesh geometry={CIL} material={mat("#f5f5f4", 0.3)} position={[0.95, 0.83, 0.15]} scale={[0.08, 0.1, 0.08]} castShadow />
       </group>
-      <CadeiraEscritorio posicao={CADEIRA_RAFAEL} rotacao={Math.PI} cor="#1b1e23" />
-      {/* cadeiras de visita, viradas para você */}
-      <CadeiraEscritorio posicao={[mx - 0.6, mz + 1.05]} cor="#6b4f3a" />
-      <CadeiraEscritorio posicao={[mx + 0.6, mz + 1.05]} cor="#6b4f3a" />
-      <EstanteLivros posicao={[mx, CORREDOR.z1 + 0.32]} largura={3.6} />
-      <Sofa posicao={[SALA.rafael.x0 + 0.65, 8.4]} rotacao={Math.PI / 2} cor="#55606d" />
-      <MesaCentro posicao={[SALA.rafael.x0 + 1.85, 8.4]} />
-      <Planta posicao={[SALA.rafael.x0 + 0.5, CORREDOR.z1 + 0.6]} semente={3} />
-      <Planta posicao={[SALA.rafael.x1 - 0.5, SALA.rafael.z1 - 0.6]} tipo="baixa" semente={4} />
+      {/* aparador e quadro atrás de você, estante na parede da recepção */}
+      <group position={[mx, 0, s.z0 + 0.35]}>
+        <Caixa p={[0, 0.36, 0]} s={[3.6, 0.72, 0.5]} m={mat("#3b2a1e", 0.45)} sombra recebe />
+        <Caixa p={[0, 0.735, 0]} s={[3.64, 0.03, 0.52]} m={mat("#c8a46a", 0.35, 0.6)} />
+        <mesh geometry={CIL} material={mat("#e7e1d6", 0.4)} position={[-1.3, 0.9, 0]} scale={[0.18, 0.3, 0.18]} castShadow />
+        <Caixa p={[1.1, 0.84, 0]} s={[0.5, 0.18, 0.3]} m={mat("#7c2d12", 0.7)} />
+      </group>
+      <Quadro posicao={[mx, s.z0 + 0.08]} mapa={texturaArte(0)} largura={2.6} altura={1.2} y={1.75} />
+      <EstanteLivros posicao={[s.x1 - 0.25, 14.0]} largura={3.4} rotacao={-Math.PI / 2} />
+      <MesaCentro posicao={[-24.0, 13.8]} tamanho={[0.6, 1.2]} />
+      <Tapete posicao={[-24.2, 13.6]} tamanho={[3.0, 3.4]} cor="#d6cfc3" borda="#b4aa9b" />
       {/* luminária de pé */}
-      <group position={[SALA.rafael.x0 + 0.5, 0, 10.3]}>
-        <mesh position={[0, 0.015, 0]} material={acoPreto()}>
-          <cylinderGeometry args={[0.18, 0.2, 0.03, 20]} />
-        </mesh>
+      <group position={[s.x0 + 0.5, 0, 16.3]}>
+        <mesh geometry={CIL} material={acoPreto()} position={[0, 0.015, 0]} scale={[0.36, 0.03, 0.36]} />
         <Caixa p={[0, 0.8, 0]} s={[0.03, 1.6, 0.03]} m={acoPreto()} />
         <mesh position={[0, 1.65, 0]} material={mat("#efe6d6", 0.9)} castShadow>
           <cylinderGeometry args={[0.18, 0.25, 0.3, 24, 1, true]} />
@@ -588,54 +459,46 @@ export function SalaRafael({ pendentes, onClick }: { pendentes: number; onClick:
           <sphereGeometry args={[0.06, 12, 10]} />
         </mesh>
       </group>
+      <Relogio p={[s.x1 - 0.08, 2.2, 11.6]} rot={-Math.PI / 2} raio={0.2} />
     </group>
   );
 }
 
 // ---------- sala de reunião com TV ----------
 
-const TAMPO_REUNIAO = new RoundedBoxGeometry(4.8, 0.05, 1.4, 3, 0.02);
-
 export function SalaReuniao({ painel }: { painel: PainelTV }) {
   const [mx, mz] = MESA_REUNIAO;
-  const lados = [-1.65, -0.55, 0.55, 1.65];
+  const s = SALA.reuniao;
   return (
     <group>
       <group position={[mx, 0, mz]}>
-        <mesh geometry={TAMPO_REUNIAO} material={mat("#c6ae8e", 0.4)} position={[0, 0.75, 0]} castShadow receiveShadow />
-        {[-1.7, 1.7].map((x) => (
+        <mesh geometry={TAMPO_REUNIAO} material={mat("#bda383", 0.38)} position={[0, 0.76, 0]} castShadow receiveShadow />
+        {[-2.0, 2.0].map((x) => (
           <group key={x}>
-            <Caixa p={[x, 0.37, 0]} s={[0.1, 0.72, 0.7]} m={acoPreto()} sombra />
-            <Caixa p={[x, 0.02, 0]} s={[0.14, 0.04, 1.0]} m={acoPreto()} />
+            <Caixa p={[x, 0.37, 0]} s={[0.12, 0.72, 0.9]} m={acoPreto()} sombra />
+            <Caixa p={[x, 0.02, 0]} s={[0.5, 0.04, 1.2]} m={acoPreto()} />
           </group>
         ))}
-        {/* telefone de conferência, copos e cadernos */}
-        <mesh position={[0, 0.79, 0]} material={mat("#1f2125", 0.4)}>
-          <cylinderGeometry args={[0.16, 0.18, 0.03, 3]} />
-        </mesh>
-        {lados.map((x, i) => (
+        <mesh geometry={CIL} material={mat("#1f2125", 0.4)} position={[0, 0.8, 0]} scale={[0.34, 0.03, 0.34]} />
+        {[-2.6, -1.3, 0, 1.3, 2.6].map((x, i) => (
           <group key={x}>
-            <mesh position={[x + 0.25, 0.83, -0.38]} material={vidro()}>
-              <cylinderGeometry args={[0.035, 0.03, 0.12, 12]} />
-            </mesh>
-            {i % 2 === 0 && <Caixa p={[x, 0.785, 0.38]} s={[0.22, 0.012, 0.3]} m={mat("#1f2937", 0.7)} r={[0, 0.15, 0]} />}
+            <mesh geometry={CIL} material={vidro()} position={[x + 0.25, 0.85, -0.5]} scale={[0.07, 0.12, 0.07]} />
+            <mesh geometry={CIL} material={vidro()} position={[x - 0.25, 0.85, 0.5]} scale={[0.07, 0.12, 0.07]} />
+            {i % 2 === 0 && <Caixa p={[x, 0.795, 0.48]} s={[0.22, 0.012, 0.3]} m={mat("#1f2937", 0.7)} r={[0, 0.15, 0]} />}
+            {i % 2 === 1 && <Caixa p={[x, 0.795, -0.48]} s={[0.3, 0.012, 0.22]} m={mat("#f6f4ef", 0.9)} r={[0, -0.2, 0]} />}
           </group>
         ))}
-        {lados.map((x) => <CadeiraEscritorio key={`a${x}`} posicao={[x, -1.0]} rotacao={Math.PI} cor="#3b4250" />)}
-        {lados.map((x) => <CadeiraEscritorio key={`b${x}`} posicao={[x, 1.0]} cor="#3b4250" />)}
-        <CadeiraEscritorio posicao={[-2.85, 0]} rotacao={-Math.PI / 2} cor="#3b4250" />
-        <CadeiraEscritorio posicao={[2.85, 0]} rotacao={Math.PI / 2} cor="#3b4250" />
       </group>
       <Televisao painel={painel} />
       {/* aparador sob a TV */}
-      <group position={[TV.x, 0, CORREDOR.z1 + 0.32]}>
-        <Caixa p={[0, 0.3, 0]} s={[2.8, 0.52, 0.42]} m={mat("#4a3426", 0.5)} sombra recebe />
-        <Caixa p={[0, 0.03, 0]} s={[2.7, 0.06, 0.38]} m={acoPreto()} />
-        <Caixa p={[0, 0.65, -0.05]} s={[1.1, 0.07, 0.1]} m={mat("#16181c", 0.4)} />
-        <Planta posicao={[1.15, 0]} tipo="baixa" escala={0.45} semente={2} />
+      <group position={[TV.x, 0, s.z0 + 0.3]}>
+        <Caixa p={[0, 0.3, 0]} s={[3.4, 0.52, 0.42]} m={mat("#4a3426", 0.5)} sombra recebe />
+        <Caixa p={[0, 0.03, 0]} s={[3.3, 0.06, 0.38]} m={acoPreto()} />
+        <Caixa p={[0, 0.6, -0.05]} s={[1.1, 0.07, 0.1]} m={mat("#16181c", 0.4)} />
       </group>
-      <Planta posicao={[SALA.reuniao.x0 + 0.5, SALA.reuniao.z1 - 0.6]} semente={5} />
-      <Planta posicao={[SALA.reuniao.x1 - 0.5, SALA.reuniao.z1 - 0.6]} semente={8} />
+      <Quadro posicao={[s.x0 + 0.08, 0.6]} rotacao={Math.PI / 2} mapa={texturaArte(8)} largura={2.2} altura={1.2} />
+      <Quadro posicao={[s.x1 - 0.08, 0.6]} rotacao={-Math.PI / 2} mapa={texturaArte(9)} largura={2.2} altura={1.2} />
+      <Relogio p={[TV.x + 2.6, 2.1, s.z0 + 0.08]} />
     </group>
   );
 }
@@ -673,11 +536,9 @@ function Televisao({ painel }: { painel: PainelTV }) {
 
   return (
     <group position={[TV.x, TV.y, TV.z]}>
-      <Caixa p={[0, 0, 0.03]} s={[TV.largura + 0.05, TV.altura + 0.05, 0.05]} m={mat("#0c0d0f", 0.3)} sombra />
-      <mesh position={[0, 0, 0.0565]}>
-        <planeGeometry args={[TV.largura, TV.altura]} />
-        <meshStandardMaterial map={textura} emissive="#ffffff" emissiveMap={textura} emissiveIntensity={0.9}
-          toneMapped={false} roughness={0.15} />
+      <Caixa p={[0, 0, -0.02]} s={[TV.largura + 0.05, TV.altura + 0.05, 0.05]} m={mat("#0c0d0f", 0.3)} sombra />
+      <mesh geometry={plano()} position={[0, 0, 0.0065]} scale={[TV.largura, TV.altura, 1]}>
+        <meshStandardMaterial map={textura} emissive="#ffffff" emissiveMap={textura} emissiveIntensity={0.9} toneMapped={false} roughness={0.15} />
       </mesh>
     </group>
   );
@@ -685,67 +546,77 @@ function Televisao({ painel }: { painel: PainelTV }) {
 
 // ---------- copa ----------
 
-function Copa() {
+export const Copa = memo(function Copa() {
   const s = SALA.copa;
-  const xb = s.x1 - 0.32;
+  const z = s.z0 + 0.32;
   return (
     <group>
-      {/* bancada com armários na parede da direita */}
-      <Caixa p={[xb, 0.44, 5.9]} s={[0.6, 0.88, 3.6]} m={mat("#f4f2ee", 0.5)} sombra recebe />
-      <Caixa p={[xb - 0.01, 0.9, 5.9]} s={[0.64, 0.04, 3.64]} m={mat("#e6e3dd", 0.2)} sombra recebe />
-      <Caixa p={[xb + 0.12, 1.95, 5.9]} s={[0.36, 0.7, 3.6]} m={mat("#f4f2ee", 0.5)} sombra />
-      {[4.6, 5.5, 6.4, 7.3].map((z) => <Caixa key={z} p={[xb - 0.302, 0.62, z]} s={[0.02, 0.025, 0.2]} m={inox()} />)}
-      {/* cafeteira, micro-ondas, pia */}
-      <group position={[xb, 0.92, 4.5]}>
-        <Caixa p={[0, 0.18, 0]} s={[0.32, 0.36, 0.3]} m={mat("#1e1f22", 0.3, 0.3)} sombra />
-        <Caixa p={[-0.17, 0.27, 0]} s={[0.01, 0.06, 0.12]} m={emissivo("#7dd3fc", 1.2)} />
-        <mesh position={[-0.1, 0.05, 0]} material={mat("#f5f5f4", 0.3)}>
-          <cylinderGeometry args={[0.035, 0.03, 0.08, 12]} />
-        </mesh>
+      <Caixa p={[21.3, 0.44, z]} s={[6.6, 0.88, 0.62]} m={brancoFosco()} sombra recebe />
+      <Caixa p={[21.3, 0.9, z + 0.01]} s={[6.64, 0.04, 0.66]} m={mat("#2b2e33", 0.2)} sombra recebe />
+      <Caixa p={[21.3, 1.95, s.z0 + 0.2]} s={[6.6, 0.7, 0.36]} m={brancoFosco()} sombra />
+      <Caixa p={[21.3, 1.55, s.z0 + 0.03]} s={[6.6, 0.75, 0.02]} m={mat("#3f6f6a", 0.3)} />
+      {[18.6, 19.9, 21.2, 22.5, 23.8].map((x) => <Caixa key={x} p={[x, 0.62, z + 0.315]} s={[0.2, 0.025, 0.02]} m={aluminio()} />)}
+      {/* cafeteira, micro-ondas e pia */}
+      <group position={[18.7, 0.92, z]}>
+        <Caixa p={[0, 0.2, 0]} s={[0.34, 0.4, 0.32]} m={mat("#1e1f22", 0.3, 0.3)} sombra />
+        <Caixa p={[0, 0.28, 0.165]} s={[0.12, 0.06, 0.01]} m={emissivo("#7dd3fc", 1.2)} />
+        <mesh geometry={CIL} material={mat("#f5f5f4", 0.3)} position={[0, 0.05, 0.1]} scale={[0.07, 0.08, 0.07]} />
       </group>
-      <group position={[xb, 0.92, 6.7]}>
-        <Caixa p={[0, 0.16, 0]} s={[0.4, 0.32, 0.55]} m={inox()} sombra />
-        <Caixa p={[-0.205, 0.16, -0.05]} s={[0.01, 0.24, 0.38]} m={mat("#16181c", 0.2)} />
+      <group position={[20.4, 0.92, z]}>
+        <Caixa p={[0, 0.16, 0]} s={[0.55, 0.32, 0.4]} m={aluminio()} sombra />
+        <Caixa p={[-0.05, 0.16, 0.205]} s={[0.38, 0.24, 0.01]} m={mat("#16181c", 0.2)} />
       </group>
-      <Caixa p={[xb - 0.02, 0.921, 5.6]} s={[0.4, 0.005, 0.5]} m={inox()} />
-      <Caixa p={[xb + 0.18, 1.05, 5.6]} s={[0.03, 0.25, 0.03]} m={inox()} />
-      {/* geladeira e bebedouro */}
-      <Caixa p={[s.x1 - 0.4, 0.95, 8.4]} s={[0.72, 1.9, 0.72]} m={inox()} sombra />
-      <Caixa p={[s.x1 - 0.77, 1.3, 8.15]} s={[0.02, 0.5, 0.03]} m={acoPreto()} />
-      <group position={[s.x0 + 0.5, 0, s.z1 - 0.6]}>
-        <Caixa p={[0, 0.5, 0]} s={[0.32, 1.0, 0.32]} m={mat("#f2f2f0", 0.5)} sombra />
-        <mesh position={[0, 1.24, 0]} material={vidroAgua()}>
-          <cylinderGeometry args={[0.13, 0.13, 0.46, 20]} />
-        </mesh>
-      </group>
-      {/* mesa alta com banquetas */}
-      <group position={[s.x0 + 2.3, 0, 7.4]}>
-        <mesh position={[0, 1.05, 0]} material={mat("#efe9df", 0.35)} castShadow receiveShadow>
-          <cylinderGeometry args={[0.45, 0.45, 0.04, 32]} />
-        </mesh>
-        <Caixa p={[0, 0.52, 0]} s={[0.06, 1.04, 0.06]} m={acoPreto()} />
-        <mesh position={[0, 0.015, 0]} material={acoPreto()}>
-          <cylinderGeometry args={[0.25, 0.27, 0.03, 24]} />
-        </mesh>
-        {[0, 2.1, 4.2].map((a) => (
-          <group key={a} position={[Math.cos(a) * 0.72, 0, Math.sin(a) * 0.72]}>
-            <mesh position={[0, 0.76, 0]} material={mat("#6b4f3a", 0.6)} castShadow>
-              <cylinderGeometry args={[0.18, 0.17, 0.05, 20]} />
-            </mesh>
-            <Caixa p={[0, 0.38, 0]} s={[0.04, 0.76, 0.04]} m={acoPreto()} />
-            <mesh position={[0, 0.3, 0]} rotation-x={Math.PI / 2} material={acoPreto()}>
-              <torusGeometry args={[0.14, 0.012, 6, 20]} />
-            </mesh>
-          </group>
-        ))}
-      </group>
-      <Planta posicao={[s.x0 + 0.45, s.z1 - 2.2]} tipo="baixa" semente={6} />
+      <Caixa p={[22.6, 0.921, z]} s={[0.6, 0.005, 0.42]} m={aluminio()} />
+      <Caixa p={[22.6, 1.06, z - 0.18]} s={[0.03, 0.28, 0.03]} m={aluminio()} />
+      {/* geladeira e mesa */}
+      <Caixa p={[25.2, 0.95, s.z0 + 0.45]} s={[0.78, 1.9, 0.78]} m={aluminio()} sombra />
+      <MesaRedonda x={21.5} z={2.1} raio={0.7} />
+      <mesh geometry={CIL} material={mat("#ef4444", 0.6)} position={[21.5, 0.82, 2.1]} scale={[0.22, 0.1, 0.22]} />
+      <Quadro posicao={[s.x1 - 0.08, 2.0]} rotacao={-Math.PI / 2} mapa={texturaArte(10)} largura={1.4} altura={1.0} />
     </group>
   );
-}
+});
 
-function vidroAgua() {
-  return mat("#93c5fd", 0.1, 0.1);
-}
+// ---------- recepção ----------
 
-export const PISO_ALTURA = H;
+export const Recepcao = memo(function Recepcao() {
+  const logo = texturaLogoRecepcao();
+  return (
+    <group>
+      {/* parede do logo, solta, virada para a entrada */}
+      <group position={[-1, 0, 11.0]}>
+        <Caixa p={[0, ALT / 2, 0]} s={[7.2, ALT, 0.24]} m={mat("#2b2119", 0.6)} sombra recebe />
+        <mesh geometry={plano()} position={[0, ALT / 2, 0.123]} scale={[5.4, 2.7, 1]}>
+          <meshStandardMaterial map={logo} roughness={0.55} emissive="#ffffff" emissiveMap={logo} emissiveIntensity={0.18} />
+        </mesh>
+        <mesh geometry={plano()} material={emissivo("#ffd9a0", 1.6)} position={[0, 0.02, 0.2]} rotation-x={-Math.PI / 2} scale={[6.8, 0.08, 1]} />
+      </group>
+      {/* balcão */}
+      <group position={[-1, 0, 13.6]}>
+        <mesh geometry={BALCAO} material={brancoFosco()} position={[0, 0.55, 0]} castShadow receiveShadow />
+        <Caixa p={[0, 1.12, -0.06]} s={[4.3, 0.04, 0.95]} m={mat("#2b2e33", 0.25)} sombra />
+        {Array.from({ length: 20 }).map((_, i) => (
+          <Caixa key={i} p={[-1.9 + i * 0.2, 0.55, 0.405]} s={[0.12, 1.0, 0.02]} m={mat("#8a6a4a", 0.5)} />
+        ))}
+        <mesh geometry={plano()} material={emissivo("#ffd9a0", 1.2)} position={[0, 0.03, 0.43]} rotation-x={-Math.PI / 2} scale={[4.0, 0.06, 1]} />
+        <group position={[0.9, 1.14, -0.15]} rotation-y={Math.PI}>
+          <Caixa p={[0, 0.25, 0]} s={[0.55, 0.34, 0.02]} m={mat("#111214", 0.35)} />
+          <mesh geometry={plano()} material={emissivo("#bcd4f5", 0.5)} position={[0, 0.255, 0.011]} scale={[0.52, 0.31, 1]} />
+          <Caixa p={[0, 0.06, -0.03]} s={[0.04, 0.12, 0.02]} m={aluminio()} />
+        </group>
+        <mesh geometry={CIL} material={vidro()} position={[-1.4, 1.27, 0.1]} scale={[0.12, 0.26, 0.12]} />
+        {[0, 1, 2, 3, 4].map((k) => (
+          <mesh key={k} geometry={CIL} material={mat("#16a34a", 0.6)} position={[-1.4 + (k - 2) * 0.03, 1.45 + (k % 2) * 0.04, 0.1]} scale={[0.01, 0.3, 0.01]} />
+        ))}
+        <mesh position={[-1.4, 1.62, 0.1]} material={mat("#f9a8d4", 0.6)}><sphereGeometry args={[0.07, 10, 8]} /></mesh>
+      </group>
+      {/* sala de espera */}
+      <Tapete posicao={[17, 13.95]} tamanho={[6.4, 5.2]} cor="#cfc6b8" borda="#a99d8b" />
+      <MesaCentro posicao={[17, 13.95]} tamanho={[1.2, 0.7]} />
+      {/* tapete da entrada */}
+      <mesh geometry={plano()} position={[SALA.recepcao.porta, 0.008, 16.2]} rotation-x={-Math.PI / 2} scale={[2.2, 1.4, 1]} material={mat("#2f3236", 1)} receiveShadow />
+      <Quadro posicao={[SALA.recepcao.x0 + 0.08, 14.6]} rotacao={Math.PI / 2} mapa={texturaArte(11)} largura={2.0} altura={1.2} />
+    </group>
+  );
+});
+

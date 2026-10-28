@@ -9,7 +9,7 @@ export type PainelTV = {
   documentos: number;
   eventos: { hora: string; nome: string; texto: string; tipo: string }[];
   // reunião em andamento: a TV mostra a pauta e o cronômetro no lugar do painel do dia
-  reuniao?: { titulo: string; pauta: string[]; participantes: string[]; desde: string | null; outras: number } | null;
+  reuniao?: { titulo: string; pauta: string[]; participantes: string[]; desde: string | null; outras: number; fala?: { nome: string; texto: string } | null } | null;
   // só agendada: faixa "Próxima reunião HH:MM · título" no rodapé do painel do dia
   proxima?: { hora: string; titulo: string } | null;
   // na reprodução do dia, a hora do evento reproduzido (relógio e cronômetro seguem a reprodução)
@@ -116,6 +116,19 @@ function desenharReuniao(ctx: CanvasRenderingContext2D, r: NonNullable<PainelTV[
   ctx.fillText(cronometro(decorrido), TV_W - 88, 284);
   ctx.textAlign = "left";
 
+  // quem está falando: legenda grande no lugar da pauta
+  if (r.fala) {
+    cartao(ctx, 56, 332, TV_W - 112, 322);
+    ctx.fillStyle = "#e3b341";
+    ctx.fillRect(56, 332, 6, 322);
+    ctx.fillStyle = "#e3b341";
+    ctx.font = `700 30px ${FONTE}`;
+    ctx.fillText(`${r.fala.nome} está falando`, 88, 382);
+    ctx.fillStyle = "#f8fafc";
+    ctx.font = `500 38px ${FONTE}`;
+    const ls = linhas(ctx, `“${r.fala.texto}”`, TV_W - 112 - 64, 5);
+    ls.forEach((l, k) => ctx.fillText(l, 88, 440 + k * 48));
+  } else {
   // pauta
   cartao(ctx, 56, 332, TV_W - 112, 322);
   ctx.fillStyle = "#e2e8f0";
@@ -145,6 +158,7 @@ function desenharReuniao(ctx: CanvasRenderingContext2D, r: NonNullable<PainelTV[
     ctx.fillText(`+ ${r.pauta.length - max} itens`, 132, Math.min(y, 640));
   }
 
+  }
   ctx.fillStyle = "#475569";
   ctx.font = `500 20px ${FONTE}`;
   ctx.fillText(

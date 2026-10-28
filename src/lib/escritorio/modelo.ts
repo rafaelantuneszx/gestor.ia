@@ -1,4 +1,4 @@
-// Modelo do escritório 3D: planta, rotas de caminhada e como os eventos do banco viram estado
+// Modelo do escritório 3D: planta, rotas de caminhada, câmeras e como os eventos do banco viram estado
 // (quem está trabalhando, o que aparece no monitor) e viagens (quem leva o quê para onde).
 
 export type Vec2 = [number, number]; // [x, z] no chão, em metros
@@ -38,9 +38,14 @@ export type Viagem = {
 };
 
 // ---------- planta ----------
-// Prédio de 42 x 22 m visto de frente, em corte (sem a fachada da frente). Fileira do fundo: as salas
-// de trabalho, com as mesas encostadas no fundo e o agente de costas para a câmera, olhando o monitor.
-// No meio, o corredor. Na frente: a sua sala, a sala de reunião, o arquivo e a copa.
+// Andar corporativo de 52 x 36 m visto de frente, em corte (sem a fachada da frente e sem o teto visto de cima).
+// Três faixas de salas e dois corredores largos, ligados por um hall ("espinha") no meio:
+//   fundo (z -19 a -8): Direção, Sistemas, Financeiro e Custos, com janelões para a cidade;
+//   corredor 1 (z -8 a -4);
+//   meio (z -4 a 6): Frota e RH, Suprimentos, sala de reunião, hall, Arquivo e copa;
+//   corredor 2 (z 6 a 10);
+//   frente (z 10 a 17): a sala do Rafael e a recepção aberta, com balcão, logo e sofás.
+// Os agentes sentam de costas para a câmera, olhando o monitor; o Rafael senta de frente.
 
 export const GRUPO_COR: Record<string, string> = {
   "Direção": "#7F77DD",
@@ -48,90 +53,90 @@ export const GRUPO_COR: Record<string, string> = {
   "Sistemas": "#D85A30",
 };
 
-export const SETOR_COR: Record<string, string> = {
-  direcao: "#7F77DD",
-  financeiro: "#1D9E75",
-  custos: "#378ADD",
-  "frota-rh": "#BA7517",
-  suprimentos: "#D4537E",
-  sistemas: "#D85A30",
-  agenda: "#639922",
-  reunioes: "#64748b",
-};
+export { COR_SETOR as SETOR_COR } from "@/lib/pessoas";
+import { COR_SETOR } from "@/lib/pessoas";
 
-export const PREDIO = { x0: -18, x1: 24, z0: -11, z1: 11 };
-export const CORREDOR = { z0: -4, z1: 3 };
-export const CORREDOR_Z = -0.5; // linha por onde se anda no corredor
+export const PREDIO = { x0: -26, x1: 26, z0: -19, z1: 17 };
 export const ALTURA_PAREDE = 2.9;
+export const CORREDORES = {
+  c1: { z0: -8, z1: -4, faixa: -6 },
+  c2: { z0: 6, z1: 10, faixa: 8 },
+} as const;
+export type Corredor = keyof typeof CORREDORES;
+export const ESPINHA = { x0: 3, x1: 7, faixa: 5, z0: -4, z1: 6 };
 
-export type Piso = "madeira" | "carpete" | "carpete-quente" | "porcelanato";
+export type Piso = "madeira" | "carpete" | "carpete-quente" | "porcelanato" | "concreto";
 
 export type Sala = {
   id: string;
   nome: string;
   cor: string;
-  fileira: "fundo" | "frente";
+  icone: string; // chave em icones.ts
+  fileira: "fundo" | "meio" | "frente";
   x0: number;
   x1: number;
   z0: number;
   z1: number;
-  porta: number; // x do centro da porta, na parede do corredor
+  corredor: Corredor; // corredor para onde abre a porta
+  porta: number; // x do centro da porta
   faixa: number; // z da faixa livre dentro da sala, por onde se anda
   piso: Piso;
+  aberta?: boolean; // sem parede para o corredor (recepção)
 };
 
-const FUNDO = { z0: PREDIO.z0, z1: CORREDOR.z0, faixa: -6 };
-const FRENTE = { z0: CORREDOR.z1, z1: PREDIO.z1 };
-
+const A = { fileira: "fundo" as const, z0: -19, z1: -8, corredor: "c1" as const, faixa: -14 };
 export const SALAS: Sala[] = [
-  { id: "direcao", nome: "Direção", cor: SETOR_COR.direcao, fileira: "fundo", x0: -18, x1: -10, ...FUNDO, porta: -10.9, piso: "madeira" },
-  { id: "sistemas", nome: "Sistemas", cor: SETOR_COR.sistemas, fileira: "fundo", x0: -10, x1: 0, ...FUNDO, porta: -0.9, piso: "madeira" },
-  { id: "financeiro", nome: "Financeiro", cor: SETOR_COR.financeiro, fileira: "fundo", x0: 0, x1: 9.2, ...FUNDO, porta: 8.3, piso: "madeira" },
-  { id: "custos", nome: "Custos e Contratos", cor: SETOR_COR.custos, fileira: "fundo", x0: 9.2, x1: 16, ...FUNDO, porta: 15.1, piso: "madeira" },
-  { id: "frota-rh", nome: "Frota e RH", cor: SETOR_COR["frota-rh"], fileira: "fundo", x0: 16, x1: 20, ...FUNDO, porta: 19.1, piso: "madeira" },
-  { id: "suprimentos", nome: "Suprimentos", cor: SETOR_COR.suprimentos, fileira: "fundo", x0: 20, x1: 24, ...FUNDO, porta: 23.1, piso: "madeira" },
-  { id: "rafael", nome: "Sala do Rafael", cor: "#b8875a", fileira: "frente", x0: -18, x1: -8, ...FRENTE, porta: -9.0, faixa: 7.4, piso: "carpete-quente" },
-  { id: "reuniao", nome: "Sala de reunião", cor: "#4b5563", fileira: "frente", x0: -8, x1: 4, ...FRENTE, porta: -7.1, faixa: 9.6, piso: "carpete" },
-  { id: "arquivo", nome: "Arquivo", cor: "#888780", fileira: "frente", x0: 4, x1: 16, ...FRENTE, porta: 4.8, faixa: 5.3, piso: "madeira" },
-  { id: "copa", nome: "Copa", cor: "#0f766e", fileira: "frente", x0: 16, x1: 24, ...FRENTE, porta: 16.9, faixa: 5.0, piso: "porcelanato" },
+  { id: "direcao", nome: "Direção", cor: COR_SETOR.direcao, icone: "direcao", ...A, x0: -26, x1: -14, porta: -15.0, piso: "madeira" },
+  { id: "sistemas", nome: "Sistemas", cor: COR_SETOR.sistemas, icone: "sistemas", ...A, x0: -14, x1: 0, porta: -1.0, piso: "madeira" },
+  { id: "financeiro", nome: "Financeiro", cor: COR_SETOR.financeiro, icone: "financeiro", ...A, x0: 0, x1: 14, porta: 13.0, piso: "madeira" },
+  { id: "custos", nome: "Custos e Contratos", cor: COR_SETOR.custos, icone: "custos", ...A, x0: 14, x1: 26, porta: 25.0, piso: "madeira" },
+  { id: "frota-rh", nome: "Frota e RH", cor: COR_SETOR["frota-rh"], icone: "frota-rh", fileira: "meio", x0: -26, x1: -19, z0: -4, z1: 6, corredor: "c1", porta: -19.9, faixa: 0.9, piso: "madeira" },
+  { id: "suprimentos", nome: "Suprimentos", cor: COR_SETOR.suprimentos, icone: "suprimentos", fileira: "meio", x0: -19, x1: -12, z0: -4, z1: 6, corredor: "c1", porta: -12.9, faixa: 0.9, piso: "madeira" },
+  { id: "reuniao", nome: "Sala de reunião", cor: "#475569", icone: "reuniao", fileira: "meio", x0: -12, x1: 3, z0: -4, z1: 6, corredor: "c2", porta: -11.0, faixa: 4.3, piso: "carpete" },
+  { id: "arquivo", nome: "Arquivo", cor: "#78716c", icone: "arquivo", fileira: "meio", x0: 7, x1: 17, z0: -4, z1: 6, corredor: "c2", porta: 7.9, faixa: -1.9, piso: "madeira" },
+  { id: "copa", nome: "Copa", cor: "#0f766e", icone: "copa", fileira: "meio", x0: 17, x1: 26, z0: -4, z1: 6, corredor: "c2", porta: 17.9, faixa: 3.6, piso: "porcelanato" },
+  { id: "rafael", nome: "Sala do Rafael", cor: "#b8875a", icone: "rafael", fileira: "frente", x0: -26, x1: -10, z0: 10, z1: 17, corredor: "c2", porta: -11.0, faixa: 11.2, piso: "carpete-quente" },
+  { id: "recepcao", nome: "Recepção", cor: "#1f2937", icone: "recepcao", fileira: "frente", x0: -10, x1: 26, z0: 10, z1: 17, corredor: "c2", porta: 8.5, faixa: 15.8, piso: "porcelanato", aberta: true },
 ];
 
 export const SALA = Object.fromEntries(SALAS.map((s) => [s.id, s])) as Record<string, Sala>;
 
-// Mesa de cada agente: centro da mesa no chão. A cadeira fica 0,7 m à frente (z maior) e o agente
-// olha para o monitor (para -z), de costas para a câmera; o monitor fica de frente para quem olha.
-const MESA_Z = -9.6;
+// Mesa de cada agente: centro da mesa (em L, com o retorno à esquerda) no chão. A cadeira fica 0,7 m à frente
+// (z maior) e o agente olha para o monitor (para -z), de costas para a câmera.
+export const MESA_Z_FUNDO = -16.4;
+export const MESA_Z_MEIO = -2.4;
 export const MESAS: Record<string, Vec2> = {
-  helena: [-15.6, MESA_Z],
-  "clara-assistente": [-12.9, MESA_Z],
-  "ricardo-diretor-sistemas": [-8.4, MESA_Z],
-  "otavio-pavimax": [-6.2, MESA_Z],
-  "lucia-financeiro": [-4.0, MESA_Z],
-  "paulo-rh": [-1.8, MESA_Z],
-  "bruno-financeiro": [1.3, MESA_Z],
-  "davi-faturas": [3.5, MESA_Z],
-  "igor-folha-financeiro": [5.7, MESA_Z],
-  "beatriz-fiscal": [7.9, MESA_Z],
-  "marina-custos": [10.4, MESA_Z],
-  "henrique-analise-custos": [12.6, MESA_Z],
-  "laura-calculos-custos": [14.8, MESA_Z],
-  "sofia-adm-rh-frota": [17.9, MESA_Z],
-  "caio-suprimentos": [21.9, MESA_Z],
+  helena: [-22.0, MESA_Z_FUNDO],
+  "clara-assistente": [-18.0, MESA_Z_FUNDO],
+  "ricardo-diretor-sistemas": [-11.4, MESA_Z_FUNDO],
+  "otavio-pavimax": [-8.4, MESA_Z_FUNDO],
+  "lucia-financeiro": [-5.4, MESA_Z_FUNDO],
+  "paulo-rh": [-2.4, MESA_Z_FUNDO],
+  "bruno-financeiro": [2.4, MESA_Z_FUNDO],
+  "davi-faturas": [5.4, MESA_Z_FUNDO],
+  "igor-folha-financeiro": [8.4, MESA_Z_FUNDO],
+  "beatriz-fiscal": [11.4, MESA_Z_FUNDO],
+  "marina-custos": [17.0, MESA_Z_FUNDO],
+  "henrique-analise-custos": [20.0, MESA_Z_FUNDO],
+  "laura-calculos-custos": [23.0, MESA_Z_FUNDO],
+  "sofia-adm-rh-frota": [-22.8, MESA_Z_MEIO],
+  "caio-suprimentos": [-15.8, MESA_Z_MEIO],
 };
 
-// Sua sala: a mesa fica de frente para a câmera; você senta atrás dela (z menor), olhando para nós.
-export const MESA_RAFAEL: Vec2 = [-13, 6.7];
+// Sala do Rafael: a mesa fica de frente para a câmera; ele senta atrás dela (z menor), olhando para nós.
+export const MESA_RAFAEL: Vec2 = [-19, 13.4];
 export const CADEIRA_RAFAEL: Vec2 = [MESA_RAFAEL[0], MESA_RAFAEL[1] - 0.85];
-const VISITA_RAFAEL: Vec2 = [-10.8, SALA.rafael.faixa]; // onde quem traz uma demanda para, ao lado da mesa
+const VISITA_RAFAEL: Vec2 = [-16.9, 13.2]; // onde quem traz uma demanda para, ao lado da mesa
 
-// Arquivo: uma estante por setor, encostada na parede do corredor e aberta para a frente.
-export const ARQUIVO_X0 = 5.9;
+// Arquivo: uma estante por setor, encostada na parede do fundo da sala e aberta para a frente (para a câmera).
+export const ARQUIVO_X0 = 8.2;
 export const ARQUIVO_PASSO = 1.1;
-export const ARQUIVO_Z = 3.45;
+export const ARQUIVO_Z = -3.6;
+export const ARQUIVO_FRENTE = -2.75; // onde se para para guardar o relatório
 
-// Sala de reunião: a TV fica na parede do corredor, virada para a mesa.
-export const TV = { x: -2, y: 1.55, z: 3.09, largura: 2.1, altura: 1.18 };
-export const MESA_REUNIAO: Vec2 = [-2, 7.1];
+// Sala de reunião: a TV fica na parede do fundo (z = -4), virada para a mesa e para a câmera.
+export const MESA_REUNIAO: Vec2 = [-4.5, 1.0];
+export const TV = { x: -4.5, y: 1.62, z: -4 + 0.09, largura: 2.6, altura: 1.46 };
 
 export function cadeira(agente: string): Vec2 {
   const m = MESAS[agente] ?? [0, 0];
@@ -139,7 +144,7 @@ export function cadeira(agente: string): Vec2 {
 }
 
 // Uma estante por setor, com o passo normal enquanto couber; com setores demais, elas estreitam para caber na sala.
-const ARQUIVO_LIVRE: [number, number] = [ARQUIVO_X0 - 0.5, SALA.arquivo.x1 - 1.0];
+const ARQUIVO_LIVRE: [number, number] = [ARQUIVO_X0 - 0.5, SALA.arquivo.x1 - 0.6];
 const ARQUIVO_CABEM = Math.floor((ARQUIVO_LIVRE[1] - ARQUIVO_LIVRE[0] + 0.1) / ARQUIVO_PASSO);
 export function estante(i: number, n: number): { x: number; escala: number } {
   if (n <= ARQUIVO_CABEM) return { x: ARQUIVO_X0 + i * ARQUIVO_PASSO, escala: 1 };
@@ -156,62 +161,79 @@ export function salaDoPonto(p: Vec2): Sala | null {
   return SALAS.find((s) => p[0] >= s.x0 && p[0] <= s.x1 && p[1] >= s.z0 && p[1] <= s.z1) ?? null;
 }
 
-// Caminho pelas faixas livres e portas, sem atravessar mesas nem paredes: sai para a faixa da sua
-// sala, passa pela porta, anda pelo corredor, entra pela porta do destino e vai pela faixa até lá.
-// Dentro da mesma sala, só pela faixa.
+function corredorDoPonto(p: Vec2): Corredor {
+  return Math.abs(p[1] - CORREDORES.c1.faixa) <= Math.abs(p[1] - CORREDORES.c2.faixa) ? "c1" : "c2";
+}
+
+// Do ponto até a faixa do corredor: sai para a faixa da sala, vai até a porta e cruza para o corredor.
+function saida(p: Vec2): { pts: Vec2[]; corredor: Corredor } {
+  const s = salaDoPonto(p);
+  if (s) {
+    const fz = CORREDORES[s.corredor].faixa;
+    if (s.aberta) return { pts: [[p[0], fz]], corredor: s.corredor };
+    return { pts: [[p[0], s.faixa], [s.porta, s.faixa], [s.porta, fz]], corredor: s.corredor };
+  }
+  if (p[0] >= ESPINHA.x0 && p[0] <= ESPINHA.x1 && p[1] > CORREDORES.c1.z1 && p[1] < CORREDORES.c2.z0) {
+    return { pts: [[ESPINHA.faixa, p[1]], [ESPINHA.faixa, CORREDORES.c1.faixa]], corredor: "c1" };
+  }
+  const c = corredorDoPonto(p);
+  return { pts: [[p[0], CORREDORES[c].faixa]], corredor: c };
+}
+
+const semRepetir = (pts: Vec2[]) =>
+  pts.filter((p, i) => i === 0 || Math.abs(p[0] - pts[i - 1][0]) > 1e-6 || Math.abs(p[1] - pts[i - 1][1]) > 1e-6);
+
+// Caminho pelas faixas livres, portas e corredores, sem atravessar mesas nem paredes. Entre os dois corredores,
+// passa pelo hall do meio. Dentro da mesma sala, só pela faixa.
 export function rota(de: Vec2, para: Vec2): Vec2[] {
   const a = salaDoPonto(de);
   const b = salaDoPonto(para);
-  const pts: Vec2[] = [de];
-  if (a && b && a.id === b.id) {
-    pts.push([de[0], a.faixa], [para[0], a.faixa]);
-  } else {
-    if (a) pts.push([de[0], a.faixa], [a.porta, a.faixa], [a.porta, CORREDOR_Z]);
-    else pts.push([de[0], CORREDOR_Z]);
-    if (b) pts.push([b.porta, CORREDOR_Z], [b.porta, b.faixa], [para[0], b.faixa]);
-    else pts.push([para[0], CORREDOR_Z]);
+  if (a && b && a.id === b.id) return semRepetir([de, [de[0], a.faixa], [para[0], a.faixa], para]);
+  const ida = saida(de);
+  const volta = saida(para);
+  const pts: Vec2[] = [de, ...ida.pts];
+  if (ida.corredor !== volta.corredor) {
+    pts.push([ESPINHA.faixa, CORREDORES[ida.corredor].faixa], [ESPINHA.faixa, CORREDORES[volta.corredor].faixa]);
   }
-  pts.push(para);
-  // remove pontos repetidos seguidos
-  return pts.filter((p, i) => i === 0 || p[0] !== pts[i - 1][0] || p[1] !== pts[i - 1][1]);
+  pts.push(...[...volta.pts].reverse(), para);
+  return semRepetir(pts);
 }
 
 function destinoAgente(id: string): Vec2 {
   if (id === "rafael") return VISITA_RAFAEL;
   const c = cadeira(id);
-  return [c[0] + 0.85, c[1] + 0.15]; // ao lado da cadeira do colega
+  return [c[0] + 1.15, c[1] + 0.2]; // ao lado da cadeira do colega (o retorno da mesa fica à esquerda)
 }
 
 // ---------- reuniões ----------
-// Cadeiras da mesa de reunião (no chão) e para onde o boneco fica virado ao sentar (rotação y do boneco:
-// 0 olha para +z, π para -z). A primeira é a cabeceira perto da porta, para quem convocou.
+// Cadeiras da mesa de reunião e para onde o boneco fica virado ao sentar (rotação y: 0 olha para +z, π para -z).
+// A primeira é a cabeceira perto da porta, para quem convocou.
 const [RX, RZ] = MESA_REUNIAO;
-const LADO_A = RZ - 1.0; // lado da TV
-const LADO_B = RZ + 1.0; // lado de quem olha a TV
+const LADO_A = RZ - 1.55; // lado da TV
+const LADO_B = RZ + 1.55; // lado da câmera
 export const ASSENTOS_REUNIAO: { p: Vec2; rotacao: number }[] = [
-  { p: [RX - 2.85, RZ], rotacao: Math.PI / 2 },
-  ...[-1.65, -0.55, 0.55, 1.65].flatMap((dx) => [
+  { p: [RX - 3.9, RZ], rotacao: Math.PI / 2 },
+  ...[-2.6, -1.3, 0, 1.3, 2.6].flatMap((dx) => [
     { p: [RX + dx, LADO_B] as Vec2, rotacao: Math.PI },
     { p: [RX + dx, LADO_A] as Vec2, rotacao: 0 },
   ]),
-  { p: [RX + 2.85, RZ], rotacao: -Math.PI / 2 },
+  { p: [RX + 3.9, RZ], rotacao: -Math.PI / 2 },
 ];
-const PASSAGEM_TV = 5.2; // entre o aparador da TV e as cadeiras do lado A
+const PASSAGEM_TV = -2.3; // entre o aparador da TV e as cadeiras do lado A
 
-// Quem não tem mesa no escritório (agentes novos) chega pelo fim do corredor.
-export const ENTRADA: Vec2 = [PREDIO.x1 - 0.6, CORREDOR_Z];
+// Quem não tem mesa no escritório (agentes novos) chega pela porta da recepção.
+export const ENTRADA: Vec2 = [SALA.recepcao.porta, PREDIO.z1 - 0.4];
 export function casa(agente: string): Vec2 {
   return MESAS[agente] ? cadeira(agente) : ENTRADA;
 }
 
-// Da mesa até a cadeira da reunião: sai pela porta, anda no corredor, entra na sala de reunião e
-// contorna a mesa pela passagem do lado certo (lado A pela frente da TV, lado B pelo fundo).
+// Da mesa até a cadeira da reunião: sai pela porta, corredores, entra na sala de reunião e contorna a mesa
+// pela passagem do lado certo (lado A pela frente da TV, lado B e cabeceiras pela faixa da porta).
 export function rotaReuniao(de: Vec2, assento: Vec2): Vec2[] {
   const sala = SALA.reuniao;
-  const ate = rota(de, [sala.porta, CORREDOR_Z]);
-  const faixa = assento[1] > RZ ? sala.faixa : PASSAGEM_TV;
-  const pts: Vec2[] = [...ate, [sala.porta, faixa], [assento[0], faixa], assento];
-  return pts.filter((p, i) => i === 0 || p[0] !== pts[i - 1][0] || p[1] !== pts[i - 1][1]);
+  const ate = rota(de, [sala.porta, CORREDORES.c2.faixa]);
+  const faixa = assento[1] < RZ - 0.5 ? PASSAGEM_TV : sala.faixa;
+  return semRepetir([...ate, [sala.porta, sala.z1], [sala.porta, faixa], [assento[0], faixa], assento]);
 }
 
 export type LugarReuniao = {
@@ -246,6 +268,38 @@ export function lugaresReuniao(
   }
   return out;
 }
+
+// ---------- câmeras ----------
+// Posição da câmera e para onde ela olha. As das salas ficam no canto alto da frente, como câmeras de segurança.
+export type Vista = [number, number, number, number, number, number];
+export type Camera = { id: string; nome: string; atalho?: string; icone: string; vista: Vista };
+
+function cameraDaSala(s: Sala, lado: "esq" | "dir" = "dir"): Vista {
+  const w = s.x1 - s.x0;
+  const d = s.z1 - s.z0;
+  const cx = (s.x0 + s.x1) / 2;
+  const sinal = lado === "dir" ? 1 : -1;
+  return [lado === "dir" ? s.x1 - 0.45 : s.x0 + 0.45, 2.72, s.z1 - 0.35, cx - sinal * w * 0.08, 0.55, s.z0 + d * 0.36];
+}
+
+export const CAMERAS: Camera[] = [
+  { id: "geral", nome: "Visão geral", atalho: "1", icone: "geral", vista: [0, 38, 47, 0, 0, -3.5] },
+  { id: "direcao", nome: "Direção", atalho: "2", icone: "direcao", vista: cameraDaSala(SALA.direcao, "esq") },
+  { id: "sistemas", nome: "Sistemas", atalho: "3", icone: "sistemas", vista: cameraDaSala(SALA.sistemas) },
+  { id: "financeiro", nome: "Financeiro", atalho: "4", icone: "financeiro", vista: cameraDaSala(SALA.financeiro) },
+  { id: "custos", nome: "Custos", atalho: "5", icone: "custos", vista: cameraDaSala(SALA.custos) },
+  { id: "frota-rh", nome: "Frota e RH", atalho: "6", icone: "frota-rh", vista: cameraDaSala(SALA["frota-rh"]) },
+  { id: "suprimentos", nome: "Suprimentos", atalho: "7", icone: "suprimentos", vista: cameraDaSala(SALA.suprimentos) },
+  { id: "reuniao", nome: "Reunião", atalho: "8", icone: "reuniao", vista: [-0.6, 2.75, 5.6, -5.0, 0.95, -1.4] },
+  { id: "rafael", nome: "Sala do Rafael", atalho: "9", icone: "rafael", vista: [-13.4, 2.9, 16.7, -19.6, 0.85, 12.2] },
+  { id: "arquivo", nome: "Arquivo", atalho: "A", icone: "arquivo", vista: [16.5, 2.72, 5.6, 11.2, 0.9, -3.0] },
+  { id: "recepcao", nome: "Recepção", atalho: "R", icone: "recepcao", vista: [24.6, 3.4, 16.7, 4.0, 0.6, 12.0] },
+  { id: "cima", nome: "Vista de cima", atalho: "0", icone: "cima", vista: [0, 64, -0.99, 0, 0, -1] },
+];
+export const CAMERA = Object.fromEntries(CAMERAS.map((c) => [c.id, c])) as Record<string, Camera>;
+
+// Visões do mosaico (CFTV): 6 em tela larga, 4 no celular.
+export const MOSAICO = ["reuniao", "sistemas", "financeiro", "custos", "direcao", "rafael"];
 
 // ---------- eventos → estado e viagens ----------
 
@@ -324,7 +378,7 @@ export function viagemDoEvento(
     return {
       id: `doc-${ev.id}`,
       agente: ev.agente,
-      caminho: rota(cadeira(ev.agente), [prateleira(setores, setor)[0], ARQUIVO_Z + 0.95]),
+      caminho: rota(cadeira(ev.agente), [prateleira(setores, setor)[0], ARQUIVO_FRENTE]),
       rotulo: "levando o relatório ao arquivo",
       tipo: "documento",
     };
