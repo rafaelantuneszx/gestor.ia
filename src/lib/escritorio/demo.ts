@@ -2,6 +2,7 @@
 // desenvolvimento). Nada daqui vai para o banco.
 import type { AgenteInfo, DemandaResumo, EventoCentral, SetorInfo } from "./modelo";
 import type { Reuniao } from "../reunioes";
+import { falaDoEvento, type Fala } from "../falas";
 
 export const DEMO_AGENTES: AgenteInfo[] = [
   { id: "helena", nome: "Helena", cargo: "Diretora de Operações", grupo: "Direção", setor: "direcao" },
@@ -105,19 +106,62 @@ const ROTEIRO: Passo[] = [
   [1, "passo", "marina-custos", "producao-receita", "OBRA039: produzido R$ 210 mil, medido R$ 160 mil"],
 ];
 
-export function demoEventos(agora = Date.now()): EventoCentral[] {
-  return ROTEIRO.map(([min, tipo, agente, rotina, resumo, extra], i) => ({
-    id: i + 1,
-    ts: new Date(agora - min * 60_000).toISOString(),
-    tipo,
-    agente,
-    rotina,
-    resumo: resumo ?? "",
-    status: null,
-    alertas: null,
-    documento_id: null,
-    ...extra,
-  }));
+// Falas fictícias. Reunião 2 (encerrada): conversa inteira. Reunião 1 (em andamento): parte já falada e o resto
+// chegando a cada 7 s depois que a página abre (minAtras negativo = no futuro), para ver o modo ao vivo.
+type FalaDemo = [minAtras: number, reuniao: number, agente: string, texto: string];
+const FALAS_2: [string, string][] = [
+  ["helena", "Bom dia. Três pontos hoje: a agenda do Rafael até sexta, os pedidos parados em Suprimentos e as revisões da frota. Clara, começa pela agenda?"],
+  ["clara-assistente", "Claro. O Rafael tem três compromissos: quarta às 10h com a obra 039, quinta às 14h com a contabilidade e sexta às 9h a visita na 056."],
+  ["clara-assistente", "Deixei pronto o rascunho do e-mail para a obra 039. Ele só precisa dizer sim para eu mandar."],
+  ["helena", "Ótimo. Caio, e os pedidos?"],
+  ["caio-suprimentos", "São quatro pedidos sem nota fiscal há mais de dez dias. O maior é o de EPI, de R$ 18,4 mil."],
+  ["caio-suprimentos", "E luvas e botinas estão abaixo do mínimo no almoxarifado central. Se não comprar até quinta, falta na 040."],
+  ["helena", "O fornecedor de EPI está esperando pagamento?"],
+  ["caio-suprimentos", "Está. A liberação do pagamento é com o Rafael, então eu abro a demanda para ele aprovar."],
+  ["helena", "Combinado. Cobra as notas dos quatro pedidos até quinta; essa eu aprovo como diretora."],
+  ["clara-assistente", "Coloco um lembrete na agenda do Rafael para olhar a demanda do EPI amanhã cedo."],
+  ["helena", "Último ponto: a Sofia achou duas revisões vencidas na frota. Ela leva a demanda para o Rafael ainda hoje."],
+  ["helena", "Resumindo: Caio cobra as notas, a liberação do EPI vai para o Rafael e a Clara manda o e-mail da 039 com o ok dele. Obrigada, pessoal."],
+];
+const FALAS_1: [string, string][] = [
+  ["bruno-financeiro", "Pessoal, chamei por causa de três coisas: boletos que vencem até sexta, faturas sem lançamento e o centro 57 parado."],
+  ["davi-faturas", "Vencem até sexta dois boletos: R$ 7,2 mil de locação de equipamento e R$ 3,1 mil de combustível."],
+  ["davi-faturas", "E tem quatro faturas de energia das obras que ainda não foram lançadas no Financeiro."],
+  ["lucia-financeiro", "As de energia eu quero lançadas hoje. Davi, você tem os valores certos de cada uma?"],
+  ["davi-faturas", "Tenho. Somam R$ 5,8 mil; a maior é a da 040, com R$ 2,3 mil."],
+  ["bruno-financeiro", "Sobre o centro 57: não tem lançamento nenhum desde primeiro de outubro, e a obra está rodando."],
+  ["lucia-financeiro", "Isso é sinal de lançamento no centro errado. Bruno, confere se não caiu tudo no 42."],
+  ["bruno-financeiro", "Conferi agora: são onze lançamentos no 42 que são do 57, R$ 46 mil no total."],
+  ["lucia-financeiro", "Então preparo o ajuste com o SQL pronto e levo para o Rafael aprovar. Não mexo sem o ok dele."],
+  ["davi-faturas", "Enquanto isso eu lanço as quatro faturas de energia e aviso quando terminar."],
+  ["bruno-financeiro", "E os dois boletos de sexta já estão com previsão no caixa, então não precisam de decisão."],
+  ["lucia-financeiro", "Perfeito. Fechando: Davi lança as faturas, eu preparo o ajuste do centro 57 para o Rafael, e o Bruno acompanha os boletos."],
+  ["bruno-financeiro", "Registro a ata e as decisões agora. Obrigado, Lúcia; obrigado, Davi."],
+];
+const FALAS_DEMO: FalaDemo[] = [
+  ...FALAS_2.map(([a, t], i) => [79 - i * 1.4, 2, a, t] as FalaDemo),
+  ...FALAS_1.map(([a, t], i) => [(i < 6 ? 8.5 - i * 1.3 : -(0.12 + (i - 6) * 0.12)), 1, a, t] as FalaDemo),
+];
+
+// Todos os eventos da demonstração, inclusive os que ainda vão acontecer (ts no futuro), com ids na ordem do tempo.
+function todosEventosDemo(agora: number): EventoCentral[] {
+  const base = (min: number) => new Date(agora - min * 60_000).toISOString();
+  const lista: Omit<EventoCentral, "id">[] = [
+    ...ROTEIRO.map(([min, tipo, agente, rotina, resumo, extra]) => ({
+      ts: base(min), tipo, agente, rotina, resumo: resumo ?? "", status: null, alertas: null, documento_id: null, ...extra,
+    })),
+    ...FALAS_DEMO.map(([min, r, agente, texto]) => ({
+      ts: base(min), tipo: "nota" as const, agente, rotina: `reuniao#${r}`, resumo: `fala: ${texto}`,
+      status: null, alertas: null, documento_id: null,
+    })),
+  ];
+  return lista.sort((a, b) => a.ts.localeCompare(b.ts)).map((e, i) => ({ ...e, id: i + 1 }));
+}
+
+// Eventos que já aconteceram em `agora`, com a linha do tempo fixada em `base` (o momento em que a página abriu).
+export function demoEventos(base = Date.now(), agora = base): EventoCentral[] {
+  const limite = new Date(agora).toISOString();
+  return todosEventosDemo(base).filter((e) => e.ts <= limite);
 }
 
 // Reuniões fictícias: uma em andamento (Bruno, Lúcia e Davi), uma encerrada hoje cedo e uma agendada.
@@ -209,4 +253,32 @@ export function demoReunioes(agora = Date.now()): Reuniao[] {
       atualizado_em: min(14),
     },
   ];
+}
+
+// Falas de uma reunião da demonstração até `agora`.
+export function demoFalas(reuniaoId: number, base = Date.now(), agora = base): Fala[] {
+  return demoEventos(base, agora)
+    .map(falaDoEvento)
+    .filter((f): f is Fala => f !== null && f.reuniaoId === reuniaoId);
+}
+
+// Respostas fixas da sala de reunião na demonstração (sem chave da API): quem responde depende do assunto.
+const RESPOSTAS_DEMO: { chaves: RegExp; agente: string; texto: string }[] = [
+  { chaves: /custo|obra|or[cç]amento|estouro/i, agente: "marina-custos", texto: "Na demonstração eu não tenho os números reais, mas no acompanhamento a 033 é a obra mais crítica. Levanto o detalhe e trago na próxima rodada." },
+  { chaves: /sistema|erp|pavimax|integra/i, agente: "ricardo-diretor-sistemas", texto: "Os três sistemas estão no ar. Se precisar de ajuste no banco, eu preparo o SQL e trago para a sua aprovação." },
+  { chaves: /caixa|pag|boleto|fatura|financeiro/i, agente: "lucia-financeiro", texto: "Os boletos desta semana já têm previsão no caixa. Pagamento só sai com o seu ok, então eu preparo e trago para aprovar." },
+  { chaves: /folha|rh|ponto|f[eé]rias/i, agente: "paulo-rh", texto: "A folha de outubro está em preparo; falta criar a competência. Faço hoje e aviso quando estiver conferida." },
+];
+
+export function respostasDemo(texto: string, participantes: string[]): { agente: string; texto: string }[] {
+  const tem = (id: string) => participantes.includes(id);
+  const quem = participantes.find((p) => p !== "rafael") ?? "helena";
+  const conduz = tem("helena") ? "helena" : quem;
+  if (!texto.trim()) {
+    return [{ agente: conduz, texto: "Bom dia, Rafael. Estamos todos aqui. Qual é o primeiro assunto?" }];
+  }
+  const r = RESPOSTAS_DEMO.find((x) => x.chaves.test(texto) && tem(x.agente));
+  const out = [r ? { agente: r.agente, texto: r.texto } : { agente: conduz, texto: "Entendido. Anoto como próximo passo e distribuo para quem é dono do assunto." }];
+  if (conduz !== out[0].agente) out.push({ agente: conduz, texto: "Fica registrado na ata. Mais algum ponto, Rafael?" });
+  return out;
 }

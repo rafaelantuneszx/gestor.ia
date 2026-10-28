@@ -7,37 +7,13 @@ import type { ReactNode, RefObject } from "react";
 import * as THREE from "three";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 import { mat } from "./materiais";
+import { APARENCIA, type Aparencia, type EstiloCabelo } from "@/lib/pessoas";
 
 export type Junta =
   | "quadril" | "tronco" | "cabeca" | "ombroE" | "cotoveloE" | "ombroD" | "cotoveloD" | "coxaE" | "joelhoE" | "coxaD" | "joelhoD";
 export type Juntas = Partial<Record<Junta, THREE.Group>>;
 
-export type EstiloCabelo = "curto" | "longo" | "coque" | "raspado" | "ondulado";
-
-export type Aparencia = {
-  pele: string;
-  cabelo: string;
-  estilo: EstiloCabelo;
-  camisa: string;
-  calca: string;
-  sapato: string;
-  terno?: boolean; // paletó e gravata (o Rafael)
-};
-
-// Aparência de cada um. É só visual: troque cores e estilos à vontade.
-export const APARENCIA: Record<string, Partial<Aparencia>> = {
-  rafael: { pele: "#e2b08a", cabelo: "#241a14", estilo: "curto", camisa: "#1f2a44", calca: "#1f2a44", sapato: "#16120f", terno: true },
-  helena: { pele: "#e8b896", cabelo: "#3b2418", estilo: "longo", calca: "#2a2f3a" },
-  "clara-assistente": { pele: "#f1c7a5", cabelo: "#8a5a2b", estilo: "coque", calca: "#3d3a4a" },
-  "ricardo-diretor-sistemas": { pele: "#c68a62", cabelo: "#1a1410", estilo: "curto", calca: "#2f3542" },
-  "otavio-pavimax": { pele: "#e0ac84", cabelo: "#5b5b5b", estilo: "curto", calca: "#4a4136" },
-  "lucia-financeiro": { pele: "#b97a56", cabelo: "#1d1410", estilo: "ondulado", calca: "#2a2f3a" },
-  "paulo-rh": { pele: "#f1c7a5", cabelo: "#4a3020", estilo: "curto", calca: "#3a3f4a" },
-  "marina-custos": { pele: "#d9a37c", cabelo: "#2b1d14", estilo: "longo", calca: "#33384a" },
-  "sofia-adm-rh-frota": { pele: "#f5d3b8", cabelo: "#b07a3c", estilo: "ondulado", calca: "#4b5563" },
-  "bruno-financeiro": { pele: "#e0ac84", cabelo: "#3a2618", estilo: "curto", calca: "#5b4a3a" },
-  "caio-suprimentos": { pele: "#8d5a3b", cabelo: "#151515", estilo: "raspado", calca: "#2f3640" },
-};
+export type { Aparencia, EstiloCabelo } from "@/lib/pessoas";
 
 // A camisa sai da cor do grupo, um pouco puxada para o cinza para parecer tecido de verdade.
 export function aparenciaDe(id: string, corGrupo: string): Aparencia {

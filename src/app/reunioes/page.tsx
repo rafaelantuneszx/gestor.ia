@@ -16,19 +16,27 @@ export default async function Reunioes() {
   ]);
   const reunioes = (reu.data ?? []) as Reuniao[];
 
+  // Quantas falas cada reunião tem (eventos "fala: ..." com rotina reuniao#<id>).
+  const falas: Record<number, number> = {};
+  if (reunioes.length) {
+    const ev = await sb.from("central_eventos").select("rotina").eq("tipo", "nota").like("resumo", "fala:%")
+      .in("rotina", reunioes.map((r) => `reuniao#${r.id}`)).limit(20000);
+    for (const e of (ev.data ?? []) as { rotina: string }[]) {
+      const id = Number(e.rotina.slice(8));
+      falas[id] = (falas[id] ?? 0) + 1;
+    }
+  }
+
   return (
     <>
       <Topo aba="reunioes" pendentes={pend.count ?? 0} />
       <main className="mx-auto max-w-6xl px-4 py-6">
-        <p className="mb-5 text-sm text-muted">
-          Reuniões que os agentes marcam entre si: pauta, quem participa, a ata e as decisões que precisam de aprovação.
-        </p>
         {reu.error && (
           <p className="mb-5 rounded-xl border border-bad/40 bg-bad-soft px-4 py-3 text-sm text-bad">
             Não foi possível ler as reuniões ({reu.error.message}).
           </p>
         )}
-        <ListaReunioes reunioes={reunioes} agentes={agentes} base="/reunioes" />
+        <ListaReunioes reunioes={reunioes} agentes={agentes} base="/reunioes" falas={falas} />
       </main>
     </>
   );

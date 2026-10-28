@@ -2,6 +2,7 @@ import Link from "next/link";
 import { CalendarClock, FileText, History } from "lucide-react";
 import { Topo, SemAcesso } from "@/components/Topo";
 import { Decisao } from "@/components/Decisao";
+import { Avatar } from "@/components/Avatar";
 import { autorizado, cadastros, haQuanto, nomeDe, quando, soHora, type Demanda, type Historico } from "@/lib/dados";
 import { hojeEmBrasilia, type Reuniao } from "@/lib/reunioes";
 import { supabaseServidor } from "@/lib/supabase/server";
@@ -96,10 +97,15 @@ export default async function Mesa() {
                   {d.setor && <span className="text-muted">{nomeSetor.get(d.setor)}</span>}
                   <span className="text-muted">· #{d.id} · {haQuanto(d.criada)}</span>
                 </div>
-                <h3 className="text-[15px] font-semibold leading-snug">{d.titulo}</h3>
-                <p className="mt-0.5 text-sm text-muted">
-                  Enviado por {autor?.nome ?? d.de}{autor ? `, ${autor.cargo}` : ""}
-                </p>
+                <div className="flex items-start gap-3">
+                  <Avatar id={d.de} nome={autor?.nome ?? d.de} setor={autor?.setor} tamanho={44} className="mt-0.5" />
+                  <div className="min-w-0">
+                    <h3 className="text-[15px] font-semibold leading-snug">{d.titulo}</h3>
+                    <p className="mt-0.5 text-sm text-muted">
+                      Enviado por {autor?.nome ?? d.de}{autor ? `, ${autor.cargo}` : ""}
+                    </p>
+                  </div>
+                </div>
                 {d.detalhe && <p className="mt-2 whitespace-pre-wrap text-sm">{d.detalhe}</p>}
                 <div className="mt-2 flex flex-wrap gap-3 text-sm">
                   {d.documento_id && (
@@ -132,11 +138,14 @@ export default async function Mesa() {
             <ul className="divide-y divide-line rounded-xl border border-line bg-card">
               {comAgentes.length === 0 && <li className="px-4 py-3 text-sm text-muted">Nenhuma demanda em aberto.</li>}
               {comAgentes.map((d) => (
-                <li key={d.id} className="px-4 py-2.5 text-sm">
-                  <div className="font-medium">#{d.id} {d.titulo}</div>
-                  <div className="text-xs text-muted">
-                    {nomeDe(agentes, d.de)} → {nomeDe(agentes, d.para)} · {ESTADO[d.estado]} · {haQuanto(d.atualizada)}
-                    {d.decisao && ` · ${DECISAO[d.decisao][0].toLowerCase()} por você`}
+                <li key={d.id} className="flex items-start gap-3 px-4 py-2.5 text-sm">
+                  <Avatar id={d.para} nome={nomeDe(agentes, d.para)} setor={agentes.get(d.para)?.setor} tamanho={32} selo={false} className="mt-0.5" />
+                  <div className="min-w-0">
+                    <div className="font-medium">#{d.id} {d.titulo}</div>
+                    <div className="text-xs text-muted">
+                      {nomeDe(agentes, d.de)} → {nomeDe(agentes, d.para)} · {ESTADO[d.estado]} · {haQuanto(d.atualizada)}
+                      {d.decisao && ` · ${DECISAO[d.decisao][0].toLowerCase()} por você`}
+                    </div>
                   </div>
                 </li>
               ))}
