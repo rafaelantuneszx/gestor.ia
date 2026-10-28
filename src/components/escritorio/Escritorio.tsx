@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Canvas, useFrame } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { AdaptiveDpr, CameraControls, Environment, Lightformer, PerformanceMonitor } from "@react-three/drei";
 import * as THREE from "three";
 import {
@@ -40,6 +40,33 @@ const ICONE_CAMERA: Record<string, LucideIcon> = {
   suprimentos: Package, reuniao: Presentation, rafael: Crown, arquivo: Archive, recepcao: ConciergeBell, cima: Grid2x2,
   copa: Coffee,
 };
+
+// Ritmo do desenho: 30 quadros por segundo bastam para o escritório ao vivo (metade do trabalho da placa de vídeo);
+// 60 enquanto o Rafael gira ou aproxima a câmera. Com a aba escondida o navegador já para tudo.
+function Ritmo({ rapido }: { rapido: boolean }) {
+  const invalidate = useThree((s) => s.invalidate);
+  useEffect(() => {
+    const t = setInterval(() => invalidate(), rapido ? 1000 / 60 : 1000 / 30);
+    return () => clearInterval(t);
+  }, [invalidate, rapido]);
+  return null;
+}
+
+// Sombras recalculadas a cada 3 quadros (os bonecos andam devagar; refazer o mapa de sombra todo quadro era caro).
+function SombrasEspacadas({ ativo }: { ativo: boolean }) {
+  const gl = useThree((s) => s.gl);
+  const n = useRef(0);
+  useEffect(() => {
+    if (!ativo) return;
+    gl.shadowMap.autoUpdate = false;
+    gl.shadowMap.needsUpdate = true;
+    return () => { gl.shadowMap.autoUpdate = true; };
+  }, [gl, ativo]);
+  useFrame(() => {
+    if (ativo && n.current++ % 3 === 0) gl.shadowMap.needsUpdate = true;
+  });
+  return null;
+}
 
 // Avisa quando o primeiro quadro foi desenhado (a compilação dos shaders pode levar alguns segundos).
 function PrimeiroQuadro({ onPronto }: { onPronto: () => void }) {
@@ -86,7 +113,7 @@ function estadosDe(eventos: EventoCentral[], agentes: AgenteInfo[]) {
   return conferirTravadas(est);
 }
 
-async function carregar(desdeId: number | null): Promise<Partial<Dados> & { eventos: EventoCentral[] }> {
+async function carregar(desdeId: number | null, completo = true): Promise<Partial<Dados> & { eventos: EventoCentral[] }> {
   const sb = supabaseNavegador();
   const desde = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
   const evQuery = desdeId === null
@@ -94,8 +121,8 @@ async function carregar(desdeId: number | null): Promise<Partial<Dados> & { even
     : sb.from("central_eventos").select("*").gt("id", desdeId).order("id").limit(500);
   const [ev, dem, docs, reu, ag, st] = await Promise.all([
     evQuery,
-    sb.from("central_demandas").select("id, de, para, estado, titulo, prioridade"),
-    sb.from("central_documentos").select("setor"),
+    completo ? sb.from("central_demandas").select("id, de, para, estado, titulo, prioridade") : Promise.resolve({ data: null }),
+    completo ? sb.from("central_documentos").select("setor") : Promise.resolve({ data: null }),
     // abertas (agendada, em andamento) e as que mudaram nas últimas 24 h, para a reprodução do dia
     sb.from("central_reunioes").select(CAMPOS_RESUMO)
       .or(`estado.in.(agendada,em_andamento),atualizado_em.gte.${desde}`).order("id"),
@@ -106,8 +133,7 @@ async function carregar(desdeId: number | null): Promise<Partial<Dados> & { even
   for (const d of (docs.data ?? []) as { setor: string }[]) contagem[d.setor] = (contagem[d.setor] ?? 0) + 1;
   return {
     eventos: (ev.data ?? []) as EventoCentral[],
-    demandas: (dem.data ?? []) as DemandaResumo[],
-    contagem,
+    ...(dem.data ? { demandas: dem.data as DemandaResumo[], contagem } : {}),
     reunioes: (reu.data ?? []) as ReuniaoResumo[],
     ...(ag.data ? { agentes: ag.data as AgenteInfo[] } : {}),
     ...(st.data ? { setores: st.data as SetorInfo[] } : {}),
@@ -159,6 +185,7 @@ export default function Escritorio({ modo }: { modo: "real" | "demo" }) {
   const [erro, setErro] = useState<string | null>(null);
   const [cameraAtual, setCameraAtual] = useState("geral");
   const [mosaico, setMosaico] = useState(false);
+  const [interagindo, setInteragindo] = useState(false);
   const [assistindo, setAssistindo] = useState<number | null>(null);
   const ultimoId = useRef<number | null>(null);
   const camera = useRef<CameraControls>(null);
@@ -227,6 +254,7 @@ export default function Escritorio({ modo }: { modo: "real" | "demo" }) {
   // ---- ao vivo: eventos novos a cada 8 s (3 s com reunião em andamento, para as falas) ----
   useEffect(() => {
     if (!carregado || reproduzindo) return;
+    let voltas = 0;
     const t = setInterval(async () => {
       try {
         const d = dadosRef.current;
@@ -236,12 +264,17 @@ export default function Escritorio({ modo }: { modo: "real" | "demo" }) {
         if (modo === "demo") {
           novos = demoEventos(demoBase.current, Date.now()).filter((e) => e.id > (ultimoId.current ?? 0));
         } else {
-          const r = await carregar(ultimoId.current ?? 0);
+          // demandas e documentos mudam devagar: a cada ~30 s; eventos e reuniões a cada volta
+          const completo = voltas++ % Math.round(30000 / (temReuniaoAberta || assistindo ? ATUALIZAR_REUNIAO_MS : ATUALIZAR_MS)) === 0;
+          const r = await carregar(ultimoId.current ?? 0, completo);
           novos = r.eventos;
           extra = { demandas: r.demandas ?? d.demandas, contagem: r.contagem ?? d.contagem, reunioes: r.reunioes ?? d.reunioes };
         }
-        const base = { ...d, ...extra, eventos: [...d.eventos, ...novos] };
-        if (novos.length || modo === "real") setDados(base);
+        // sem nada novo, não troca o estado: trocar re-renderiza o escritório inteiro (era a cada 3 s com reunião aberta)
+        const mudou = novos.length > 0 || JSON.stringify(extra.demandas) !== JSON.stringify(d.demandas)
+          || JSON.stringify(extra.contagem) !== JSON.stringify(d.contagem) || JSON.stringify(extra.reunioes) !== JSON.stringify(d.reunioes);
+        const base = mudou ? { ...d, ...extra, eventos: [...d.eventos, ...novos] } : d;
+        if (mudou) setDados(base);
         if (novos.length) {
           enfileirar(novos, base);
           ultimoId.current = novos[novos.length - 1].id;
@@ -478,7 +511,8 @@ export default function Escritorio({ modo }: { modo: "real" | "demo" }) {
 
   // Qualidade: começa alta em tela grande e baixa sozinha se o aparelho não der conta.
   const [qualidade, setQualidade] = useState<"alta" | "baixa">(() => (window.innerWidth >= 900 ? "alta" : "baixa"));
-  const [dpr, setDpr] = useState(() => Math.min(window.devicePixelRatio || 1, window.innerWidth >= 900 ? 1.75 : 1.4));
+  // teto de resolução: numa tela Retina grande, 1,75 desenhava ~7 milhões de pixels por quadro com AO e bloom
+  const [dpr, setDpr] = useState(() => Math.min(window.devicePixelRatio || 1, window.innerWidth >= 900 ? 1.25 : 1.2));
   const [pronto, setPronto] = useState(false);
   const marcarPronto = useCallback(() => setPronto(true), []);
   const agSel = selecionado ? agentesMap.get(selecionado) : null;
@@ -492,13 +526,15 @@ export default function Escritorio({ modo }: { modo: "real" | "demo" }) {
 
   return (
     <div className="relative h-[calc(100dvh-57px)] w-full overflow-hidden bg-[#dfe5ea]">
-      <Canvas shadows="soft" dpr={dpr}
+      <Canvas shadows="soft" dpr={dpr} frameloop="demand"
         camera={{ position: [inicial[0], inicial[1], inicial[2]], fov: 40, near: 0.1, far: 400 }}
         gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.0, powerPreference: "high-performance" }}
         onPointerMissed={() => setSelecionado(null)}>
-        <PerformanceMonitor bounds={() => [45, 60]} flipflops={3}
-          onIncline={() => setDpr((d) => Math.min(d + 0.25, largo ? 1.75 : 1.4))}
-          onDecline={() => { setQualidade("baixa"); setDpr((d) => Math.max(0.8, d - 0.25)); }} />
+        <Ritmo rapido={interagindo} />
+        <SombrasEspacadas ativo={!mosaico} />
+        <PerformanceMonitor bounds={() => [22, 30]} flipflops={3}
+          onIncline={() => setDpr((d) => Math.min(d + 0.25, largo ? 1.25 : 1.2))}
+          onDecline={() => { setQualidade("baixa"); setDpr((d) => Math.max(0.75, d - 0.25)); }} />
         <AdaptiveDpr pixelated={false} />
         <PrimeiroQuadro onPronto={marcarPronto} />
         <color attach="background" args={["#dfe6ec"]} />
@@ -506,7 +542,7 @@ export default function Escritorio({ modo }: { modo: "real" | "demo" }) {
         <hemisphereLight args={["#f6f8fb", "#b5a892", 0.5]} />
         {/* sol entrando pela frente, com sombras suaves e justas no prédio */}
         <directionalLight position={[-16, 30, 22]} intensity={2.3} color="#fff1dd" castShadow
-          shadow-mapSize={qualidade === "alta" ? [4096, 4096] : [2048, 2048]} shadow-bias={-0.0003} shadow-normalBias={0.03}
+          shadow-mapSize={qualidade === "alta" ? [2048, 2048] : [1024, 1024]} shadow-bias={-0.0003} shadow-normalBias={0.03}
           shadow-radius={4}
           shadow-camera-left={-34} shadow-camera-right={34} shadow-camera-top={26} shadow-camera-bottom={-26}
           shadow-camera-near={5} shadow-camera-far={90} />
@@ -519,7 +555,8 @@ export default function Escritorio({ modo }: { modo: "real" | "demo" }) {
           <Lightformer form="rect" intensity={0.6} color="#e9f1ff" position={[PREDIO.x1 + 6, 3, 0]} rotation-y={-Math.PI / 2} scale={[36, 5, 1]} />
         </Environment>
         <CameraControls ref={camera} minDistance={1.5} maxDistance={110} maxPolarAngle={Math.PI / 2.05} smoothTime={0.55}
-          onStart={() => setCameraAtual((c) => (c === "geral" || c === "cima" ? c : ""))} />
+          onStart={() => { setInteragindo(true); setCameraAtual((c) => (c === "geral" || c === "cima" ? c : "")); }}
+          onRest={() => setInteragindo(false)} />
         <Predio />
         <Mobilia />
         <DetalhesSalas />
