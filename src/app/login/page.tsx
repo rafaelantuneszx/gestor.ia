@@ -9,7 +9,7 @@ export default function Login() {
     <main className="flex min-h-screen items-center justify-center px-4">
       <form action={acao} className="w-full max-w-sm rounded-2xl border border-line bg-card p-6">
         <h1 className="text-lg font-semibold">Gestor.IA</h1>
-        <p className="mb-5 text-sm text-muted">Rafael Enterprises · use o mesmo login do PaviMax</p>
+        <p className="mb-5 text-sm text-muted">Agentes capacitados em gestão · use o mesmo login do PaviMax</p>
         <label className="mb-1 block text-sm font-medium" htmlFor="email">E-mail</label>
         <input id="email" name="email" type="email" autoComplete="email" required
           className="mb-3 w-full rounded-lg border border-line bg-bg px-3 py-2 text-sm outline-none focus:border-accent" />
