@@ -1,11 +1,12 @@
 "use client";
 
-// Toca uma conversa em sequência: cada fala com a voz do agente (speechSynthesis), legenda, pausa, pular,
-// velocidade e volume. Sem voz no navegador (ou se ela falhar), passa só a legenda no tempo de leitura.
+// Toca uma conversa em sequência: cada fala com a voz real do agente (ElevenLabs, quando ligada) ou com a voz do
+// navegador (speechSynthesis), legenda, pausa, pular, velocidade e volume. Sem voz no navegador (ou se ela falhar), passa só a legenda no tempo de leitura.
 // Ao vivo: quando chega ao fim, espera as próximas falas e fala assim que elas chegam.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { frases, tempoLeitura, type Fala } from "@/lib/falas";
 import { carregarVozes, perfisDeVoz, temVoz, type PerfilVoz } from "@/lib/voz";
+import { agentesComVozReal, audioDaFala } from "@/lib/vozReal";
 
 export type ModoLeitor = "carregando" | "voz" | "legenda";
 
@@ -53,6 +54,7 @@ export function useLeitor({
   const [velocidade, setVelocidade] = useState(1);
   const [volume, setVolume] = useState(1);
   const [aoVivo, setAoVivo] = useState(aoVivoInicial);
+  const [reais, setReais] = useState<Set<string>>(new Set());
 
   const falasRef = useRef(falas);
   falasRef.current = falas;
@@ -60,6 +62,14 @@ export function useLeitor({
   pularRef.current = pularFala;
   const cfg = useRef({ velocidade, volume, aoVivo });
   cfg.current = { velocidade, volume, aoVivo };
+
+  useEffect(() => {
+    let vivo = true;
+    agentesComVozReal().then((s) => vivo && setReais(s));
+    return () => { vivo = false; };
+  }, []);
+  const reaisRef = useRef(reais);
+  reaisRef.current = reais;
 
   useEffect(() => {
     let vivo = true;
@@ -122,7 +132,7 @@ export function useLeitor({
     const { velocidade: vel, volume: vol } = cfg.current;
 
     // só legenda: sem voz, sem som ou fala que não deve ser dita em voz alta
-    if (modo === "legenda" || vol === 0 || pularRef.current?.(fala)) {
+    if ((modo === "legenda" && !reaisRef.current.has(fala.agente)) || vol === 0 || pularRef.current?.(fala)) {
       const total = pularRef.current?.(fala) ? 900 : tempoLeitura(fala.texto, vel);
       const porParte = total / partes.length;
       partes.forEach((_, k) => k > 0 && timers.push(setTimeout(() => setParte(k), porParte * k)));
@@ -130,45 +140,97 @@ export function useLeitor({
       return () => { acabou = true; timers.forEach(clearTimeout); };
     }
 
-    const synth = window.speechSynthesis;
-    synth.cancel();
-    const perfil = perfisRef.current[fala.agente];
-    let comecou = false;
-    partes.forEach((p, k) => {
-      const u = new SpeechSynthesisUtterance(p);
-      u.lang = perfil?.voz?.lang ?? "pt-BR";
-      if (perfil?.voz) u.voice = perfil.voz;
-      u.pitch = perfil?.pitch ?? 1;
-      u.rate = Math.min(3, Math.max(0.5, (perfil?.rate ?? 1) * vel));
-      u.volume = vol;
-      u.onstart = () => { comecou = true; setParte(k); };
-      if (k === partes.length - 1) u.onend = fim;
-      u.onerror = (e) => {
-        if (acabou || e.error === "interrupted" || e.error === "canceled") return;
-        if (e.error === "not-allowed") {
-          setAviso("O navegador bloqueou a voz até você tocar na tela: toque em Assistir de novo.");
-          acabou = true;
-          setTocando(false);
-          return;
-        }
-        fim();
+    // voz real (ElevenLabs): toca o MP3 da fala; a legenda acompanha pela proporção do texto já dito.
+    // Se a voz real falhar, cai para a voz do navegador nesta mesma fala.
+    let audio: HTMLAudioElement | null = null;
+    let usandoNavegador = false;
+    if (reaisRef.current.has(fala.agente)) {
+      const acum: number[] = [];
+      partes.reduce((t, p) => { acum.push(t + p.length); return t + p.length; }, 0);
+      const total = acum[acum.length - 1] || 1;
+      const a = new Audio();
+      audio = a;
+      a.playbackRate = Math.min(2, Math.max(0.5, vel));
+      a.volume = vol;
+      a.ontimeupdate = () => {
+        if (!a.duration) return;
+        const dito = (a.currentTime / a.duration) * total;
+        const k = acum.findIndex((c) => dito <= c);
+        setParte(k < 0 ? partes.length - 1 : k);
       };
-      synth.speak(u);
-    });
-    // vigias: a voz não começou em 4 s (aparelho sem síntese) → passa a só legenda; ou não terminou nunca
-    timers.push(setTimeout(() => {
-      if (comecou || acabou) return;
-      acabou = true;
-      synth.cancel();
-      setModo("legenda");
-      setAviso("A voz do navegador não respondeu: seguindo só com legenda.");
-    }, 4000));
-    timers.push(setTimeout(fim, tempoLeitura(fala.texto, vel) * 2.5 + 4000));
+      a.onended = fim;
+      a.onerror = () => { if (!acabou && !usandoNavegador) navegador(); };
+      audioDaFala(fala.agente, fala.texto).then((url) => {
+        if (acabou) return;
+        a.src = url;
+        a.play().catch((e: unknown) => {
+          if (acabou) return;
+          if (e instanceof DOMException && e.name === "NotAllowedError") {
+            setAviso("O navegador bloqueou o som até você tocar na tela: toque em Assistir de novo.");
+            acabou = true;
+            setTocando(false);
+            return;
+          }
+          navegador();
+        });
+      }).catch(() => { if (!acabou) navegador(); });
+      // já pede o áudio da próxima fala, para não haver silêncio entre uma e outra
+      const prox = falasRef.current[i + 1];
+      if (prox && reaisRef.current.has(prox.agente) && !pularRef.current?.(prox)) audioDaFala(prox.agente, prox.texto).catch(() => {});
+      timers.push(setTimeout(fim, tempoLeitura(fala.texto, vel) * 2.5 + 20000));
+    } else {
+      navegador();
+    }
     return () => {
       acabou = true;
       timers.forEach(clearTimeout);
-      synth.cancel();
+      if (audio) { audio.pause(); audio.removeAttribute("src"); }
+      if (usandoNavegador) window.speechSynthesis.cancel();
     };
+
+    function navegador() {
+      usandoNavegador = true;
+      if (audio) { audio.onerror = null; audio.pause(); }
+      if (!temVoz()) {
+        const t = tempoLeitura(fala!.texto, vel);
+        timers.push(setTimeout(fim, t));
+        return;
+      }
+      const synth = window.speechSynthesis;
+      synth.cancel();
+      const perfil = perfisRef.current[fala!.agente];
+      let comecou = false;
+      partes.forEach((p, k) => {
+        const u = new SpeechSynthesisUtterance(p);
+        u.lang = perfil?.voz?.lang ?? "pt-BR";
+        if (perfil?.voz) u.voice = perfil.voz;
+        u.pitch = perfil?.pitch ?? 1;
+        u.rate = Math.min(3, Math.max(0.5, (perfil?.rate ?? 1) * vel));
+        u.volume = vol;
+        u.onstart = () => { comecou = true; setParte(k); };
+        if (k === partes.length - 1) u.onend = fim;
+        u.onerror = (e) => {
+          if (acabou || e.error === "interrupted" || e.error === "canceled") return;
+          if (e.error === "not-allowed") {
+            setAviso("O navegador bloqueou a voz até você tocar na tela: toque em Assistir de novo.");
+            acabou = true;
+            setTocando(false);
+            return;
+          }
+          fim();
+        };
+        synth.speak(u);
+      });
+      // vigias: a voz não começou em 4 s (aparelho sem síntese) → passa a só legenda; ou não terminou nunca
+      timers.push(setTimeout(() => {
+        if (comecou || acabou) return;
+        acabou = true;
+        synth.cancel();
+        setModo("legenda");
+        setAviso("A voz do navegador não respondeu: seguindo só com legenda.");
+      }, 4000));
+      timers.push(setTimeout(fim, tempoLeitura(fala!.texto, vel) * 2.5 + 4000));
+    }
   }, [chave]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const play = useCallback((de?: number) => {
