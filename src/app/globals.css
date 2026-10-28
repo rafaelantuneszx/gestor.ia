@@ -74,3 +74,10 @@ body {
 .md a { color: var(--accent); text-decoration: underline; }
 .md strong { font-weight: 650; }
 .md > :first-child { margin-top: 0; }
+
+/* barras de áudio de quem está falando (sala de reunião) */
+@keyframes onda {
+  0%, 100% { transform: scaleY(0.25); }
+  50% { transform: scaleY(1); }
+}
+.motion-safe\:animate-\[onda_0\.9s_ease-in-out_infinite\] { transform-origin: bottom; }
