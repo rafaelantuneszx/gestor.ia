@@ -1,103 +1,244 @@
-// Funções do Rafael e quem cuida de cada uma. Copiado de rafael-enterprises/rotinas/funcoes-por-agente.md
-// (outubro/2026); quando aquele arquivo mudar, atualize aqui. "consegue": Entrega = o agente faz até o fim;
-// Adianta = prepara e o último passo é do Rafael; Você = decisão ou reunião do Rafael, com o material pronto.
+// Funções do Rafael: quem prepara (agente), quem do escritório pode executar e onde o trabalho para nele.
+// Fonte: rafael-enterprises/rotinas/funcoes-por-agente.md (as 68 funções de outubro/2026). As que não estão lá
+// vieram de conhecimento/emails-assuntos.md e decisoes/registro.md (campo `fonte`).
+// A coluna "pessoa" é proposta para o Rafael validar (reunião #5 de 30/10/2026, decisão 3). Só primeiro nome, sem dado pessoal.
 
-export type Consegue = "Entrega" | "Adianta" | "Você";
+// O último passo de cada função, quando é do Rafael. "ler" quer dizer que o agente entrega e ele só lê.
+export type Passo = "ler" | "aprovar" | "pagar" | "enviar" | "lancar" | "dado" | "frota" | "negociar" | "sistemas" | "decidir";
+export type Modo = "entrega" | "adianta" | "voce";
+export type Status = "ativa" | "planejada" | "sob-demanda";
+
 export type Funcao = {
   area: string;
-  funcao: string;
-  agentes: string[];
-  consegue: Consegue | null;
-  dia: string;
-  status: string;
-  depende: string;
+  nome: string;
+  agentes: string[]; // ids de central_agentes (ou de agentes ainda fora dela, ver NOME_AGENTE)
+  modo: Modo | null;
+  quando: string;
+  status: Status;
+  ultimo: string; // o que o Rafael faz hoje no fim
+  passo: Passo;
+  pessoas: string[];
+  palavras: string[]; // trechos do título que ligam uma demanda a esta função (sem acento, minúsculo)
+  fonte?: string; // só nas funções que não estão no mapa de funções por agente
 };
 
+// Agentes que trabalham mas ainda não estão em central_agentes (demanda #68).
+export const NOME_AGENTE: Record<string, string> = {
+  "tiago-logistica": "Tiago",
+  "vitor-engenharia-producao": "Vítor",
+  "julio-tesouraria": "Júlio",
+};
+
+export const AREAS = [
+  "Financeiro",
+  "Custos e orçamento de obras",
+  "Operacional de obras",
+  "Suprimentos e compras",
+  "Frota",
+  "RH e pessoal",
+  "Contratos",
+  "Sistemas e TI",
+  "Fora do mapa (e-mails e decisões)",
+] as const;
+
+const f = (
+  area: (typeof AREAS)[number], nome: string, agentes: string[], modo: Modo | null, quando: string, status: Status,
+  ultimo: string, passo: Passo, pessoas: string[], palavras: string[] = [], fonte?: string,
+): Funcao => ({ area, nome, agentes, modo, quando, status, ultimo, passo, pessoas, palavras, fonte });
+
+const BRUNO = "bruno-financeiro", CLARA = "clara-assistente", MARINA = "marina-custos", CAIO = "caio-suprimentos",
+  SOFIA = "sofia-adm-rh-frota", PAULO = "paulo-rh", LUCIA = "lucia-financeiro", OTAVIO = "otavio-pavimax",
+  RICARDO = "ricardo-diretor-sistemas", HELENA = "helena", DAVI = "davi-faturas", IGOR = "igor-folha-financeiro",
+  BEATRIZ = "beatriz-fiscal", HENRIQUE = "henrique-analise-custos", LAURA = "laura-calculos-custos",
+  TIAGO = "tiago-logistica", VITOR = "vitor-engenharia-producao", JULIO = "julio-tesouraria";
+
+const FIN = "Financeiro", CUS = "Custos e orçamento de obras", OPE = "Operacional de obras", SUP = "Suprimentos e compras",
+  FRO = "Frota", RH = "RH e pessoal", CON = "Contratos", SIS = "Sistemas e TI", FORA = "Fora do mapa (e-mails e decisões)";
+
 export const FUNCOES: Funcao[] = [
-  { area: "Financeiro", funcao: "Lançamentos de fornecedores (NF/boleto) no Conta Azul", agentes: ["bruno-financeiro"], consegue: "Adianta", dia: "Seg a sex, 8h", status: "Planejada (falta caixa de NFs no Gmail)", depende: "Aprovar os rascunhos" },
-  { area: "Financeiro", funcao: "Conciliação bancária FPAV e BRACTOS", agentes: ["bruno-financeiro"], consegue: "Adianta", dia: "Ter e sex, 9h", status: "Planejada (falta OFX numa pasta)", depende: "Baixar o OFX dos bancos" },
-  { area: "Financeiro", funcao: "Correção e alinhamento no Conta Azul", agentes: ["bruno-financeiro"], consegue: "Adianta", dia: "Dia 6 (na conferência)", status: "Ativa", depende: "Aprovar as correções" },
-  { area: "Financeiro", funcao: "Validação de NF e negociação prévia", agentes: ["bruno-financeiro"], consegue: "Adianta", dia: "Sob demanda", status: "Sob demanda", depende: "Negociar" },
-  { area: "Financeiro", funcao: "Fechamento de reembolsos por obra", agentes: ["bruno-financeiro"], consegue: "Adianta", dia: "Qui (conferência) e sex (fechamento), 10h", status: "Planejada", depende: "Aprovar e pagar" },
-  { area: "Financeiro", funcao: "Rateio geral mensal (ADM)", agentes: ["bruno-financeiro"], consegue: "Entrega", dia: "Dia 6, 8h", status: "Ativa (proposta)", depende: "Fechar o mês no Financeiro" },
-  { area: "Financeiro", funcao: "Revisão de faturamento BRACTOS e FPAV", agentes: ["bruno-financeiro"], consegue: "Entrega", dia: "Dia 28, 9h", status: "Planejada", depende: "Só ler" },
-  { area: "Financeiro", funcao: "Contratos e faturas para a contabilidade", agentes: ["bruno-financeiro", "clara-assistente"], consegue: "Adianta", dia: "Dia 28, 9h", status: "Planejada", depende: "Enviar o e-mail" },
-  { area: "Financeiro", funcao: "Solicitar e subir NFs emitidas", agentes: ["bruno-financeiro", "clara-assistente"], consegue: "Adianta", dia: "Sob demanda", status: "Sob demanda", depende: "Enviar a cobrança" },
-  { area: "Financeiro", funcao: "Análise de categorias e despesas das obras", agentes: ["bruno-financeiro"], consegue: "Entrega", dia: "Dia 6, 8h", status: "Ativa", depende: "Só ler" },
-  { area: "Financeiro", funcao: "Produção x Receita", agentes: ["marina-custos"], consegue: "Entrega", dia: "Seg, 8h30", status: "Ativa", depende: "Só ler" },
-  { area: "Financeiro", funcao: "Lançamentos CAJU", agentes: ["bruno-financeiro"], consegue: "Adianta", dia: "Sob demanda", status: "Sob demanda", depende: "Lançar e pagar no CAJU" },
-  { area: "Financeiro", funcao: "Conferência do mês anterior", agentes: ["bruno-financeiro"], consegue: "Entrega", dia: "Dia 6, 8h", status: "Ativa", depende: "Só ler" },
-  { area: "Financeiro", funcao: "Rateio pela % das obras na folha", agentes: ["bruno-financeiro"], consegue: "Entrega", dia: "Dia 6, 8h", status: "Ativa (proposta)", depende: "Aprovar o lançamento" },
-  { area: "Financeiro", funcao: "Monitor de faturas e boletos: previsões de 7 dias e vencidas, documento lançado, valor real × previsto (> 5%), pago sem previsão", agentes: ["davi-faturas"], consegue: "Entrega", dia: "Seg a sex, 8h30 e 14h", status: "Ativa", depende: "Só ler (ajustes vêm pela Lúcia)" },
-  { area: "Financeiro", funcao: "RH × Financeiro: folha prevista × calculada × paga, diárias × pagamentos, competência fechada a tempo", agentes: ["igor-folha-financeiro"], consegue: "Entrega", dia: "Seg, 9h e dias 5, 16 e 21, 9h", status: "Ativa", depende: "Só ler" },
-  { area: "Financeiro", funcao: "FGTS (dia 20, antecipa no feriado) e DARF da folha (dia 15) lançados e pagos nas datas", agentes: ["igor-folha-financeiro"], consegue: "Entrega", dia: "Dias 16 e 21, 9h", status: "Ativa", depende: "Aprovar mudança de data" },
-  { area: "Financeiro", funcao: "Acompanhamento fiscal: guias da 7P, DAS, PIS, COFINS, ISS, IRPJ/CSLL, retidos e parcelamentos lançados certos", agentes: ["beatriz-fiscal"], consegue: "Entrega", dia: "Dias 10, 15, 20 e 25, 9h e sex, 10h", status: "Ativa", depende: "Só ler" },
-  { area: "Financeiro", funcao: "Pedido de guia que falta à contabilidade (7P)", agentes: ["beatriz-fiscal", "clara-assistente"], consegue: "Adianta", dia: "Sob demanda (na rotina)", status: "Ativa", depende: "Enviar o e-mail" },
-  { area: "Custos e Orçamento de Obras", funcao: "Relatório de resultado por obra", agentes: ["marina-custos"], consegue: "Entrega", dia: "Dia 6, 9h", status: "Ativa", depende: "Só ler" },
-  { area: "Custos e Orçamento de Obras", funcao: "Atualização do orçamento de custo", agentes: ["marina-custos"], consegue: "Adianta", dia: "Dia 6 (no resultado)", status: "Ativa (só compara)", depende: "Decidir os cenários" },
-  { area: "Custos e Orçamento de Obras", funcao: "Produção das medições x receita", agentes: ["marina-custos"], consegue: "Entrega", dia: "Seg, 8h30", status: "Ativa", depende: "Só ler" },
-  { area: "Custos e Orçamento de Obras", funcao: "Reprogramar despesas e receitas", agentes: ["marina-custos"], consegue: "Adianta", dia: "Sob demanda", status: "Sob demanda", depende: "Validar as premissas" },
-  { area: "Custos e Orçamento de Obras", funcao: "Conferência de contratos (GLP, locações)", agentes: ["marina-custos"], consegue: "Entrega", dia: "Seg, 9h", status: "Ativa", depende: "Só ler" },
-  { area: "Custos e Orçamento de Obras", funcao: "Fornecedores fechados para os próximos meses", agentes: ["caio-suprimentos"], consegue: "Adianta", dia: "Dias 15 e 30, 9h", status: "Planejada", depende: "Confirmar" },
-  { area: "Custos e Orçamento de Obras", funcao: "Custo de viagem e mobilização", agentes: ["marina-custos"], consegue: "Entrega", dia: "Sob demanda", status: "Sob demanda", depende: "Só ler" },
-  { area: "Custos e Orçamento de Obras", funcao: "Planejamento x real (quinzenal)", agentes: ["marina-custos"], consegue: "Entrega", dia: "Dia 6 (no resultado)", status: "Ativa", depende: "Só ler" },
-  { area: "Custos e Orçamento de Obras", funcao: "Rateio de fechamento de posto", agentes: ["bruno-financeiro"], consegue: "Entrega", dia: "Dia 6, 8h", status: "Ativa (proposta)", depende: "Aprovar o lançamento" },
-  { area: "Custos e Orçamento de Obras", funcao: "Conferência PaviMax x FPAV Financeiro", agentes: ["ricardo-diretor-sistemas"], consegue: "Entrega", dia: "Seg a sáb, 7h30 e 13h30", status: "Ativa", depende: "Só ler" },
-  { area: "Custos e Orçamento de Obras", funcao: "Análise mensal por obra", agentes: ["marina-custos"], consegue: "Entrega", dia: "Dia 6, 9h", status: "Ativa", depende: "Só ler" },
-  { area: "Custos e Orçamento de Obras", funcao: "Acompanhamento de custos por obra: programação × Orçamento de Custo × lançado, projeção no fim do mês e da obra, data e categoria do estouro (novo, 27/10)", agentes: ["henrique-analise-custos", "laura-calculos-custos", "marina-custos"], consegue: "Entrega", dia: "Seg, 10h (em reunião) e sob demanda", status: "Ativa", depende: "Só ler" },
-  { area: "Custos e Orçamento de Obras", funcao: "Proposta de aditivo (valor e justificativa) quando a obra não fecha no orçamento", agentes: ["henrique-analise-custos", "laura-calculos-custos"], consegue: "Adianta", dia: "Na rotina de segunda", status: "Ativa", depende: "Negociar com o cliente" },
-  { area: "Custos e Orçamento de Obras", funcao: "Atualização do Orçamento de Custo no PaviMax e das planilhas de programação", agentes: ["henrique-analise-custos", "laura-calculos-custos", "otavio-pavimax"], consegue: "Adianta", dia: "Na rotina de segunda", status: "Ativa (só proposta)", depende: "Aprovar a gravação" },
-  { area: "Operacional de Obras", funcao: "Passagens (mobilização e desmobilização)", agentes: ["caio-suprimentos"], consegue: "Adianta", dia: "Sob demanda", status: "Sob demanda", depende: "Comprar" },
-  { area: "Operacional de Obras", funcao: "Desmobilização de equipes", agentes: ["marina-custos"], consegue: "Adianta", dia: "Sob demanda", status: "Sob demanda", depende: "Alinhar com o engenheiro" },
-  { area: "Operacional de Obras", funcao: "Logística e refeição na mobilização", agentes: ["caio-suprimentos"], consegue: "Adianta", dia: "Sob demanda", status: "Sob demanda", depende: "Aprovar" },
-  { area: "Operacional de Obras", funcao: "Locação de alojamento", agentes: ["caio-suprimentos"], consegue: "Adianta", dia: "Sob demanda", status: "Sob demanda", depende: "Negociar e assinar" },
-  { area: "Operacional de Obras", funcao: "Recebimento de contratos de máquinas", agentes: ["marina-custos"], consegue: "Entrega", dia: "Seg, 9h", status: "Ativa", depende: "Só ler" },
-  { area: "Operacional de Obras", funcao: "Liberação de fornecedores por obra", agentes: ["caio-suprimentos"], consegue: "Entrega", dia: "Qua, 10h", status: "Ativa", depende: "Só ler" },
-  { area: "Operacional de Obras", funcao: "Fiscalização produção x receita", agentes: ["marina-custos"], consegue: "Entrega", dia: "Seg, 8h30", status: "Ativa", depende: "Só ler" },
-  { area: "Operacional de Obras", funcao: "Conferência de produção pelo RDO", agentes: ["marina-custos"], consegue: "Entrega", dia: "Seg, qua e sex, 8h (e RDO faltando no fechamento das 18h)", status: "Ativa", depende: "Só ler os alertas" },
-  { area: "Operacional de Obras", funcao: "Reunião de resultados (mensal)", agentes: ["marina-custos", "clara-assistente"], consegue: "Você", dia: "Dia 6 (pauta pronta)", status: "Ativa", depende: "Conduzir a reunião" },
-  { area: "Operacional de Obras", funcao: "Encerramento de obra", agentes: ["marina-custos"], consegue: "Adianta", dia: "Sob demanda", status: "Sob demanda", depende: "Aprovar o encerramento" },
-  { area: "Suprimentos e Compras", funcao: "Cotações de ferramentas e EPIs", agentes: ["caio-suprimentos", "clara-assistente"], consegue: "Adianta", dia: "Dia 20, 9h", status: "Planejada", depende: "Enviar a cotação" },
-  { area: "Suprimentos e Compras", funcao: "Compra de EPIs e materiais", agentes: ["caio-suprimentos"], consegue: "Adianta", dia: "Sob demanda", status: "Sob demanda", depende: "Aprovar e comprar" },
-  { area: "Suprimentos e Compras", funcao: "Fechamento de refeição (quinzenal)", agentes: ["caio-suprimentos"], consegue: "Entrega", dia: "Dias 15 e 30, 9h", status: "Planejada", depende: "Aprovar o pagamento" },
-  { area: "Suprimentos e Compras", funcao: "Fornecedor de uniformes", agentes: ["caio-suprimentos"], consegue: "Adianta", dia: "Sob demanda", status: "Sob demanda", depende: "Alinhar com o fornecedor" },
-  { area: "Suprimentos e Compras", funcao: "Pedidos de compra (mobília, alojamento, equipamentos)", agentes: ["caio-suprimentos"], consegue: "Adianta", dia: "Sob demanda", status: "Sob demanda", depende: "Aprovar" },
-  { area: "Suprimentos e Compras", funcao: "Orçamento de contratações por fase de obra", agentes: ["caio-suprimentos"], consegue: "Adianta", dia: "Sob demanda", status: "Sob demanda", depende: "Validar" },
-  { area: "Suprimentos e Compras", funcao: "Liberação de faturamento de fornecedores", agentes: ["caio-suprimentos"], consegue: "Entrega", dia: "Qua, 10h", status: "Ativa", depende: "Só ler" },
-  { area: "Suprimentos e Compras", funcao: "Controle de pedidos no sistema", agentes: ["caio-suprimentos"], consegue: "Entrega", dia: "Qua, 10h", status: "Ativa", depende: "Só ler" },
-  { area: "Gestão de Frota", funcao: "Conferência de KM e revisões", agentes: ["sofia-adm-rh-frota"], consegue: "Entrega", dia: "Seg, 8h", status: "Ativa", depende: "Só ler" },
-  { area: "Gestão de Frota", funcao: "Agendamento de revisões", agentes: ["sofia-adm-rh-frota", "clara-assistente"], consegue: "Adianta", dia: "Seg, 8h (a lista)", status: "Ativa", depende: "Enviar ou agendar" },
-  { area: "Gestão de Frota", funcao: "Recarga Ticket Log", agentes: ["sofia-adm-rh-frota"], consegue: "Adianta", dia: "Sex, 9h", status: "Planejada (falta relatório do Ticket Log)", depende: "Fazer a recarga" },
-  { area: "Gestão de Frota", funcao: "Manutenção e aprovação de serviços", agentes: ["sofia-adm-rh-frota"], consegue: "Adianta", dia: "Seg, 8h", status: "Ativa", depende: "Aprovar" },
-  { area: "Gestão de Frota", funcao: "Locações de máquinas", agentes: ["marina-custos"], consegue: "Entrega", dia: "Seg, 9h", status: "Ativa", depende: "Só ler" },
-  { area: "Gestão de Frota", funcao: "Inventário FPAV e BRACTOS", agentes: ["sofia-adm-rh-frota"], consegue: "Adianta", dia: "Sob demanda", status: "Sob demanda", depende: "Contagem física em campo" },
-  { area: "RH e Sistemas de Pessoal", funcao: "Correções no sistema RH", agentes: ["paulo-rh"], consegue: "Adianta", dia: "Triagem 7h30 e 13h30", status: "Ativa", depende: "Aprovar a publicação" },
-  { area: "RH e Sistemas de Pessoal", funcao: "Liberação da folha", agentes: ["sofia-adm-rh-frota"], consegue: "Adianta", dia: "Dia 1, 9h (prazos) e triagem diária", status: "Planejada", depende: "Aprovar o fechamento" },
-  { area: "RH e Sistemas de Pessoal", funcao: "Rescisões", agentes: ["sofia-adm-rh-frota"], consegue: "Adianta", dia: "Sob demanda", status: "Sob demanda", depende: "Conferir com o contador" },
-  { area: "RH e Sistemas de Pessoal", funcao: "Adiantamentos", agentes: ["sofia-adm-rh-frota"], consegue: "Adianta", dia: "Sob demanda", status: "Sob demanda", depende: "Aprovar" },
-  { area: "RH e Sistemas de Pessoal", funcao: "FGTS", agentes: ["sofia-adm-rh-frota"], consegue: "Adianta", dia: "Dia 1, 9h", status: "Planejada", depende: "Emitir a guia e pagar" },
-  { area: "RH e Sistemas de Pessoal", funcao: "DARF", agentes: ["sofia-adm-rh-frota"], consegue: "Adianta", dia: "Dia 1, 9h", status: "Planejada", depende: "Emitir e pagar" },
-  { area: "RH e Sistemas de Pessoal", funcao: "Comprovantes de seguro de vida", agentes: ["sofia-adm-rh-frota", "clara-assistente"], consegue: "Adianta", dia: "Dia 1, 9h", status: "Planejada", depende: "Enviar o comprovante" },
-  { area: "RH e Sistemas de Pessoal", funcao: "Tarefas do financeiro no Conta Azul", agentes: ["bruno-financeiro"], consegue: "Entrega", dia: "Dia 6, 8h", status: "Ativa", depende: "Só ler" },
-  { area: "RH e Sistemas de Pessoal", funcao: "Cancelamento de benefícios (CAJU, Ticket Log, estacionamento)", agentes: ["sofia-adm-rh-frota"], consegue: "Adianta", dia: "Seg, 10h", status: "Planejada", depende: "Cancelar nas plataformas" },
-  { area: "RH e Sistemas de Pessoal", funcao: "Cadastro de obra nova", agentes: ["otavio-pavimax", "paulo-rh", "lucia-financeiro"], consegue: "Adianta", dia: "Sob demanda", status: "Sob demanda", depende: "Aprovar. Documentos da obra" },
-  { area: "RH e Sistemas de Pessoal", funcao: "Responsável pelo sistema RH", agentes: ["paulo-rh"], consegue: "Entrega", dia: "Triagem 7h30 e 13h30", status: "Ativa", depende: "Aprovar mudanças" },
-  { area: "Gestão de Contratos", funcao: "Elaboração e revisão de contratos de locação", agentes: ["marina-custos"], consegue: "Adianta", dia: "Sob demanda", status: "Sob demanda", depende: "Revisar e assinar" },
-  { area: "Gestão de Contratos", funcao: "Conferência de contratos de fornecedores", agentes: ["marina-custos"], consegue: "Entrega", dia: "Seg, 9h", status: "Ativa", depende: "Só ler" },
-  { area: "Gestão de Contratos", funcao: "Liberação e faturamento de contratos", agentes: ["marina-custos"], consegue: "Entrega", dia: "Seg, 9h", status: "Ativa", depende: "Só ler" },
-  { area: "Gestão de Contratos", funcao: "Contratos de máquinas", agentes: ["marina-custos"], consegue: "Entrega", dia: "Seg, 9h", status: "Ativa", depende: "Só ler" },
-  { area: "Gestão de Contratos", funcao: "Contratos para o fechamento (contabilidade)", agentes: ["bruno-financeiro", "clara-assistente"], consegue: "Adianta", dia: "Dia 28, 9h", status: "Planejada", depende: "Enviar" },
-  { area: "Gestão de Contratos", funcao: "Vencimentos e renovações", agentes: ["marina-custos"], consegue: "Entrega", dia: "Seg, 9h", status: "Ativa", depende: "Decidir renovar" },
-  { area: "Gestão de Contratos", funcao: "Negociação com fornecedores estratégicos", agentes: ["caio-suprimentos", "marina-custos"], consegue: "Você", dia: "Sob demanda", status: "Sob demanda", depende: "Negociar" },
-  { area: "Gestão de Contratos", funcao: "Fiscalização do cumprimento por obra", agentes: ["marina-custos"], consegue: "Entrega", dia: "Seg, 9h", status: "Ativa", depende: "Só ler" },
-  { area: "Sistemas e TI", funcao: "Conta Azul, PaviMax, RH e Financeiro (manutenção)", agentes: ["ricardo-diretor-sistemas", "otavio-pavimax", "lucia-financeiro", "paulo-rh"], consegue: null, dia: "Triagem seg a sáb, 7h30 e 13h30", status: "Ativa", depende: "" },
-  { area: "Sistemas e TI", funcao: "monday.com (cronograma, solicitações)", agentes: ["helena"], consegue: null, dia: "Sob demanda (conector disponível)", status: "Sob demanda", depende: "" },
-  { area: "Sistemas e TI", funcao: "Google Ads (vagas)", agentes: ["clara-assistente"], consegue: null, dia: "Sob demanda (rascunho do anúncio)", status: "Sob demanda", depende: "" },
-  { area: "Sistemas e TI", funcao: "Matriz RACI", agentes: ["helena"], consegue: null, dia: "Gerada a partir deste arquivo", status: "Sob demanda", depende: "" },
-  { area: "Sistemas e TI", funcao: "Mapeamento de fornecedores essenciais", agentes: ["caio-suprimentos"], consegue: null, dia: "Qua, 10h", status: "Ativa", depende: "" },
-  { area: "Sistemas e TI", funcao: "TI geral", agentes: ["ricardo-diretor-sistemas"], consegue: null, dia: "Triagem", status: "Ativa", depende: "" },
+  // Financeiro
+  f(FIN, "Lançamentos de fornecedores (NF e boleto)", [BRUNO], "adianta", "Seg a sex, 8h", "planejada", "Aprovar os rascunhos", "lancar", ["Erica"], ["lancadas"]),
+  f(FIN, "Conciliação bancária FPAV e BRACTOS", [BRUNO], "adianta", "Ter e sex, 9h", "planejada", "Baixar o OFX dos bancos", "dado", ["Erica"], ["concilia"]),
+  f(FIN, "Correção e alinhamento no Conta Azul", [BRUNO], "adianta", "Dia 6", "ativa", "Aprovar as correções", "aprovar", ["Erica"], ["conta azul"]),
+  f(FIN, "Validação de NF e negociação prévia", [BRUNO], "adianta", "Sob demanda", "sob-demanda", "Negociar", "negociar", ["Erica"], ["validar nf"]),
+  f(FIN, "Fechamento de reembolsos por obra", [BRUNO], "adianta", "Qui e sex, 10h", "planejada", "Aprovar e pagar", "pagar", ["Erica"], ["reembolso"]),
+  f(FIN, "Rateio geral mensal (ADM)", [BRUNO, LUCIA], "entrega", "Dia 6, 8h", "ativa", "A Lúcia fecha o mês (decisão de 28/10)", "ler", ["Erica"], ["rateio"]),
+  f(FIN, "Revisão de faturamento BRACTOS e FPAV", [BRUNO], "entrega", "Dia 28, 9h", "planejada", "Só ler", "ler", ["Erica"], ["faturamento"]),
+  f(FIN, "Contratos e faturas para a contabilidade", [BRUNO, CLARA], "adianta", "Dia 28, 9h", "planejada", "Enviar o e-mail", "enviar", ["Erica"], ["contabilidade"]),
+  f(FIN, "Solicitar e subir NFs emitidas", [BRUNO, CLARA], "adianta", "Sob demanda", "sob-demanda", "Enviar a cobrança", "enviar", ["Erica"], ["nfs emitidas"]),
+  f(FIN, "Análise de categorias e despesas das obras", [BRUNO], "entrega", "Dia 6, 8h", "ativa", "Só ler", "ler", ["Erica"], ["categoria"]),
+  f(FIN, "Produção × receita", [MARINA], "entrega", "Seg, 8h30", "ativa", "Só ler", "ler", ["Rogéria"]),
+  f(FIN, "Lançamentos Caju", [BRUNO], "adianta", "Sob demanda", "sob-demanda", "Lançar e pagar no Caju", "pagar", ["Erica"], ["caju"]),
+  f(FIN, "Conferência do mês anterior", [BRUNO], "entrega", "Dia 6, 8h", "ativa", "Só ler", "ler", ["Erica"], ["conferencia diaria"]),
+  f(FIN, "Rateio pela % das obras na folha", [BRUNO], "entrega", "Dia 6, 8h", "ativa", "Aprovar o lançamento", "aprovar", ["Erica"]),
+  f(FIN, "Monitor de faturas e boletos (previsto × real, vencidas)", [DAVI], "entrega", "Seg a sex, 8h30 e 14h", "ativa", "Só ler", "ler", ["Erica"], ["previsto", "vence", "sem previsao", "previsoes sem"]),
+  f(FIN, "RH × Financeiro: folha prevista × calculada × paga", [IGOR], "entrega", "Seg, 9h e dias 5, 16 e 21", "ativa", "Só ler", "ler", ["Erica", "Nita"]),
+  f(FIN, "FGTS e DARF da folha lançados e pagos nas datas", [IGOR], "entrega", "Dias 16 e 21, 9h", "ativa", "Aprovar mudança de data", "aprovar", ["Erica"], ["fgts", "darf"]),
+  f(FIN, "Acompanhamento fiscal (guias e impostos)", [BEATRIZ], "entrega", "Dias 10, 15, 20 e 25 e sex", "ativa", "Só ler", "ler", ["Erica"], ["dctf", "imposto"]),
+  f(FIN, "Pedido de guia que falta à contabilidade (7P)", [BEATRIZ, CLARA], "adianta", "Na rotina fiscal", "ativa", "Enviar o e-mail", "enviar", ["Erica"], ["guia", "7p"]),
+
+  // Custos e orçamento de obras
+  f(CUS, "Relatório de resultado por obra", [MARINA], "entrega", "Dia 6, 9h", "ativa", "Só ler", "ler", ["Rogéria"], ["resultado"]),
+  f(CUS, "Atualização do orçamento de custo", [MARINA], "adianta", "Dia 6", "ativa", "Decidir os cenários", "decidir", ["Rogéria"], ["orcamento de custo"]),
+  f(CUS, "Produção das medições × receita", [MARINA, VITOR], "entrega", "Seg, 8h30", "ativa", "Só ler", "ler", ["Rogéria"], ["medic", "previa"]),
+  f(CUS, "Reprogramar despesas e receitas", [MARINA], "adianta", "Sob demanda", "sob-demanda", "Validar as premissas", "decidir", ["Erica"], ["reprogram", "receita prevista"]),
+  f(CUS, "Conferência de contratos (GLP, locações)", [MARINA], "entrega", "Seg, 9h", "ativa", "Só ler", "ler", ["Rogéria"]),
+  f(CUS, "Fornecedores fechados para os próximos meses", [CAIO], "adianta", "Dias 15 e 30, 9h", "planejada", "Confirmar", "aprovar", ["Rogéria"]),
+  f(CUS, "Custo de viagem e mobilização", [MARINA], "entrega", "Sob demanda", "sob-demanda", "Só ler", "ler", ["Renan"]),
+  f(CUS, "Planejamento × real (quinzenal)", [MARINA], "entrega", "Dia 6", "ativa", "Só ler", "ler", ["Rogéria"]),
+  f(CUS, "Rateio de fechamento de posto", [BRUNO], "entrega", "Dia 6, 8h", "ativa", "Aprovar o lançamento", "aprovar", ["Erica"]),
+  f(CUS, "Conferência PaviMax × FPAV Financeiro", [RICARDO, OTAVIO], "entrega", "Seg a sáb, 7h30 e 13h30", "ativa", "Só ler", "ler", ["Erica"], ["espelho", "financeiro x pavimax", "sem baixa", "diferentes do pavimax"]),
+  f(CUS, "Análise mensal por obra", [MARINA], "entrega", "Dia 6, 9h", "ativa", "Só ler", "ler", ["Rogéria"]),
+  f(CUS, "Acompanhamento de custos por obra (projeção e estouro)", [HENRIQUE, LAURA], "entrega", "Seg, 10h", "ativa", "Só ler", "ler", ["Rogéria"], ["projec", "custo das obras", "o prazo"]),
+  f(CUS, "Proposta de aditivo quando a obra não fecha", [HENRIQUE, LAURA], "adianta", "Na rotina de segunda", "ativa", "Negociar com o cliente", "negociar", ["Rogéria"], ["aditivo"]),
+  f(CUS, "Orçamento de Custo no PaviMax e planilhas de programação", [HENRIQUE, LAURA, OTAVIO], "adianta", "Na rotina de segunda", "ativa", "Aprovar a gravação", "aprovar", ["Rogéria"], ["orcamento de custo"]),
+
+  // Operacional de obras
+  f(OPE, "Passagens (mobilização e desmobilização)", [CAIO, TIAGO], "adianta", "Sob demanda", "sob-demanda", "Comprar", "pagar", ["Adrielle"], ["passage"]),
+  f(OPE, "Desmobilização de equipes", [MARINA], "adianta", "Sob demanda", "sob-demanda", "Alinhar com o engenheiro", "negociar", ["Renan", "Evandro"], ["desmobiliz"]),
+  f(OPE, "Logística e refeição na mobilização", [CAIO, TIAGO], "adianta", "Sob demanda", "sob-demanda", "Aprovar", "aprovar", ["Adrielle", "Evandro"], ["logistica"]),
+  f(OPE, "Locação de alojamento", [CAIO], "adianta", "Sob demanda", "sob-demanda", "Negociar e assinar", "negociar", ["Renan"], ["alojamento"]),
+  f(OPE, "Recebimento de contratos de máquinas", [MARINA], "entrega", "Seg, 9h", "ativa", "Só ler", "ler", ["Renan"]),
+  f(OPE, "Liberação de fornecedores por obra", [CAIO], "entrega", "Qua, 10h", "ativa", "Só ler", "ler", ["Rogéria"]),
+  f(OPE, "Fiscalização produção × receita", [MARINA], "entrega", "Seg, 8h30", "ativa", "Só ler", "ler", ["Rogéria"]),
+  f(OPE, "Conferência de produção pelo RDO", [MARINA, VITOR], "entrega", "Seg, qua e sex, 8h", "ativa", "Só ler os alertas", "ler", ["Renan", "Evandro"], ["rdo"]),
+  f(OPE, "Reunião de resultados (mensal)", [MARINA, CLARA], "voce", "Dia 6 (pauta pronta)", "ativa", "Conduzir a reunião", "decidir", []),
+  f(OPE, "Encerramento de obra", [MARINA], "adianta", "Sob demanda", "sob-demanda", "Aprovar o encerramento", "aprovar", ["Rogéria", "Renan"], ["encerramento de obra", "encerrar"]),
+
+  // Suprimentos e compras
+  f(SUP, "Cotações de ferramentas e EPIs", [CAIO, CLARA], "adianta", "Dia 20, 9h", "planejada", "Enviar a cotação", "enviar", ["Adrielle"], ["cotacao"]),
+  f(SUP, "Compra de EPIs e materiais", [CAIO], "adianta", "Sob demanda", "sob-demanda", "Aprovar e comprar", "pagar", ["Adrielle"], ["compra de epi"]),
+  f(SUP, "Fechamento de refeição (quinzenal)", [CAIO], "entrega", "Dias 15 e 30, 9h", "planejada", "Aprovar o pagamento", "pagar", ["Erica"], ["refeicao"]),
+  f(SUP, "Fornecedor de uniformes", [CAIO], "adianta", "Sob demanda", "sob-demanda", "Alinhar com o fornecedor", "negociar", ["Adrielle"], ["catalogo de uniformes"]),
+  f(SUP, "Pedidos de compra (mobília, alojamento, equipamentos)", [CAIO], "adianta", "Sob demanda", "sob-demanda", "Aprovar", "aprovar", ["Rogéria"], ["pedidos de compra"]),
+  f(SUP, "Orçamento de contratações por fase de obra", [CAIO], "adianta", "Sob demanda", "sob-demanda", "Validar", "decidir", ["Rogéria"]),
+  f(SUP, "Liberação de faturamento de fornecedores", [CAIO], "entrega", "Qua, 10h", "ativa", "Só ler", "ler", ["Erica"], ["sem numero de nf", "nf_recebida"]),
+  f(SUP, "Controle de pedidos no sistema", [CAIO], "entrega", "Qua, 10h", "ativa", "Só ler", "ler", ["Rogéria"], ["pedidos"]),
+
+  // Frota
+  f(FRO, "Conferência de KM e revisões", [SOFIA], "entrega", "Seg, 8h", "ativa", "Só ler", "ler", ["Renan"], ["revisao preventiva", "quilometr"]),
+  f(FRO, "Agendamento de revisões", [SOFIA, CLARA], "adianta", "Seg, 8h", "ativa", "Enviar ou agendar", "enviar", ["Renan"]),
+  f(FRO, "Recarga Ticket Log", [SOFIA], "adianta", "Sex, 9h", "planejada", "Exportar o relatório e fazer a recarga", "dado", ["Renan", "Erica"], ["ticket log"]),
+  f(FRO, "Manutenção e aprovação de serviços", [SOFIA], "adianta", "Seg, 8h", "ativa", "Aprovar", "aprovar", ["Renan"], ["manutenc"]),
+  f(FRO, "Locações de máquinas", [MARINA], "entrega", "Seg, 9h", "ativa", "Só ler", "ler", ["Renan"], ["locacao"]),
+  f(FRO, "Inventário FPAV e BRACTOS", [SOFIA], "adianta", "Sob demanda", "sob-demanda", "Contagem física em campo", "dado", ["Evandro"], ["inventario"]),
+
+  // RH e pessoal
+  f(RH, "Correções no sistema RH", [PAULO], "adianta", "Triagem 7h30 e 13h30", "ativa", "Aprovar a publicação", "sistemas", []),
+  f(RH, "Liberação da folha", [SOFIA, PAULO], "adianta", "Dia 1, 9h e triagem diária", "planejada", "Aprovar o fechamento", "aprovar", ["Nita"], ["folha", "quinzena"]),
+  f(RH, "Rescisões", [SOFIA], "adianta", "Sob demanda", "sob-demanda", "Conferir com o contador", "aprovar", ["Nita"], ["rescis"]),
+  f(RH, "Adiantamentos", [SOFIA], "adianta", "Sob demanda", "sob-demanda", "Aprovar", "aprovar", ["Nita"], ["adiantamento"]),
+  f(RH, "FGTS", [SOFIA], "adianta", "Dia 1, 9h", "planejada", "Emitir a guia e pagar", "pagar", ["Nita", "Erica"], ["fgts"]),
+  f(RH, "DARF", [SOFIA], "adianta", "Dia 1, 9h", "planejada", "Emitir e pagar", "pagar", ["Nita", "Erica"], ["darf"]),
+  f(RH, "Comprovantes de seguro de vida", [SOFIA, CLARA], "adianta", "Dia 1, 9h", "planejada", "Enviar o comprovante", "enviar", ["Thalita"], ["seguro de vida"]),
+  f(RH, "Tarefas do financeiro no Conta Azul", [BRUNO], "entrega", "Dia 6, 8h", "ativa", "Só ler", "ler", ["Erica"]),
+  f(RH, "Cancelamento de benefícios (Caju, Ticket Log, estacionamento)", [SOFIA], "adianta", "Seg, 10h", "planejada", "Cancelar nas plataformas", "lancar", ["Thalita"], ["beneficio"]),
+  f(RH, "Cadastro de obra nova", [OTAVIO, PAULO, LUCIA], "adianta", "Sob demanda", "sob-demanda", "Aprovar e mandar os documentos da obra", "aprovar", ["Adrielle", "Rogéria"], ["cadastro pavimax"]),
+  f(RH, "Responsável pelo sistema RH", [PAULO], "entrega", "Triagem 7h30 e 13h30", "ativa", "Aprovar mudanças", "sistemas", []),
+
+  // Contratos
+  f(CON, "Elaboração e revisão de contratos de locação", [MARINA], "adianta", "Sob demanda", "sob-demanda", "Revisar e assinar", "negociar", ["Rogéria"], ["contrato de locacao"]),
+  f(CON, "Conferência de contratos de fornecedores", [MARINA], "entrega", "Seg, 9h", "ativa", "Só ler", "ler", ["Rogéria"]),
+  f(CON, "Liberação e faturamento de contratos", [MARINA], "entrega", "Seg, 9h", "ativa", "Só ler", "ler", ["Erica"]),
+  f(CON, "Contratos de máquinas", [MARINA], "entrega", "Seg, 9h", "ativa", "Só ler", "ler", ["Renan"]),
+  f(CON, "Contratos para o fechamento (contabilidade)", [BRUNO, CLARA], "adianta", "Dia 28, 9h", "planejada", "Enviar", "enviar", ["Erica"]),
+  f(CON, "Vencimentos e renovações", [MARINA], "entrega", "Seg, 9h", "ativa", "Decidir renovar", "decidir", ["Rogéria"], ["renova"]),
+  f(CON, "Negociação com fornecedores estratégicos", [CAIO, MARINA], "voce", "Sob demanda", "sob-demanda", "Negociar", "negociar", []),
+  f(CON, "Fiscalização do cumprimento por obra", [MARINA], "entrega", "Seg, 9h", "ativa", "Só ler", "ler", ["Evandro"]),
+
+  // Sistemas e TI
+  f(SIS, "Manutenção do PaviMax, RH e Financeiro", [RICARDO, OTAVIO, LUCIA, PAULO], null, "Triagem seg a sáb, 7h30 e 13h30", "ativa", "Aprovar SQL, publicação e permissões", "sistemas", [], ["cadastro pavimax"]),
+  f(SIS, "monday.com (cronograma e solicitações)", [HELENA], null, "Sob demanda", "sob-demanda", "Só ler", "ler", ["Adrielle"], ["monday", "registrar no gestor"]),
+  f(SIS, "Google Ads (vagas)", [CLARA], null, "Sob demanda", "sob-demanda", "Publicar o anúncio", "enviar", ["Thalita"], ["vaga"]),
+  f(SIS, "Matriz RACI", [HELENA], null, "Sob demanda", "sob-demanda", "Só ler", "ler", [], ["raci"]),
+  f(SIS, "Mapeamento de fornecedores essenciais", [CAIO], null, "Qua, 10h", "ativa", "Só ler", "ler", ["Rogéria"]),
+  f(SIS, "TI geral", [RICARDO], null, "Triagem", "ativa", "Só ler", "ler", [], ["acesso", "central_agentes"]),
+
+  // Fora do mapa: o que os e-mails e as decisões mostram que o Rafael faz e o mapa de funções não tinha
+  f(FORA, "Multas e indicação de condutor", [SOFIA], "adianta", "Todo dia (e-mails × multas no PaviMax)", "ativa", "Indicar o condutor no sistema de infrações", "frota", ["Renan", "Nita"], ["condutor", "multa", "autos"], "E-mails (frota e multas) e decisões #59 e #60"),
+  f(FORA, "Máquinas com faturamento direto (cadastro no cliente, medição, NF autorizada)", [CLARA, MARINA], "adianta", "Sob demanda (rotina da Hitachi)", "ativa", "Mandar a ficha do fornecedor e aprovar a medição", "enviar", ["Rogéria", "Renan"], ["obrasplan", "maquinas e da verba"], "E-mails (faturamento direto) e demanda #79"),
+  f(FORA, "Fluxo de caixa e cenários para a diretoria", [LUCIA, JULIO], "adianta", "Todo dia", "ativa", "Escolher o cenário (prorrogar ou antecipar)", "decidir", ["Erica"], ["caixa negativo", "negativa"], "Decisões #1 e #74"),
+  f(FORA, "Registro diário do Financeiro para a diretoria", [BRUNO, LUCIA], "adianta", "Todo dia, 18h15", "ativa", "Dar o \"pode enviar\"", "enviar", ["Erica"], ["financeiro do dia"], "Decisão de 29/10 (registro diário)"),
+  f(FORA, "Teto mensal dos sócios", [BRUNO], "entrega", "Toda semana", "ativa", "Só ler", "ler", ["Erica"], ["socios"], "Decisão de 28/10 (regra mensal)"),
+  f(FORA, "Protestos, cartório e boletos vencidos", [], null, "Consulta semanal", "sob-demanda", "Conferir o que foi pago e negociar", "negociar", ["Erica"], ["protesto", "vencidos"], "E-mails (pendências e riscos)"),
+  f(FORA, "Alojamento: chaves, vistoria, luz e água", [], null, "Sob demanda", "sob-demanda", "Combinar com o locador", "negociar", ["Renan"], [], "E-mails (alojamento)"),
+  f(FORA, "Máquina que dispara as rotinas dos agentes", [HELENA], null, "Seg a sáb, 7h às 19h", "ativa", "Deixar o Mac ligado e o app aberto", "sistemas", [], ["agendador"], "Decisão #37"),
+  f(FORA, "Jurídico: citações, notificações e minutas com a advogada", [], null, "Sob demanda", "sob-demanda", "Falar com a advogada e acompanhar prazos", "negociar", [], ["juridic", "citacao", "notificacao"], "E-mails (jurídico e alojamento)"),
+  f(FORA, "Bancos: gerente, PIX e débitos sem explicação", [], null, "Sob demanda", "sob-demanda", "Falar com o gerente do banco", "dado", [], ["banco"], "E-mails (pendências)"),
+  f(FORA, "Assinaturas e cobranças dos sistemas (monday, Google, Brevo, Hostinger)", [], null, "Sob demanda", "sob-demanda", "Pagar e revisar usuários", "sistemas", [], ["assinatura"], "E-mails (sistemas e assinaturas)"),
+  f(FORA, "Propostas de fornecedores e ferramentas novas", [], null, "Sob demanda", "sob-demanda", "Decidir o que segue e o que descarta", "decidir", [], ["proposta comercial"], "E-mails (propostas sem resposta)"),
 ];
 
-export function funcoesDo(agente: string): Funcao[] {
-  return FUNCOES.filter((f) => f.agentes.includes(agente));
+// Situação de cada função. Sem dono: ninguém prepara e ninguém do escritório executa; fica tudo com o Rafael.
+export type Situacao = "sem-dono" | "para-em-voce" | "sem-agente" | "ok";
+
+export function situacao(fn: Funcao): Situacao {
+  if (fn.agentes.length === 0 && fn.pessoas.length === 0) return "sem-dono";
+  if (fn.passo !== "ler" && fn.pessoas.length === 0) return "para-em-voce";
+  if (fn.agentes.length === 0) return "sem-agente";
+  return "ok";
+}
+
+// O gargalo: o que hoje para no Rafael, por tipo de último passo, e quem poderia assumir (proposta).
+export const GARGALO: { passo: Exclude<Passo, "ler">; oque: string; quem: string }[] = [
+  {
+    passo: "aprovar",
+    oque: "Aprovar, um por um, o que os agentes já prepararam (correções, lançamentos, folha, pedidos).",
+    quem: "Os diretores aprovam sozinhos até R$ 5 mil (regra de autonomia de 28/10). Erica, Nita e Rogéria conferem o que é da área de cada um antes de chegar a você.",
+  },
+  {
+    passo: "pagar",
+    oque: "Pagar e comprar: reembolsos, Caju, FGTS e DARF, passagens, EPIs, refeição.",
+    quem: "Erica paga o que já está aprovado no Financeiro. Adrielle compra passagens e EPIs dentro do pedido aprovado.",
+  },
+  {
+    passo: "lancar",
+    oque: "Lançar NF, boleto e guia que o financeiro encaminha (\"favor lançar\" → \"Lançado\") e mexer nas plataformas (Caju, Ticket Log).",
+    quem: "Erica lança direto no Financeiro e o Bruno confere no dia seguinte. Thalita cancela benefícios nas plataformas.",
+  },
+  {
+    passo: "enviar",
+    oque: "Dar o \"pode enviar\" em e-mails: contabilidade, cotações, cobranças, registro do dia, agendamento de revisão.",
+    quem: "A Clara continua escrevendo o rascunho. Erica envia os da contabilidade e do financeiro, Adrielle as cotações, Renan os da frota.",
+  },
+  {
+    passo: "dado",
+    oque: "Buscar dado que está fora dos sistemas: OFX dos bancos, relatório do Ticket Log, contagem do inventário, falar com o banco.",
+    quem: "Erica baixa o OFX duas vezes por semana, Renan exporta o Ticket Log, Evandro faz a contagem em campo.",
+  },
+  {
+    passo: "frota",
+    oque: "Multas e indicação de condutor: hoje você é o contato das locadoras.",
+    quem: "Renan descobre quem estava com o carro e indica o condutor; Nita faz o formulário e o desconto em folha.",
+  },
+  {
+    passo: "negociar",
+    oque: "Negociar, assinar e falar com a advogada: alojamentos, aditivos, fornecedores, protestos.",
+    quem: "Rogéria conduz locadoras e contratos de locação; Renan cuida de chaves e contas dos alojamentos; Erica negocia boletos vencidos. Jurídico e aditivo com o cliente ficam com você.",
+  },
+  {
+    passo: "sistemas",
+    oque: "Sistemas: publicar, dar permissão, aplicar SQL, manter o Mac das rotinas ligado e pagar as assinaturas.",
+    quem: "O Ricardo prepara e testa; publicar e dar permissão continuam com você. Adrielle pode acompanhar as cobranças das assinaturas.",
+  },
+  {
+    passo: "decidir",
+    oque: "Decisões de dono: cenários de caixa, orçamento de custo, renovar contrato, reunião de resultados.",
+    quem: "Ficam com você. Os agentes trazem uma pergunta por vez, com a proposta pronta.",
+  },
+];
+
+// Liga uma demanda a uma função pelos trechos do título (sem acento e em minúsculas).
+export function normalizar(s: string) {
+  return s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+}
+
+// O trecho precisa começar uma palavra ("rdo" liga "RDO de 29/10", mas não "acordo").
+export function liga(fn: Funcao, tituloNormalizado: string) {
+  return fn.palavras.some((p) => {
+    for (let i = tituloNormalizado.indexOf(p); i >= 0; i = tituloNormalizado.indexOf(p, i + 1)) {
+      if (i === 0 || !/[a-z0-9]/.test(tituloNormalizado[i - 1])) return true;
+    }
+    return false;
+  });
 }

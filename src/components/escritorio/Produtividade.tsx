@@ -10,7 +10,7 @@ import {
   ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Clock, FileText, Gauge, Info, MapPin, Stamp, X,
 } from "lucide-react";
 import { Avatar } from "@/components/Avatar";
-import { funcoesDo, type Consegue } from "@/lib/funcoes-rafael";
+import { FUNCOES, type Modo, type Status } from "@/lib/funcoes-rafael";
 import {
   MINUTOS_DECISAO, OUTRA_TAREFA, REGUA, calcularDia, diaDe, fmtHoras, fmtMin, limitesDoDia, nomeDoDia, somarDias,
   type DecisaoRafael, type EventoProd, type ProdAgente, type ProdDia,
@@ -101,11 +101,12 @@ const VEREDITO: Record<ProdAgente["veredito"], { texto: string; cor: string; ane
   gera: { texto: "Mais aprovação que entrega", cor: "bg-bad-soft text-bad", anel: "ring-bad" },
   parado: { texto: "Sem atividade no dia", cor: "bg-bg text-muted", anel: "ring-transparent" },
 };
-const CONSEGUE_COR: Record<Consegue, string> = {
-  Entrega: "bg-ok-soft text-ok",
-  Adianta: "bg-warn-soft text-warn",
-  "Você": "bg-accent-soft text-accent",
+const MODO: Record<Modo, { texto: string; cor: string }> = {
+  entrega: { texto: "Entrega", cor: "bg-ok-soft text-ok" },
+  adianta: { texto: "Adianta", cor: "bg-warn-soft text-warn" },
+  voce: { texto: "Você", cor: "bg-accent-soft text-accent" },
 };
+const STATUS: Record<Status, string> = { ativa: "ativa", planejada: "planejada", "sob-demanda": "sob demanda" };
 const corSaldo = (h: number) => (h > 0.05 ? "text-ok" : h < -0.05 ? "text-bad" : "text-muted");
 const nomeRotina = (r: string) => {
   const m = /^reuniao#(\d+)$/.exec(r);
@@ -166,9 +167,9 @@ function Regua() {
 function Detalhe({ p, pessoa, real, onVoltar, onVerNoEscritorio }: {
   p: ProdAgente | null; pessoa: Pessoa; real: boolean; onVoltar: () => void; onVerNoEscritorio?: () => void;
 }) {
-  const funcoes = funcoesDo(pessoa.id);
+  const funcoes = FUNCOES.filter((f) => f.agentes.includes(pessoa.id));
   const v = VEREDITO[p?.veredito ?? "parado"];
-  const ordem: (Consegue | null)[] = ["Entrega", "Adianta", "Você", null];
+  const ordem: (Modo | null)[] = ["entrega", "adianta", "voce", null];
   return (
     <div className="space-y-3">
       <div className="flex items-start gap-3">
@@ -244,13 +245,13 @@ function Detalhe({ p, pessoa, real, onVoltar, onVerNoEscritorio }: {
         <h3 className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-muted">Suas funções que {pessoa.nome} cobre ({funcoes.length})</h3>
         {funcoes.length === 0 && <p className="text-xs text-muted">Nenhuma função sua está com {pessoa.nome} no quadro de funções.</p>}
         <ul className="space-y-1">
-          {ordem.flatMap((c) => funcoes.filter((f) => f.consegue === c)).map((f, i) => (
+          {ordem.flatMap((m) => funcoes.filter((f) => f.modo === m)).map((f, i) => (
             <li key={i} className="text-xs">
               <div className="flex items-start gap-1.5">
-                {f.consegue && <span className={`mt-px shrink-0 rounded px-1.5 text-[10.5px] font-medium ${CONSEGUE_COR[f.consegue]}`}>{f.consegue}</span>}
-                <span className="min-w-0 flex-1">{f.funcao}</span>
+                {f.modo && <span className={`mt-px shrink-0 rounded px-1.5 text-[10.5px] font-medium ${MODO[f.modo].cor}`}>{MODO[f.modo].texto}</span>}
+                <span className="min-w-0 flex-1">{f.nome}</span>
               </div>
-              <div className="ml-0.5 text-[10.5px] text-muted">{f.area} · {f.dia} · {f.status}{f.depende ? ` · você: ${f.depende.toLowerCase()}` : ""}</div>
+              <div className="ml-0.5 text-[10.5px] text-muted">{f.area} · {f.quando} · {STATUS[f.status]}{f.ultimo ? ` · você: ${f.ultimo.toLowerCase()}` : ""}</div>
             </li>
           ))}
         </ul>
