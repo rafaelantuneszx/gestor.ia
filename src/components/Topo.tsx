@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { Archive, Building2, Inbox, LogOut, Users } from "lucide-react";
+import { Archive, Building2, Inbox, ListChecks, LogOut, Users } from "lucide-react";
 import { sair } from "@/app/acoes";
 
-type Aba = "mesa" | "arquivo" | "escritorio" | "reunioes";
+type Aba = "mesa" | "arquivo" | "escritorio" | "reunioes" | "funcoes";
 
 export function Topo({ aba, pendentes }: { aba: Aba; pendentes: number }) {
   const item = (ativo: boolean) =>
@@ -27,6 +27,9 @@ export function Topo({ aba, pendentes }: { aba: Aba; pendentes: number }) {
           </Link>
           <Link href="/reunioes" className={item(aba === "reunioes")}>
             <Users size={16} /> Reuniões
+          </Link>
+          <Link href="/funcoes" className={item(aba === "funcoes")}>
+            <ListChecks size={16} /> Funções
           </Link>
           <Link href="/arquivo" className={item(aba === "arquivo")}>
             <Archive size={16} /> Arquivo

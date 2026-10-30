@@ -6,6 +6,9 @@ No banco, as tabelas e funções continuam com o prefixo `central_` (nome intern
 
 - **Mesa** (`/`): demandas que os agentes mandaram para o Rafael decidir (aprovar, pedir ajuste, recusar).
 - **Arquivo** (`/arquivo`): relatórios, rascunhos e PDFs entregues pelos agentes, por setor.
+- **Funções** (`/funcoes`): tela grande com cada função do Rafael, o agente que prepara, a pessoa do escritório que pode
+  executar, as demandas abertas ligadas e o bloco "Onde está o gargalo". As funções ficam em `src/lib/funcoes-rafael.ts`
+  (vindas de `rafael-enterprises/rotinas/funcoes-por-agente.md`, dos e-mails e das decisões); as demandas vêm do banco.
 
 ## Stack
 
