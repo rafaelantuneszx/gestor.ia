@@ -68,7 +68,7 @@ export function Conversa({
             {leitor.modo === "voz" ? " · uma voz por pessoa" : leitor.modo === "legenda" ? " · só legenda" : ""}
           </span>
           {linkSala && aoVivo && (
-            <Link href={linkSala} className="ml-auto inline-flex h-8 items-center gap-1.5 rounded-full bg-text px-3 font-semibold text-card hover:opacity-90">
+            <Link href={linkSala} className="ml-auto inline-flex h-8 items-center gap-1.5 rounded-full bg-accent-fill px-3 font-semibold text-white hover:opacity-90">
               <LogIn size={14} /> Entrar na reunião
             </Link>
           )}
@@ -88,7 +88,7 @@ export function Conversa({
 
       {/* transcrição */}
       {falas.length === 0 ? (
-        <p className="rounded-xl border border-line bg-card px-4 py-8 text-center text-sm text-muted">
+        <p className="ios-card px-4 py-8 text-center text-sm text-muted">
           {aoVivo ? "A reunião começou. As falas aparecem aqui assim que alguém falar." : "Esta reunião não tem falas registradas."}
         </p>
       ) : (
@@ -114,7 +114,7 @@ export function Conversa({
                           onClick={() => leitor.play(i)}
                           title="Tocar a partir daqui"
                           className={`rounded-2xl px-3.5 py-2 text-left text-[15px] leading-relaxed transition ${
-                            eu ? "rounded-tr-md bg-accent text-white" : "rounded-tl-md border border-line bg-card"
+                            eu ? "rounded-tr-md bg-accent-fill text-white" : "rounded-tl-md border border-line bg-card"
                           } ${atual ? "ring-2 ring-ok ring-offset-2 ring-offset-bg" : "hover:border-accent"}`}>
                           {f.texto}
                           {g.itens.length > 1 && (
@@ -132,7 +132,7 @@ export function Conversa({
       )}
 
       {vozes.length > 0 && leitor.modo === "voz" && (
-        <details className="rounded-xl border border-line bg-card px-4 py-3 text-xs text-muted">
+        <details className="ios-card px-4 py-3 text-xs text-muted">
           <summary className="cursor-pointer font-medium text-text">Vozes desta reunião</summary>
           <ul className="mt-2 grid gap-1 sm:grid-cols-2">
             {vozes.map(({ id, p }) => (

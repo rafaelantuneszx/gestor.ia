@@ -20,6 +20,7 @@ export default async function Arquivo() {
     <>
       <Topo aba="arquivo" pendentes={pend.count ?? 0} />
       <main className="mx-auto max-w-6xl px-4 py-6">
+        <h1 className="ios-titulo mb-2">Arquivo</h1>
         <p className="mb-5 text-sm text-muted">
           Tudo o que os agentes entregam fica na prateleira do setor: relatórios, rascunhos e PDFs, do mais novo para o mais antigo.
         </p>
@@ -28,7 +29,7 @@ export default async function Arquivo() {
             const meus = documentos.filter((d) => d.setor === s.id);
             return (
               <Link key={s.id} href={`/arquivo/${s.id}`}
-                className="group rounded-xl border border-line bg-card p-4 transition hover:border-accent">
+                className="group ios-card p-4 transition hover:border-accent">
                 <div className="flex items-baseline justify-between">
                   <h2 className="font-semibold">{s.nome}</h2>
                   <span className="text-sm tabular-nums text-muted">{meus.length}</span>

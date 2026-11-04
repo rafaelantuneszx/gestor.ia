@@ -522,10 +522,10 @@ export default function Escritorio({ modo }: { modo: "real" | "demo" }) {
   const topoMosaico = largo ? 64 : 108;
   const base = modo === "demo" ? "/reunioes/demo" : "/reunioes";
 
-  const botao = "inline-flex h-10 shrink-0 items-center gap-1.5 rounded-xl border border-line bg-card/95 px-3 text-sm shadow-sm backdrop-blur transition hover:border-accent";
+  const botao = "inline-flex h-10 shrink-0 items-center gap-1.5 ios-card/95 px-3 text-sm shadow-sm backdrop-blur transition hover:border-accent";
 
   return (
-    <div className="relative h-[calc(100dvh-57px)] w-full overflow-hidden bg-[#dfe5ea]">
+    <div className="relative h-[calc(100dvh-var(--altura-barras))] w-full overflow-hidden bg-[#dfe5ea]">
       <Canvas shadows="soft" dpr={dpr} frameloop="demand"
         camera={{ position: [inicial[0], inicial[1], inicial[2]], fov: 40, near: 0.1, far: 400 }}
         gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.0, powerPreference: "high-performance" }}
@@ -593,7 +593,7 @@ export default function Escritorio({ modo }: { modo: "real" | "demo" }) {
       {/* topo: estado, ações e câmeras */}
       <div className="pointer-events-none absolute inset-x-2 top-2 flex flex-col gap-2 sm:inset-x-3 sm:top-3">
         <div className="flex flex-wrap items-start gap-2">
-          <div className="pointer-events-auto rounded-xl border border-line bg-card/95 px-3.5 py-2 shadow-sm backdrop-blur">
+          <div className="pointer-events-auto ios-card/95 px-3.5 py-2 shadow-sm backdrop-blur">
             <div className="flex items-center gap-2 text-sm font-semibold">
               {reproduzindo ? (
                 <><Play size={14} className="text-warn" /> Reproduzindo o dia · {reproduzindo.hora}</>
@@ -610,7 +610,7 @@ export default function Escritorio({ modo }: { modo: "real" | "demo" }) {
           <div className="pointer-events-auto flex flex-wrap gap-2">
             {reuniaoParaAssistir && !assistindo && (
               <button type="button" onClick={() => assistir(reuniaoParaAssistir.id)}
-                className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-accent px-3.5 text-sm font-semibold text-white shadow-sm hover:brightness-110">
+                className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-accent-fill px-3.5 text-sm font-semibold text-white shadow-sm hover:brightness-110">
                 <Headphones size={16} /> {reuniaoParaAssistir.estado === "em_andamento" ? "Assistir reunião ao vivo" : "Assistir reunião"}
               </button>
             )}
@@ -634,7 +634,7 @@ export default function Escritorio({ modo }: { modo: "real" | "demo" }) {
               <button key={c.id} type="button" onClick={() => irPara(c.id)} aria-pressed={ativo}
                 title={c.atalho ? `${c.nome} (tecla ${c.atalho})` : c.nome}
                 className={`inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border px-2.5 text-[13px] shadow-sm backdrop-blur transition ${
-                  ativo ? "border-accent bg-accent text-white" : "border-line bg-card/90 hover:border-accent"}`}>
+                  ativo ? "border-accent bg-accent-fill text-white" : "border-line bg-card/90 hover:border-accent"}`}>
                 <Icone size={14} /> {c.nome}
                 {c.atalho && <kbd className={`hidden rounded px-1 text-[10px] lg:inline ${ativo ? "bg-white/20" : "bg-bg text-muted"}`}>{c.atalho}</kbd>}
               </button>
@@ -728,7 +728,7 @@ export default function Escritorio({ modo }: { modo: "real" | "demo" }) {
             ))}
           </div>
           <div className="max-h-44 overflow-y-auto border-t border-line px-4 py-2.5 text-sm">
-            <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted">Demandas</div>
+            <div className="mb-1 ios-secao">Demandas</div>
             {(dados?.demandas ?? []).filter((d) => (d.para === agSel.id || d.de === agSel.id) && !["feita", "cancelada"].includes(d.estado)).length === 0 && (
               <div className="text-xs text-muted">Nenhuma demanda aberta com {agSel.nome}.</div>
             )}

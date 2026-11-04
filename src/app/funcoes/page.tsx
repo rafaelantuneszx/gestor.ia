@@ -58,7 +58,7 @@ export default async function Funcoes({ searchParams }: { searchParams: Promise<
     <>
       <Topo aba="funcoes" pendentes={aguardando} />
       <main className="mx-auto max-w-[1600px] px-4 py-6 2xl:text-[17px]">
-        <h1 className="text-2xl font-semibold tracking-tight">Funções do Rafael</h1>
+        <h1 className="ios-titulo">Funções do Rafael</h1>
         <p className="mt-1 max-w-4xl text-sm text-muted">
           Cada função sua, o agente que prepara, a pessoa do escritório que pode executar e as demandas abertas ligadas.
           Vem do mapa de funções por agente (outubro/2026), dos assuntos dos seus e-mails e das suas decisões.
@@ -73,7 +73,7 @@ export default async function Funcoes({ searchParams }: { searchParams: Promise<
             [paraEmVoce.length + semAgente.length, "param em você ou sem agente", "text-warn"],
             [semDono.length, "sem dono", "text-bad"],
           ] as const).map(([n, rotulo, cor]) => (
-            <div key={rotulo} className="rounded-xl border border-line bg-card px-4 py-3">
+            <div key={rotulo} className="ios-card px-4 py-3">
               <div className={`text-3xl font-semibold tabular-nums ${cor}`}>{n}</div>
               <div className="text-sm text-muted">{rotulo}</div>
             </div>
@@ -126,11 +126,11 @@ export default async function Funcoes({ searchParams }: { searchParams: Promise<
         </section>
 
         <div className="mt-8 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-          <div className="flex gap-1 rounded-lg border border-line bg-card p-1">
-            <Link href="/funcoes" className={`rounded-md px-3 py-1 ${!so ? "bg-accent-soft font-semibold text-accent" : "text-muted"}`}>
+          <div className="ios-segmento">
+            <Link href="/funcoes" className="ios-segmento-item" data-ativo={!so} aria-current={!so ? "page" : undefined}>
               Todas ({FUNCOES.length})
             </Link>
-            <Link href="/funcoes?ver=gargalo" className={`rounded-md px-3 py-1 ${so ? "bg-accent-soft font-semibold text-accent" : "text-muted"}`}>
+            <Link href="/funcoes?ver=gargalo" className="ios-segmento-item" data-ativo={so} aria-current={so ? "page" : undefined}>
               Só as que precisam de dono ({FUNCOES.length - FUNCOES.filter((fn) => sit.get(fn) === "ok").length})
             </Link>
           </div>
@@ -143,8 +143,8 @@ export default async function Funcoes({ searchParams }: { searchParams: Promise<
           if (fns.length === 0) return null;
           return (
             <section key={area} className="mt-6">
-              <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted">{area} · {fns.length}</h2>
-              <div className="overflow-hidden rounded-xl border border-line bg-card">
+              <h2 className="mb-2 ios-secao">{area} · {fns.length}</h2>
+              <div className="overflow-hidden ios-card">
                 <div className="hidden grid-cols-[minmax(0,2.3fr)_minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1.7fr)] gap-4 border-b border-line px-4 py-2 text-xs font-semibold text-muted lg:grid">
                   <span>Função</span><span>Agente que prepara</span><span>Pessoa que pode executar</span><span>Demandas abertas ligadas</span>
                 </div>
@@ -161,10 +161,10 @@ export default async function Funcoes({ searchParams }: { searchParams: Promise<
 
         {!so && soltas.length > 0 && (
           <section className="mt-8">
-            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted">
+            <h2 className="mb-2 ios-secao">
               Demandas abertas que não se ligam a nenhuma função · {soltas.length}
             </h2>
-            <div className="flex flex-wrap gap-1.5 rounded-xl border border-line bg-card px-4 py-3">
+            <div className="flex flex-wrap gap-1.5 ios-card px-4 py-3">
               {soltas.map((d) => <Chip key={d.id} d={d} nome={nome} />)}
             </div>
           </section>

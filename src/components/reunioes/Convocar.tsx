@@ -49,13 +49,13 @@ export function Convocar({ agentes, modo, base }: { agentes: Pessoa[]; modo: "re
       <div>
         <label htmlFor="titulo" className="mb-1 block text-sm font-semibold">Assunto</label>
         <input id="titulo" value={titulo} onChange={(e) => setTitulo(e.target.value)} maxLength={200} placeholder="Ex.: Caixa de novembro e obras críticas"
-          className="h-11 w-full rounded-xl border border-line bg-card px-3 text-[15px] outline-none focus:border-accent" />
+          className="h-11 w-full ios-card px-3 text-[15px] outline-none focus:border-accent" />
       </div>
       <div>
         <label htmlFor="pauta" className="mb-1 block text-sm font-semibold">Pauta <span className="font-normal text-muted">(um item por linha, opcional)</span></label>
         <textarea id="pauta" value={pauta} onChange={(e) => setPauta(e.target.value)} rows={3}
           placeholder={"Situação do caixa\nObras acima do orçamento"}
-          className="w-full rounded-xl border border-line bg-card px-3 py-2 text-[15px] outline-none focus:border-accent" />
+          className="w-full ios-card px-3 py-2 text-[15px] outline-none focus:border-accent" />
       </div>
       <fieldset>
         <legend className="mb-2 text-sm font-semibold">Participantes <span className="font-normal text-muted">· {sel.length} escolhidos</span></legend>
@@ -70,7 +70,7 @@ export function Convocar({ agentes, modo, base }: { agentes: Pessoa[]; modo: "re
                   <span className="block text-sm font-semibold">{a.nome}</span>
                   <span className="block truncate text-xs text-muted">{a.cargo}</span>
                 </span>
-                <span className={`flex size-6 items-center justify-center rounded-full border ${on ? "border-accent bg-accent text-white" : "border-line"}`}>
+                <span className={`flex size-6 items-center justify-center rounded-full border ${on ? "border-accent bg-accent-fill text-white" : "border-line"}`}>
                   {on && <Check size={14} />}
                 </span>
               </button>
@@ -79,7 +79,7 @@ export function Convocar({ agentes, modo, base }: { agentes: Pessoa[]; modo: "re
         </div>
       </fieldset>
       {erro && <p className="rounded-xl bg-bad-soft px-3 py-2 text-sm text-bad">{erro}</p>}
-      <button disabled={enviando} className="inline-flex h-12 items-center gap-2 rounded-full bg-accent px-6 text-[15px] font-semibold text-white disabled:opacity-60">
+      <button disabled={enviando} className="inline-flex h-12 items-center gap-2 rounded-full bg-accent-fill px-6 text-[15px] font-semibold text-white disabled:opacity-60">
         {enviando ? <Loader2 size={18} className="animate-spin" /> : <LogIn size={18} />} Convocar e entrar
       </button>
     </form>

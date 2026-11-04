@@ -6,7 +6,7 @@ import dynamic from "next/dynamic";
 const Escritorio = dynamic(() => import("./Escritorio"), {
   ssr: false,
   loading: () => (
-    <div className="flex h-[calc(100vh-57px)] items-center justify-center text-sm text-muted">Montando o escritório…</div>
+    <div className="flex h-[calc(100dvh-var(--altura-barras))] items-center justify-center text-sm text-muted">Montando o escritório…</div>
   ),
 });
 

@@ -1,36 +1,56 @@
 @import "tailwindcss";
 
+/*
+ * Visual inspirado no iOS: fundo agrupado, cartões sem contorno, cápsulas e barra de abas no celular.
+ * As cores seguem a paleta do sistema, com tons mais fechados onde o padrão do iOS não alcança
+ * contraste 4,5:1 em texto pequeno (o azul #007AFF dá 4,0 sobre branco).
+ */
 :root {
-  --bg: #f5f6f8;
+  --bg: #f2f2f7;
   --card: #ffffff;
-  --text: #1b1f24;
-  --muted: #667085;
-  --line: #e4e7ec;
-  --accent: #2563eb;
-  --accent-soft: #e8efff;
-  --ok: #12805c;
-  --ok-soft: #e6f4ee;
-  --warn: #b26b00;
-  --warn-soft: #fdf2e1;
-  --bad: #c0362c;
-  --bad-soft: #fdeceb;
+  --text: #1c1c1e;
+  --muted: #6c6c70;
+  --line: #d8d8dc;
+  --fill: rgba(118, 118, 128, 0.14);
+  --accent: #0066d6;
+  --accent-fill: #0066d6;
+  --accent-soft: #e5f0ff;
+  --ok: #1f7a34;
+  --ok-soft: #e7f6ea;
+  --warn: #a84b00;
+  --warn-soft: #fff1e0;
+  --bad: #c9000f;
+  --bad-soft: #ffe9ea;
+  --barra-vidro: rgba(249, 249, 251, 0.78);
+  --altura-topo: 57px;
+  --altura-abas: calc(56px + env(safe-area-inset-bottom, 0px));
+  --altura-barras: calc(var(--altura-topo) + var(--altura-abas));
+}
+
+@media (min-width: 768px) {
+  :root {
+    --altura-abas: 0px;
+  }
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0f1115;
-    --card: #171a21;
-    --text: #e6e8ec;
-    --muted: #98a2b3;
-    --line: #272b35;
-    --accent: #6b9bff;
-    --accent-soft: #1b2640;
-    --ok: #3fbf8a;
-    --ok-soft: #14291f;
-    --warn: #f0a43a;
-    --warn-soft: #2e2312;
-    --bad: #ff6b5f;
-    --bad-soft: #331917;
+    --bg: #000000;
+    --card: #1c1c1e;
+    --text: #f2f2f7;
+    --muted: #aeaeb2;
+    --line: #38383a;
+    --fill: rgba(118, 118, 128, 0.28);
+    --accent: #409cff;
+    --accent-fill: #0a6fdc;
+    --accent-soft: #10233d;
+    --ok: #30d158;
+    --ok-soft: #10291a;
+    --warn: #ff9f0a;
+    --warn-soft: #2e2008;
+    --bad: #ff6961;
+    --bad-soft: #33110f;
+    --barra-vidro: rgba(28, 28, 30, 0.74);
   }
 }
 
@@ -40,7 +60,9 @@
   --color-text: var(--text);
   --color-muted: var(--muted);
   --color-line: var(--line);
+  --color-fill: var(--fill);
   --color-accent: var(--accent);
+  --color-accent-fill: var(--accent-fill);
   --color-accent-soft: var(--accent-soft);
   --color-ok: var(--ok);
   --color-ok-soft: var(--ok-soft);
@@ -48,12 +70,149 @@
   --color-warn-soft: var(--warn-soft);
   --color-bad: var(--bad);
   --color-bad-soft: var(--bad-soft);
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.375rem;
 }
 
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable Text", "Segoe UI", Roboto, sans-serif;
+  letter-spacing: -0.006em;
+}
+
+/* Reserva o espaço da barra de abas no celular em toda tela que a usa. */
+body:has(.ios-abas) {
+  padding-bottom: var(--altura-abas);
+}
+
+:where(a, button, summary) {
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity 120ms ease;
+}
+:where(a, button, summary):active {
+  opacity: 0.65;
+}
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* No iPhone, campo com fonte menor que 16px faz a tela dar zoom ao tocar. */
+@media (max-width: 767px) {
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
+}
+
+@layer components {
+  .ios-card {
+    border: 1px solid transparent;
+    border-radius: var(--radius-xl);
+    background: var(--card);
+  }
+  .ios-secao {
+    padding-inline: 0.25rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--muted);
+  }
+  .ios-titulo {
+    font-size: 1.75rem;
+    line-height: 1.15;
+    font-weight: 700;
+    letter-spacing: -0.022em;
+  }
+  .ios-campo {
+    width: 100%;
+    min-height: 2.75rem;
+    border: 1px solid transparent;
+    border-radius: var(--radius-lg);
+    background: var(--fill);
+    padding: 0.625rem 0.875rem;
+    font-size: 0.9375rem;
+    outline: none;
+  }
+  .ios-campo:focus {
+    border-color: var(--accent);
+    background: var(--card);
+  }
+  .ios-segmento {
+    display: inline-flex;
+    max-width: 100%;
+    gap: 2px;
+    overflow-x: auto;
+    border-radius: var(--radius-lg);
+    background: var(--fill);
+    padding: 2px;
+  }
+  .ios-segmento-item {
+    display: inline-flex;
+    min-height: 2.25rem;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 0.375rem;
+    border-radius: 0.625rem;
+    padding-inline: 0.875rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--muted);
+  }
+  .ios-segmento-item[data-ativo="true"] {
+    background: var(--card);
+    color: var(--text);
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.14);
+  }
+  .ios-vidro {
+    background: var(--barra-vidro);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    backdrop-filter: saturate(180%) blur(20px);
+  }
+  .ios-abas {
+    position: fixed;
+    inset-inline: 0;
+    bottom: 0;
+    z-index: 40;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    height: var(--altura-abas);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    border-top: 1px solid var(--line);
+  }
+  .ios-aba {
+    position: relative;
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    color: var(--muted);
+  }
+  .ios-aba[aria-current="page"] {
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .ios-selo {
+    position: absolute;
+    top: 4px;
+    left: calc(50% + 6px);
+    min-width: 1.125rem;
+    border-radius: 999px;
+    background: var(--bad);
+    padding-inline: 0.3rem;
+    font-size: 0.6875rem;
+    line-height: 1.125rem;
+    font-weight: 600;
+    text-align: center;
+    color: var(--card);
+  }
 }
 
 /* Relatórios em Markdown */

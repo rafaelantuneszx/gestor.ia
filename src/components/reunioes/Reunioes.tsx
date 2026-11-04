@@ -70,7 +70,7 @@ export function CartaoReuniao({ r, agentes, base, falas = 0 }: { r: Reuniao; age
   const convocou = agentes.get(r.convocada_por);
   const aoVivo = r.estado === "em_andamento";
   return (
-    <article className="flex flex-col rounded-xl border border-line bg-card p-4 transition hover:border-accent">
+    <article className="flex flex-col ios-card p-4 transition hover:border-accent">
       <div className="mb-1 flex flex-wrap items-center gap-2 text-xs">
         <Selo r={r} />
         <span className="text-muted">{quandoTexto(r)} · #{r.id}</span>
@@ -100,7 +100,7 @@ export function CartaoReuniao({ r, agentes, base, falas = 0 }: { r: Reuniao; age
           </span>
           {(falas > 0 || aoVivo) && (
             <Link href={`${base}/${r.id}?aba=conversa&assistir=1`}
-              className="ml-auto inline-flex h-9 items-center gap-1.5 rounded-full bg-accent px-3.5 text-sm font-semibold text-white hover:brightness-110">
+              className="ml-auto inline-flex h-9 items-center gap-1.5 rounded-full bg-accent-fill px-3.5 text-sm font-semibold text-white hover:brightness-110">
               <Headphones size={15} /> {aoVivo ? "Assistir ao vivo" : "Assistir"}
             </Link>
           )}
@@ -119,9 +119,9 @@ export function CartaoReuniao({ r, agentes, base, falas = 0 }: { r: Reuniao; age
 function Secao({ titulo, vazio, children, n }: { titulo: string; vazio: string; children: React.ReactNode; n: number }) {
   return (
     <section className="mt-8 first:mt-0">
-      <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted">{titulo}{n > 0 ? ` · ${n}` : ""}</h2>
+      <h2 className="mb-3 ios-secao">{titulo}{n > 0 ? ` · ${n}` : ""}</h2>
       {n === 0 ? (
-        <p className="rounded-xl border border-line bg-card px-4 py-6 text-center text-sm text-muted">{vazio}</p>
+        <p className="ios-card px-4 py-6 text-center text-sm text-muted">{vazio}</p>
       ) : (
         <div className="grid gap-3 md:grid-cols-2">{children}</div>
       )}
@@ -150,11 +150,11 @@ export function ListaReunioes({
   return (
     <>
       <div className="mb-5 flex flex-wrap items-center gap-3">
-        <p className="min-w-0 flex-1 text-sm text-muted">
+        <p className="min-w-full flex-1 text-sm text-muted sm:min-w-0">
           Reuniões que os agentes marcam entre si: a conversa fala por fala (com voz), a ata e as decisões que precisam de aprovação.
         </p>
         <Link href={`${base}/nova`}
-          className="inline-flex h-10 items-center gap-1.5 rounded-full bg-text px-4 text-sm font-semibold text-card hover:opacity-90">
+          className="inline-flex h-10 items-center gap-1.5 rounded-full bg-accent-fill px-4 text-sm font-semibold text-white hover:opacity-90">
           <Plus size={16} /> Convocar reunião
         </Link>
       </div>
@@ -216,11 +216,11 @@ export function DetalheReuniao({
     <div className="grid gap-6 md:grid-cols-[1fr_280px]">
       <div className="min-w-0 space-y-6">
         <section>
-          <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted">Pauta</h2>
+          <h2 className="mb-2 ios-secao">Pauta</h2>
           {pauta.length === 0 ? (
-            <p className="rounded-xl border border-line bg-card px-4 py-4 text-sm text-muted">Sem pauta registrada.</p>
+            <p className="ios-card px-4 py-4 text-sm text-muted">Sem pauta registrada.</p>
           ) : (
-            <ol className="divide-y divide-line rounded-xl border border-line bg-card">
+            <ol className="divide-y divide-line ios-card">
               {pauta.map((p, i) => (
                 <li key={i} className="flex gap-3 px-4 py-2.5 text-sm">
                   <span className="w-5 shrink-0 text-right font-semibold tabular-nums text-muted">{i + 1}</span>
@@ -232,24 +232,24 @@ export function DetalheReuniao({
         </section>
 
         <section>
-          <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted">Ata</h2>
+          <h2 className="mb-2 ios-secao">Ata</h2>
           {r.ata ? (
-            <article className="md rounded-xl border border-line bg-card p-5 text-[15px]">
+            <article className="md ios-card p-5 text-[15px]">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>{r.ata}</ReactMarkdown>
             </article>
           ) : (
-            <p className="rounded-xl border border-line bg-card px-4 py-4 text-sm text-muted">
+            <p className="ios-card px-4 py-4 text-sm text-muted">
               {r.estado === "encerrada" ? "A ata não foi registrada." : "A ata fica pronta quando a reunião terminar."}
             </p>
           )}
         </section>
 
         <section>
-          <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted">Decisões</h2>
+          <h2 className="mb-2 ios-secao">Decisões</h2>
           {decisoes.length === 0 ? (
-            <p className="rounded-xl border border-line bg-card px-4 py-4 text-sm text-muted">Nenhuma decisão registrada.</p>
+            <p className="ios-card px-4 py-4 text-sm text-muted">Nenhuma decisão registrada.</p>
           ) : (
-            <ul className="divide-y divide-line rounded-xl border border-line bg-card">
+            <ul className="divide-y divide-line ios-card">
               {decisoes.map((d, i) => {
                 const e = ESTADO_DECISAO[d.estado ?? "pendente"] ?? ESTADO_DECISAO.pendente;
                 const aprova = d.aprovacao === "rafael"
@@ -280,8 +280,8 @@ export function DetalheReuniao({
 
       <aside className="space-y-6">
         <section>
-          <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted">Ligações</h2>
-          <div className="space-y-2 rounded-xl border border-line bg-card px-4 py-3 text-sm">
+          <h2 className="mb-2 ios-secao">Ligações</h2>
+          <div className="space-y-2 ios-card px-4 py-3 text-sm">
             {r.demanda_id ? (
               <Link href={linkDemanda} className="flex items-start gap-2 text-accent">
                 <Inbox size={15} className="mt-0.5 shrink-0" />
@@ -317,7 +317,7 @@ export function DetalheReuniao({
         <h1 className="min-w-0 flex-1 text-xl font-semibold sm:text-2xl">{r.titulo}</h1>
         {aoVivo && (
           <Link href={`${base}/${r.id}/sala`}
-            className="inline-flex h-10 items-center gap-1.5 rounded-full bg-text px-4 text-sm font-semibold text-card hover:opacity-90">
+            className="inline-flex h-10 items-center gap-1.5 rounded-full bg-accent-fill px-4 text-sm font-semibold text-white hover:opacity-90">
             <LogIn size={16} /> Entrar na reunião
           </Link>
         )}

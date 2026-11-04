@@ -42,8 +42,8 @@ export default async function Prateleira({ params }: { params: Promise<{ setor: 
         {documentos.length === 0 && <p className="text-muted">Nada nesta prateleira ainda.</p>}
         {[...porMes.entries()].map(([mes, lista]) => (
           <section key={mes} className="mb-6">
-            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted">{mes}</h2>
-            <ul className="divide-y divide-line rounded-xl border border-line bg-card">
+            <h2 className="mb-2 ios-secao">{mes}</h2>
+            <ul className="divide-y divide-line ios-card">
               {lista.map((d) => (
                 <li key={d.id}>
                   <Link href={`/documento/${d.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-bg">

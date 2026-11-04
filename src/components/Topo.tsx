@@ -4,44 +4,56 @@ import { sair } from "@/app/acoes";
 
 type Aba = "mesa" | "arquivo" | "escritorio" | "reunioes" | "funcoes";
 
+const ABAS = [
+  { id: "mesa", href: "/", rotulo: "Mesa", Icone: Inbox },
+  { id: "escritorio", href: "/escritorio", rotulo: "Escritório", Icone: Building2 },
+  { id: "reunioes", href: "/reunioes", rotulo: "Reuniões", Icone: Users },
+  { id: "funcoes", href: "/funcoes", rotulo: "Funções", Icone: ListChecks },
+  { id: "arquivo", href: "/arquivo", rotulo: "Arquivo", Icone: Archive },
+] as const;
+
+// No computador, as abas ficam no topo. No celular, descem para a barra de abas, como num app de iPhone.
 export function Topo({ aba, pendentes }: { aba: Aba; pendentes: number }) {
-  const item = (ativo: boolean) =>
-    `inline-flex shrink-0 items-center gap-2 rounded-lg px-3 py-1.5 text-sm ${
-      ativo ? "bg-accent-soft text-accent font-semibold" : "text-muted hover:bg-bg"
-    }`;
   return (
-    <header className="sticky top-0 z-10 border-b border-line bg-card/95 backdrop-blur">
-      <div className="mx-auto flex max-w-6xl items-center gap-2 px-4 py-3">
-        <Link href="/" className="mr-3 text-[15px] font-semibold tracking-tight">
-          Gestor.IA
-        </Link>
-        <nav className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
-          <Link href="/" className={item(aba === "mesa")}>
-            <Inbox size={16} /> Mesa
-            {pendentes > 0 && (
-              <span className="rounded-full bg-warn-soft px-1.5 text-xs font-semibold text-warn">{pendentes}</span>
+    <>
+      <header className="ios-vidro sticky top-0 z-30 h-[57px] border-b border-line">
+        <div className="mx-auto flex h-full max-w-6xl items-center gap-2 px-4">
+          <Link href="/" className="mr-3 text-[17px] font-semibold tracking-tight">
+            Gestor.IA
+          </Link>
+          <nav aria-label="Seções" className="ios-segmento hidden md:inline-flex">
+            {ABAS.map(({ id, href, rotulo, Icone }) => (
+              <Link key={id} href={href} className="ios-segmento-item" data-ativo={aba === id}
+                aria-current={aba === id ? "page" : undefined}>
+                <Icone size={16} /> {rotulo}
+                {id === "mesa" && pendentes > 0 && (
+                  <span className="rounded-full bg-warn-soft px-1.5 text-xs font-semibold text-warn">{pendentes}</span>
+                )}
+              </Link>
+            ))}
+          </nav>
+          <form action={sair} className="ml-auto">
+            <button className="inline-flex min-h-11 items-center gap-1.5 rounded-full px-3 text-sm text-accent hover:bg-fill" title="Sair">
+              <LogOut size={17} /> <span className="hidden sm:inline">Sair</span>
+            </button>
+          </form>
+        </div>
+      </header>
+      <nav aria-label="Seções" className="ios-abas ios-vidro md:hidden">
+        {ABAS.map(({ id, href, rotulo, Icone }) => (
+          <Link key={id} href={href} className="ios-aba" aria-current={aba === id ? "page" : undefined}>
+            <Icone size={23} strokeWidth={aba === id ? 2.3 : 1.8} aria-hidden />
+            <span className="max-w-full truncate px-0.5">{rotulo}</span>
+            {id === "mesa" && pendentes > 0 && (
+              <span className="ios-selo">
+                {pendentes}
+                <span className="sr-only"> aguardando você</span>
+              </span>
             )}
           </Link>
-          <Link href="/escritorio" className={item(aba === "escritorio")}>
-            <Building2 size={16} /> Escritório
-          </Link>
-          <Link href="/reunioes" className={item(aba === "reunioes")}>
-            <Users size={16} /> Reuniões
-          </Link>
-          <Link href="/funcoes" className={item(aba === "funcoes")}>
-            <ListChecks size={16} /> Funções
-          </Link>
-          <Link href="/arquivo" className={item(aba === "arquivo")}>
-            <Archive size={16} /> Arquivo
-          </Link>
-        </nav>
-        <form action={sair}>
-          <button className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm text-muted hover:bg-bg" title="Sair">
-            <LogOut size={16} /> <span className="hidden sm:inline">Sair</span>
-          </button>
-        </form>
-      </div>
-    </header>
+        ))}
+      </nav>
+    </>
   );
 }
 
@@ -51,7 +63,7 @@ export function SemAcesso() {
       <h1 className="text-xl font-semibold">Sem acesso ao Gestor.IA</h1>
       <p className="mt-2 text-muted">Seu login existe, mas não está liberado no Gestor.IA. Peça ao administrador para incluir seu e-mail.</p>
       <form action={sair} className="mt-6">
-        <button className="rounded-lg border border-line px-4 py-2 text-sm">Sair</button>
+        <button className="min-h-11 rounded-full bg-fill px-5 text-sm font-semibold text-accent">Sair</button>
       </form>
     </main>
   );

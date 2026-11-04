@@ -70,7 +70,7 @@ export function Controles({
           <SkipBack size={18} />
         </button>
         <button type="button" onClick={leitor.alternar} disabled={total === 0 && !aoVivoDisponivel}
-          className="inline-flex h-11 items-center gap-2 rounded-full bg-accent px-5 text-sm font-semibold text-white shadow-sm transition hover:brightness-110 disabled:opacity-50"
+          className="inline-flex h-11 items-center gap-2 rounded-full bg-accent-fill px-5 text-sm font-semibold text-white shadow-sm transition hover:brightness-110 disabled:opacity-50"
           aria-label={leitor.tocando ? "Pausar" : rotuloPlay}>
           {leitor.tocando ? <Pause size={18} /> : <Play size={18} />}
           <span>{leitor.tocando ? "Pausar" : leitor.terminou ? "De novo" : rotuloPlay}</span>

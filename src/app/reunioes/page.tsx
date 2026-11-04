@@ -31,6 +31,7 @@ export default async function Reunioes() {
     <>
       <Topo aba="reunioes" pendentes={pend.count ?? 0} />
       <main className="mx-auto max-w-6xl px-4 py-6">
+        <h1 className="ios-titulo mb-3">Reuniões</h1>
         {reu.error && (
           <p className="mb-5 rounded-xl border border-bad/40 bg-bad-soft px-4 py-3 text-sm text-bad">
             Não foi possível ler as reuniões ({reu.error.message}).

@@ -22,15 +22,14 @@ export function Abas({
   };
   const item = (a: "conversa" | "resumo", rotulo: string, Icone: typeof FileText, extra?: string) => (
     <button type="button" role="tab" aria-selected={aba === a} onClick={() => trocar(a)}
-      className={`inline-flex h-10 items-center gap-2 rounded-lg px-3.5 text-sm font-medium transition ${
-        aba === a ? "bg-card text-text shadow-sm" : "text-muted hover:text-text"}`}>
+      className="ios-segmento-item" data-ativo={aba === a}>
       <Icone size={16} /> {rotulo}
       {extra && <span className="rounded-full bg-accent-soft px-1.5 text-xs font-semibold text-accent">{extra}</span>}
     </button>
   );
   return (
     <>
-      <div role="tablist" className="mb-5 inline-flex rounded-xl bg-line/60 p-1">
+      <div role="tablist" className="ios-segmento mb-5">
         {item("conversa", "Conversa", MessagesSquare, nFalas ? String(nFalas) : undefined)}
         {item("resumo", "Pauta, ata e decisões", FileText)}
       </div>

@@ -56,6 +56,7 @@ export default async function Mesa() {
     <>
       <Topo aba="mesa" pendentes={aguardando.length} />
       <main className="mx-auto max-w-6xl px-4 py-6">
+        <h1 className="ios-titulo mb-4">Mesa</h1>
         {reuniaoHoje && (
           <Link href={`/reunioes/${reuniaoHoje.id}`}
             className="mb-4 inline-flex max-w-full items-center gap-2 rounded-lg border border-line bg-card px-3 py-1.5 text-sm hover:border-accent">
@@ -73,23 +74,23 @@ export default async function Mesa() {
             [comAgentes.length, "com os agentes"],
             [decididas.length, "decididas por você"],
           ].map(([n, rotulo]) => (
-            <div key={rotulo} className="rounded-xl border border-line bg-card px-4 py-3">
+            <div key={rotulo} className="ios-card px-4 py-3">
               <div className="text-2xl font-semibold tabular-nums">{n}</div>
               <div className="text-sm text-muted">{rotulo}</div>
             </div>
           ))}
         </div>
 
-        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted">Aguardando você</h2>
+        <h2 className="mb-3 ios-secao">Aguardando você</h2>
         {aguardando.length === 0 && (
-          <p className="rounded-xl border border-line bg-card px-4 py-6 text-center text-muted">Nada esperando a sua decisão.</p>
+          <p className="ios-card px-4 py-6 text-center text-muted">Nada esperando a sua decisão.</p>
         )}
         <div className="space-y-3">
           {aguardando.map((d) => {
             const autor = agentes.get(d.de);
             const passos = historico.filter((h) => h.demanda_id === d.id);
             return (
-              <article key={d.id} className="rounded-xl border border-line bg-card p-4">
+              <article key={d.id} className="ios-card p-4">
                 <div className="mb-1 flex flex-wrap items-center gap-2 text-xs">
                   <span className={`rounded-full px-2 py-0.5 font-semibold ${PRIORIDADE[d.prioridade]}`}>
                     {d.prioridade === "alta" ? "Prioridade alta" : d.prioridade === "media" ? "Prioridade média" : "Prioridade baixa"}
@@ -134,8 +135,8 @@ export default async function Mesa() {
 
         <div className="mt-8 grid gap-6 md:grid-cols-2">
           <section>
-            <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted">Com os agentes</h2>
-            <ul className="divide-y divide-line rounded-xl border border-line bg-card">
+            <h2 className="mb-3 ios-secao">Com os agentes</h2>
+            <ul className="divide-y divide-line ios-card">
               {comAgentes.length === 0 && <li className="px-4 py-3 text-sm text-muted">Nenhuma demanda em aberto.</li>}
               {comAgentes.map((d) => (
                 <li key={d.id} className="flex items-start gap-3 px-4 py-2.5 text-sm">
@@ -152,8 +153,8 @@ export default async function Mesa() {
             </ul>
           </section>
           <section>
-            <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted">Suas últimas decisões</h2>
-            <ul className="divide-y divide-line rounded-xl border border-line bg-card">
+            <h2 className="mb-3 ios-secao">Suas últimas decisões</h2>
+            <ul className="divide-y divide-line ios-card">
               {decididas.length === 0 && <li className="px-4 py-3 text-sm text-muted">Você ainda não decidiu nada por aqui.</li>}
               {decididas.map((d) => (
                 <li key={d.id} className="px-4 py-2.5 text-sm">

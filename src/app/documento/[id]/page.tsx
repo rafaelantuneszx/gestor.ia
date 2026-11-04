@@ -42,11 +42,11 @@ export default async function VerDocumento({ params }: { params: Promise<{ id: s
           {d.rotina ? ` · rotina ${d.rotina}` : ""}
         </p>
         {pdf && (
-          <iframe src={pdf} title={d.titulo} className="mb-6 h-[80vh] w-full rounded-xl border border-line bg-card" />
+          <iframe src={pdf} title={d.titulo} className="mb-6 h-[80vh] w-full ios-card" />
         )}
         {d.storage_path && !pdf && <p className="mb-6 text-sm text-bad">Não foi possível abrir o arquivo anexado.</p>}
         {d.conteudo_md && (
-          <article className="md rounded-xl border border-line bg-card p-5 text-[15px]">
+          <article className="md ios-card p-5 text-[15px]">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{d.conteudo_md}</ReactMarkdown>
           </article>
         )}

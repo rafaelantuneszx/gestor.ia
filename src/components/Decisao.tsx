@@ -13,32 +13,32 @@ export function Decisao({ id }: { id: number }) {
   if (estado?.ok) return <p className="text-sm font-medium text-ok">Decisão registrada. O agente continua na próxima rodada.</p>;
 
   const botao = (valor: Escolha, rotulo: string, Icone: typeof Check, cor: string) => (
-    <button type="button" onClick={() => setEscolha(valor)}
-      className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium ${
-        escolha === valor ? cor : "border-line text-text hover:bg-bg"
+    <button type="button" onClick={() => setEscolha(valor)} aria-pressed={escolha === valor}
+      className={`inline-flex min-h-11 items-center gap-1.5 rounded-full px-4 text-sm font-semibold ${
+        escolha === valor ? cor : "bg-fill text-text"
       }`}>
-      <Icone size={15} /> {rotulo}
+      <Icone size={16} /> {rotulo}
     </button>
   );
 
   return (
-    <form action={acao} className="space-y-2">
+    <form action={acao} className="space-y-3">
       <input type="hidden" name="id" value={id} />
       <input type="hidden" name="decisao" value={escolha ?? ""} />
       <div className="flex flex-wrap gap-2">
-        {botao("aprovada", "Aprovar", Check, "border-ok bg-ok-soft text-ok")}
-        {botao("ajuste", "Pedir ajuste", PenLine, "border-warn bg-warn-soft text-warn")}
-        {botao("recusada", "Recusar", X, "border-bad bg-bad-soft text-bad")}
+        {botao("aprovada", "Aprovar", Check, "bg-ok-soft text-ok ring-1 ring-inset ring-ok")}
+        {botao("ajuste", "Pedir ajuste", PenLine, "bg-warn-soft text-warn ring-1 ring-inset ring-warn")}
+        {botao("recusada", "Recusar", X, "bg-bad-soft text-bad ring-1 ring-inset ring-bad")}
       </div>
       {escolha && (
         <>
-          <textarea name="nota" rows={2}
+          <textarea name="nota" rows={2} aria-label="Nota para o agente"
             placeholder={escolha === "aprovada" ? "Comentário para o agente (opcional)"
               : escolha === "ajuste" ? "O que precisa ser ajustado" : "Motivo da recusa"}
-            className="w-full rounded-lg border border-line bg-bg px-3 py-2 text-sm outline-none focus:border-accent" />
+            className="ios-campo" />
           {estado?.erro && <p className="text-sm text-bad">{estado.erro}</p>}
           <button disabled={enviando}
-            className="rounded-lg bg-accent px-4 py-1.5 text-sm font-semibold text-white disabled:opacity-60">
+            className="min-h-11 rounded-full bg-accent-fill px-6 text-sm font-semibold text-white disabled:opacity-60">
             {enviando ? "Registrando…" : "Confirmar"}
           </button>
         </>
