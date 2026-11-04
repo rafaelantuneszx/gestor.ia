@@ -28,6 +28,8 @@ import { Predio } from "./Predio";
 import { Boneco, Rafael } from "./Boneco";
 import { Efeitos } from "./Efeitos";
 import { Mosaico, layoutMosaico } from "./Mosaico";
+import { PainelProdutividade, ResumoProdutividade, useProdutividade } from "./Produtividade";
+import { diaDe } from "@/lib/produtividade";
 import type { PainelTV } from "./tv";
 
 const ATUALIZAR_MS = 8000;
@@ -191,6 +193,11 @@ export default function Escritorio({ modo }: { modo: "real" | "demo" }) {
   const camera = useRef<CameraControls>(null);
   const demoBase = useRef(Date.now());
   const [tela, setTela] = useState(() => ({ w: window.innerWidth, h: window.innerHeight - ALTURA_TOPO }));
+  // painel de produtividade: aberto de saída em tela larga, recolhido no celular
+  const [diaProd, setDiaProd] = useState(() => diaDe());
+  const [agenteProd, setAgenteProd] = useState<string | null>(null);
+  const [prodAberto, setProdAberto] = useState(() => window.innerWidth >= 900);
+  const produtividade = useProdutividade(modo, diaProd, modo === "demo" ? dados?.eventos : undefined);
 
   const agentesMap = useMemo(() => new Map((dados?.agentes ?? []).map((a) => [a.id, a])), [dados?.agentes]);
   const pessoas = useMemo(() => new Map([
@@ -380,6 +387,12 @@ export default function Escritorio({ modo }: { modo: "real" | "demo" }) {
   }, [irPara]);
   const mosaicoRef = useRef(mosaico);
   mosaicoRef.current = mosaico;
+
+  const abrirProdutividade = (id: string) => {
+    setSelecionado(null);
+    setAgenteProd(id);
+    setProdAberto(true);
+  };
 
   const pendentes = (dados?.demandas ?? []).filter((d) => d.estado === "aguardando-rafael").length;
   const trabalhando = Object.values(estados).filter((e) => e.status === "trabalhando").length;
@@ -695,6 +708,13 @@ export default function Escritorio({ modo }: { modo: "real" | "demo" }) {
         </div>
       )}
 
+      {/* produtividade do dia, no canto superior direito (some quando o painel do agente abre) */}
+      {dados && pronto && !mosaico && !assistindo && !agSel && (
+        <PainelProdutividade {...produtividade} dia={diaProd} onDia={setDiaProd} agentes={agentesMap}
+          agente={agenteProd} onAgente={setAgenteProd} real={modo === "real"} aberto={prodAberto} onAberto={setProdAberto}
+          onVerNoEscritorio={(id) => { setAgenteProd(null); focar(id); }} />
+      )}
+
       {/* painel do agente */}
       {agSel && estSel && !mosaico && (
         <aside className="absolute inset-x-2 bottom-2 z-10 flex h-[46%] flex-col overflow-hidden rounded-2xl border border-line bg-card shadow-lg min-[900px]:inset-x-auto min-[900px]:bottom-3 min-[900px]:right-3 min-[900px]:top-28 min-[900px]:h-auto min-[900px]:w-[440px]">
@@ -706,6 +726,8 @@ export default function Escritorio({ modo }: { modo: "real" | "demo" }) {
               {lugares[agSel.id] && (
                 <div className="mt-1 text-xs font-medium text-warn">Em reunião: {lugares[agSel.id].titulo}</div>
               )}
+              <ResumoProdutividade dia={diaProd} p={produtividade.prod?.agentes.find((x) => x.agente === agSel.id) ?? null}
+                onAbrir={() => abrirProdutividade(agSel.id)} />
               <div className="mt-1 text-xs">
                 {estSel.status === "trabalhando"
                   ? <span className="text-accent">Trabalhando em {estSel.rotina}{estSel.desde ? ` desde ${hora(estSel.desde)}` : ""}</span>
