@@ -19,10 +19,9 @@ export default async function VerReuniao({
   if (!/^\d+$/.test(id)) notFound();
   if (!(await autorizado())) return <SemAcesso />;
   const sb = await supabaseServidor();
-  const [{ agentes }, reu, pend, ev] = await Promise.all([
+  const [{ agentes }, reu, ev] = await Promise.all([
     cadastros(),
     sb.from("central_reunioes").select("*").eq("id", Number(id)).maybeSingle(),
-    sb.from("central_demandas").select("id", { count: "exact", head: true }).eq("estado", "aguardando-rafael"),
     sb.from("central_eventos").select(CAMPOS_EVENTO).eq("rotina", `reuniao#${id}`).eq("tipo", "nota").order("id").limit(2000),
   ]);
   const r = reu.data as Reuniao | null;
@@ -41,7 +40,7 @@ export default async function VerReuniao({
 
   return (
     <>
-      <Topo aba="reunioes" pendentes={pend.count ?? 0} />
+      <Topo aba="escritorio" />
       <DetalheReuniao r={r} agentes={agentes} base="/reunioes" vinculos={vinculos} falas={falas}
         aba={q.aba === "resumo" ? "resumo" : q.aba === "conversa" ? "conversa" : undefined} assistir={q.assistir === "1"} />
     </>

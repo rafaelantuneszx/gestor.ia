@@ -1,3 +1,4 @@
+import { ID_GESTOR } from "@/lib/banco";
 // Reuniões entre os agentes: tipos e funções puras, usadas no servidor (páginas) e no navegador (escritório 3D).
 
 export type EstadoReuniao = "agendada" | "em_andamento" | "encerrada" | "cancelada";
@@ -6,7 +7,7 @@ export type EstadoDecisao = "pendente" | "aprovada" | "recusada" | "feita";
 export type DecisaoReuniao = {
   texto: string;
   responsavel?: string | null;
-  aprovacao?: "diretor" | "rafael" | null;
+  aprovacao?: "diretor" | typeof ID_GESTOR | null;
   aprovador?: string | null;
   estado?: EstadoDecisao;
 };

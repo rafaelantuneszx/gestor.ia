@@ -1,5 +1,6 @@
 "use client";
 
+import { ESTADO_AGUARDANDO_GESTOR, ID_GESTOR, semNomeDoGestor } from "@/lib/banco";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -23,13 +24,14 @@ import { supabaseNavegador } from "@/lib/supabase/browser";
 import { Avatar } from "@/components/Avatar";
 import { Controles, Legenda } from "@/components/reunioes/Controles";
 import { useLeitor } from "@/components/reunioes/useLeitor";
-import { Arquivo, Copa, DetalhesSalas, MesaAgente, Mobilia, Recepcao, SalaRafael, SalaReuniao } from "./Cena";
+import { Arquivo, Copa, DetalhesSalas, MesaAgente, Mobilia, Recepcao, SalaGestor, SalaReuniao } from "./Cena";
 import { Predio } from "./Predio";
-import { Boneco, Rafael } from "./Boneco";
+import { Boneco, Gestor } from "./Boneco";
 import { Efeitos } from "./Efeitos";
 import { Mosaico, layoutMosaico } from "./Mosaico";
 import type { PainelTV } from "./tv";
 import { Logo } from "@/components/marca/Logo";
+import { SecoesEscritorio } from "@/components/SecoesEscritorio";
 import { DataCenter, PainelSuspenso, ParedeResultados } from "./Tech";
 import { Planta2D } from "./Planta2D";
 import { TelaEmails, TelaEquipe, TelaResultados } from "./Telas";
@@ -44,7 +46,7 @@ const ALTURA_TOPO = 57;
 
 const ICONE_CAMERA: Record<string, LucideIcon> = {
   geral: Eye, direcao: Compass, sistemas: Server, financeiro: Landmark, custos: FileSpreadsheet, "frota-rh": Truck,
-  suprimentos: Package, reuniao: Presentation, rafael: Crown, arquivo: Archive, recepcao: ConciergeBell, cima: Grid2x2,
+  suprimentos: Package, reuniao: Presentation, gestor: Crown, arquivo: Archive, recepcao: ConciergeBell, cima: Grid2x2,
   copa: Coffee, datacenter: Server, parede: Gauge,
 };
 
@@ -63,7 +65,7 @@ function placaFraca() {
 }
 
 // Ritmo do desenho: 30 quadros por segundo bastam para o escritório ao vivo (metade do trabalho da placa de vídeo);
-// 60 enquanto o Rafael gira ou aproxima a câmera. Com a aba escondida o navegador já para tudo.
+// 60 enquanto o gestor gira ou aproxima a câmera. Com a aba escondida o navegador já para tudo.
 function Ritmo({ rapido, ativo = true }: { rapido: boolean; ativo?: boolean }) {
   const invalidate = useThree((s) => s.invalidate);
   useEffect(() => {
@@ -135,16 +137,18 @@ function estadosDe(eventos: EventoCentral[], agentes: AgenteInfo[]) {
   return conferirTravadas(est);
 }
 
-async function carregar(desdeId: number | null, completo = true): Promise<Partial<Dados> & { eventos: EventoCentral[] }> {
+async function carregar(desdeId: number | null, completo = true, escopo = "grupo"): Promise<Partial<Dados> & { eventos: EventoCentral[] }> {
+  // Com uma empresa escolhida, só os registros dela; com o grupo, tudo.
+  const doEscopo = <Q,>(q: Q): Q => (escopo === "grupo" ? q : (q as unknown as { eq: (c: string, v: string) => Q }).eq("empresa", escopo));
   const sb = supabaseNavegador();
   const desde = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
   const evQuery = desdeId === null
-    ? sb.from("central_eventos").select("*").gte("ts", desde).order("id").limit(2000)
-    : sb.from("central_eventos").select("*").gt("id", desdeId).order("id").limit(500);
+    ? doEscopo(sb.from("central_eventos").select("*")).gte("ts", desde).order("id").limit(2000)
+    : doEscopo(sb.from("central_eventos").select("*")).gt("id", desdeId).order("id").limit(500);
   const [ev, dem, docs, reu, ag, st] = await Promise.all([
     evQuery,
-    completo ? sb.from("central_demandas").select("id, de, para, estado, titulo, prioridade") : Promise.resolve({ data: null }),
-    completo ? sb.from("central_documentos").select("setor") : Promise.resolve({ data: null }),
+    completo ? doEscopo(sb.from("central_demandas").select("id, de, para, estado, titulo, prioridade")) : Promise.resolve({ data: null }),
+    completo ? doEscopo(sb.from("central_documentos").select("setor")) : Promise.resolve({ data: null }),
     // abertas (agendada, em andamento) e as que mudaram nas últimas 24 h, para a reprodução do dia
     sb.from("central_reunioes").select(CAMPOS_RESUMO)
       .or(`estado.in.(agendada,em_andamento),atualizado_em.gte.${desde}`).order("id"),
@@ -155,8 +159,8 @@ async function carregar(desdeId: number | null, completo = true): Promise<Partia
   for (const d of (docs.data ?? []) as { setor: string }[]) contagem[d.setor] = (contagem[d.setor] ?? 0) + 1;
   return {
     eventos: (ev.data ?? []) as EventoCentral[],
-    ...(dem.data ? { demandas: dem.data as DemandaResumo[], contagem } : {}),
-    reunioes: (reu.data ?? []) as ReuniaoResumo[],
+    ...(dem.data ? { demandas: (dem.data as DemandaResumo[]).map((d) => ({ ...d, titulo: semNomeDoGestor(d.titulo) })), contagem } : {}),
+    reunioes: ((reu.data ?? []) as ReuniaoResumo[]).map((r) => ({ ...r, titulo: semNomeDoGestor(r.titulo) })),
     ...(ag.data ? { agentes: ag.data as AgenteInfo[] } : {}),
     ...(st.data ? { setores: st.data as SetorInfo[] } : {}),
   };
@@ -194,7 +198,7 @@ function RotulosMosaico({ visoes, largura, altura, topo, onEscolher }: {
   );
 }
 
-export default function Escritorio({ modo }: { modo: "real" | "demo" }) {
+export default function Escritorio({ modo, escopo = "grupo" }: { modo: "real" | "demo"; escopo?: string }) {
   const router = useRouter();
   const [dados, setDados] = useState<Dados | null>(null);
   const [estados, setEstados] = useState<Record<string, EstadoAgente>>({});
@@ -208,6 +212,15 @@ export default function Escritorio({ modo }: { modo: "real" | "demo" }) {
   const [cameraAtual, setCameraAtual] = useState("geral");
   const [mosaico, setMosaico] = useState(false);
   const [planta2D, setPlanta2D] = useState(false);
+  const [descendo, setDescendo] = useState(false);
+  // Descer para a infra: a câmera atravessa o piso e a tela escurece antes de trocar de página.
+  const descer = (e: React.MouseEvent) => {
+    if (planta2D || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    e.preventDefault();
+    setDescendo(true);
+    camera.current?.setLookAt(0, -14, 8, 0, -40, 0, true);
+    setTimeout(() => router.push(modo === "demo" ? "/escritorio/infra/demo" : "/escritorio/infra"), 750);
+  };
   const [tela2, setTela2] = useState<"emails" | "equipe" | "resultados" | null>(null);
   const indicadores = useIndicadores(modo);
   const [interagindo, setInteragindo] = useState(false);
@@ -219,7 +232,7 @@ export default function Escritorio({ modo }: { modo: "real" | "demo" }) {
 
   const agentesMap = useMemo(() => new Map((dados?.agentes ?? []).map((a) => [a.id, a])), [dados?.agentes]);
   const pessoas = useMemo(() => new Map([
-    ["rafael", { id: "rafael", nome: "Rafael", cargo: "Dono", setor: null as string | null }],
+    [ID_GESTOR, { id: ID_GESTOR, nome: "Você", cargo: "Gestor", setor: null as string | null }],
     ...(dados?.agentes ?? []).map((a) => [a.id, { id: a.id, nome: a.nome, cargo: a.cargo, setor: a.setor }] as const),
   ]), [dados?.agentes]);
 
@@ -253,7 +266,7 @@ export default function Escritorio({ modo }: { modo: "real" | "demo" }) {
           setEstados(estadosDe(eventos, d.agentes));
           ultimoId.current = eventos.reduce((m, e) => Math.max(m, e.id), 0);
         } else {
-          const r = await carregar(null);
+          const r = await carregar(null, true, escopo);
           if (!vivo) return;
           const d: Dados = {
             agentes: r.agentes ?? [], setores: r.setores ?? [], eventos: r.eventos,
@@ -269,7 +282,7 @@ export default function Escritorio({ modo }: { modo: "real" | "demo" }) {
       }
     })();
     return () => { vivo = false; };
-  }, [modo]);
+  }, [modo, escopo]);
 
   const dadosRef = useRef<Dados | null>(null);
   useEffect(() => { dadosRef.current = dados; }, [dados]);
@@ -291,7 +304,7 @@ export default function Escritorio({ modo }: { modo: "real" | "demo" }) {
         } else {
           // demandas e documentos mudam devagar: a cada ~30 s; eventos e reuniões a cada volta
           const completo = voltas++ % Math.round(30000 / (temReuniaoAberta || assistindo ? ATUALIZAR_REUNIAO_MS : ATUALIZAR_MS)) === 0;
-          const r = await carregar(ultimoId.current ?? 0, completo);
+          const r = await carregar(ultimoId.current ?? 0, completo, escopo);
           novos = r.eventos;
           extra = { demandas: r.demandas ?? d.demandas, contagem: r.contagem ?? d.contagem, reunioes: r.reunioes ?? d.reunioes };
         }
@@ -316,7 +329,7 @@ export default function Escritorio({ modo }: { modo: "real" | "demo" }) {
       }
     }, temReuniaoAberta || assistindo ? ATUALIZAR_REUNIAO_MS : ATUALIZAR_MS);
     return () => clearInterval(t);
-  }, [modo, carregado, reproduzindo, enfileirar, temReuniaoAberta, assistindo]);
+  }, [modo, escopo, carregado, reproduzindo, enfileirar, temReuniaoAberta, assistindo]);
 
   // ---- reprodução do dia: reaplica os eventos das últimas 24 h, um por vez (as falas ficam mais tempo) ----
   const iniciarReproducao = () => {
@@ -408,7 +421,7 @@ export default function Escritorio({ modo }: { modo: "real" | "demo" }) {
   const mosaicoRef = useRef(mosaico);
   mosaicoRef.current = mosaico;
 
-  const pendentes = (dados?.demandas ?? []).filter((d) => d.estado === "aguardando-rafael").length;
+  const pendentes = (dados?.demandas ?? []).filter((d) => d.estado === ESTADO_AGUARDANDO_GESTOR).length;
   const trabalhando = Object.values(estados).filter((e) => e.status === "trabalhando").length;
   const demandasPorAgente = useMemo(() => {
     const out: Record<string, number> = {};
@@ -524,11 +537,11 @@ export default function Escritorio({ modo }: { modo: "real" | "demo" }) {
           pauta: itensPauta(ativa.r),
           participantes: [ativa.r.convocada_por, ...ativa.r.participantes]
             .filter((id, i, a) => a.indexOf(id) === i)
-            .map((id) => (id === "rafael" ? "Rafael" : nomes.get(id) ?? id)),
+            .map((id) => (id === ID_GESTOR ? "Você" : nomes.get(id) ?? id)),
           desde: ativa.desde,
           outras: reunioesAtivas.length - 1,
           fala: falaAgora && falaAgora.reuniaoId === ativa.r.id
-            ? { nome: falaAgora.agente === "rafael" ? "Rafael" : nomes.get(falaAgora.agente) ?? falaAgora.agente, texto: falaAgora.texto }
+            ? { nome: falaAgora.agente === ID_GESTOR ? "Você" : nomes.get(falaAgora.agente) ?? falaAgora.agente, texto: falaAgora.texto }
             : null,
         }
         : null,
@@ -544,7 +557,7 @@ export default function Escritorio({ modo }: { modo: "real" | "demo" }) {
           hora: hora(e.ts),
           nome: nomes.get(e.agente) ?? e.agente,
           tipo: e.tipo,
-          texto: e.tipo === "inicio" ? `começou ${e.rotina}` : e.tipo === "fim" ? (e.resumo || `terminou ${e.rotina}`) : e.tipo === "demanda" ? e.rotina : e.resumo || e.rotina,
+          texto: semNomeDoGestor(e.tipo === "inicio" ? `começou ${e.rotina}` : e.tipo === "fim" ? (e.resumo || `terminou ${e.rotina}`) : e.tipo === "demanda" ? e.rotina : e.resumo || e.rotina),
         })),
     };
   }, [dados, estados, pendentes, reproduzindo, reunioesAtivas, falaAgora]);
@@ -560,7 +573,7 @@ export default function Escritorio({ modo }: { modo: "real" | "demo" }) {
   const estSel = selecionado ? estados[selecionado] : null;
   const largo = tela.w >= 900;
   const visoesMosaico = largo ? MOSAICO : MOSAICO.slice(0, 4);
-  const topoMosaico = largo ? 112 : 170;
+  const topoMosaico = largo ? 120 : 200;
   const base = modo === "demo" ? "/reunioes/demo" : "/reunioes";
 
   const botao = "tech-vidro inline-flex h-10 shrink-0 items-center gap-1.5 rounded-xl px-3 text-sm font-medium transition hover:border-sinal";
@@ -622,8 +635,8 @@ export default function Escritorio({ modo }: { modo: "real" | "demo" }) {
             ))}
             <Arquivo setores={dados.setores} contagem={dados.contagem} rotulos={!mosaico && !planta2D}
               onAbrir={(s) => modo === "real" && router.push(`/arquivo/${s}`)} />
-            <SalaRafael pendentes={pendentes} onClick={() => modo === "real" && router.push("/")} />
-            <Rafael pendentes={pendentes} onClick={() => modo === "real" && router.push("/")} rotulos={!mosaico && !planta2D} />
+            <SalaGestor pendentes={pendentes} onClick={() => modo === "real" && router.push("/")} />
+            <Gestor pendentes={pendentes} onClick={() => modo === "real" && router.push("/")} rotulos={!mosaico && !planta2D} />
             <SalaReuniao painel={painel} />
           </>
         )}
@@ -642,8 +655,14 @@ export default function Escritorio({ modo }: { modo: "real" | "demo" }) {
       )}
 
       {/* topo: estado, ações e câmeras */}
+      {/* descida para a infra */}
+      <div aria-hidden={!descendo} className={`pointer-events-none absolute inset-0 z-50 flex items-center justify-center bg-noite text-sm text-marca-300 transition-opacity duration-500 ${descendo ? "opacity-100" : "opacity-0"}`}>
+        {descendo && "Descendo para a infra…"}
+      </div>
+
       <div className="pointer-events-none absolute inset-x-2 top-2 z-30 flex flex-col gap-2 sm:inset-x-3 sm:top-3">
         <div className="flex flex-wrap items-start gap-2">
+          <SecoesEscritorio atual="agentes" demo={modo === "demo"} onInfra={descer} className="pointer-events-auto bg-[#0b1220]/85 backdrop-blur" />
           <div className="tech-vidro pointer-events-auto rounded-xl px-3.5 py-2">
             <div className="flex items-center gap-2 text-sm font-semibold">
               <Logo escuro altura={24} className="mr-1 border-r border-line pr-2.5" />
@@ -700,7 +719,7 @@ export default function Escritorio({ modo }: { modo: "real" | "demo" }) {
           </div>
         </div>
         {/* legenda das cores */}
-        <div aria-hidden={planta2D} className="tech-vidro pointer-events-auto hidden w-fit items-center gap-3 rounded-lg px-2.5 py-1 text-[11px] text-muted lg:flex">
+        <div className="tech-vidro pointer-events-none fixed bottom-3 right-3 hidden w-fit items-center gap-3 rounded-lg px-2.5 py-1 text-[11px] text-muted xl:flex">
           {([["trabalhando", COR_STATUS.trabalhando], ["livre", COR_STATUS.livre], ["em reunião", COR_STATUS.reuniao], ["entregando", COR_STATUS.andando], ["na copa", COR_STATUS.pausa], ["atenção", COR_STATUS.atencao]] as const).map(([t, c]) => (
             <span key={t} className="inline-flex items-center gap-1"><span className="size-2 rounded-full" style={{ background: c }} />{t}</span>
           ))}
@@ -809,7 +828,7 @@ export default function Escritorio({ modo }: { modo: "real" | "demo" }) {
                 <div key={d.id} className="py-0.5 text-xs">
                   <span className="font-medium">#{d.id}</span> {d.titulo}{" "}
                   <span className="text-muted">
-                    · {d.para === agSel.id ? `recebida de ${agentesMap.get(d.de)?.nome ?? d.de}` : `enviada para ${d.para === "rafael" ? "você" : agentesMap.get(d.para)?.nome ?? d.para}`}
+                    · {d.para === agSel.id ? `recebida de ${agentesMap.get(d.de)?.nome ?? d.de}` : `enviada para ${d.para === ID_GESTOR ? "você" : agentesMap.get(d.para)?.nome ?? d.para}`}
                   </span>
                 </div>
               ))}

@@ -269,7 +269,7 @@ export const Predio = memo(function Predio() {
       {/* paredes entre as salas */}
       {[S.sistemas.x0, S.financeiro.x0, S.custos.x0].map((x) => <ParedeX key={`a${x}`} x={x} z0={S.direcao.z0} z1={S.direcao.z1} />)}
       {[S.suprimentos.x0, S.reuniao.x0, ESPINHA.x0, ESPINHA.x1, S.copa.x0].map((x) => <ParedeX key={`b${x}`} x={x} z0={-4} z1={6} />)}
-      <ParedeX x={S.recepcao.x0} z0={S.rafael.z0} z1={S.rafael.z1} />
+      <ParedeX x={S.recepcao.x0} z0={S.gestor.z0} z1={S.gestor.z1} />
 
       {/* corredor 1: frente das salas do fundo (z = -8) e fundo das salas do meio (z = -4) */}
       <ParedeZ z={CORREDORES.c1.z0} trechos={[S.direcao, S.sistemas, S.financeiro, S.custos].flatMap((s) => trechosDaSala(s, "vidro", true, -1))} />
@@ -289,7 +289,7 @@ export const Predio = memo(function Predio() {
         ...trechosDaSala(S.copa, "vidro", true, -1),
       ]} />
       <ParedeZ z={CORREDORES.c2.z1} trechos={[
-        ...trechosDaSala(S.rafael, "vidro", true, 1, [[-23.2, -14.8]]),
+        ...trechosDaSala(S.gestor, "vidro", true, 1, [[-23.2, -14.8]]),
         ...trechosDaSala(S.datacenter, "vidro", true, 1),
       ]} />
       {/* vidro entre a recepção e o data center */}

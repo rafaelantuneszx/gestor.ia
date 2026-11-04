@@ -1,9 +1,9 @@
-// Funções do Rafael: quem prepara (agente), quem do escritório pode executar e onde o trabalho para nele.
-// Fonte: rafael-enterprises/rotinas/funcoes-por-agente.md (as 68 funções de outubro/2026). As que não estão lá
+// Funções do gestor: quem prepara (agente), quem do escritório pode executar e onde o trabalho para nele.
+// Fonte: rotinas/funcoes-por-agente.md, na central dos agentes (as 68 funções de outubro/2026). As que não estão lá
 // vieram de conhecimento/emails-assuntos.md e decisoes/registro.md (campo `fonte`).
-// A coluna "pessoa" é proposta para o Rafael validar (reunião #5 de 30/10/2026, decisão 3). Só primeiro nome, sem dado pessoal.
+// A coluna "pessoa" é proposta para o gestor validar (reunião #5 de 30/10/2026, decisão 3). Só primeiro nome, sem dado pessoal.
 
-// O último passo de cada função, quando é do Rafael. "ler" quer dizer que o agente entrega e ele só lê.
+// O último passo de cada função, quando é do gestor. "ler" quer dizer que o agente entrega e ele só lê.
 export type Passo = "ler" | "aprovar" | "pagar" | "enviar" | "lancar" | "dado" | "frota" | "negociar" | "sistemas" | "decidir";
 export type Modo = "entrega" | "adianta" | "voce";
 export type Status = "ativa" | "planejada" | "sob-demanda";
@@ -15,7 +15,7 @@ export type Funcao = {
   modo: Modo | null;
   quando: string;
   status: Status;
-  ultimo: string; // o que o Rafael faz hoje no fim
+  ultimo: string; // o que o gestor faz hoje no fim
   passo: Passo;
   pessoas: string[];
   palavras: string[]; // trechos do título que ligam uma demanda a esta função (sem acento, minúsculo)
@@ -154,7 +154,7 @@ export const FUNCOES: Funcao[] = [
   f(SIS, "Mapeamento de fornecedores essenciais", [CAIO], null, "Qua, 10h", "ativa", "Só ler", "ler", ["Rogéria"]),
   f(SIS, "TI geral", [RICARDO], null, "Triagem", "ativa", "Só ler", "ler", [], ["acesso", "central_agentes"]),
 
-  // Fora do mapa: o que os e-mails e as decisões mostram que o Rafael faz e o mapa de funções não tinha
+  // Fora do mapa: o que os e-mails e as decisões mostram que o gestor faz e o mapa de funções não tinha
   f(FORA, "Multas e indicação de condutor", [SOFIA], "adianta", "Todo dia (e-mails × multas no PaviMax)", "ativa", "Indicar o condutor no sistema de infrações", "frota", ["Renan", "Nita"], ["condutor", "multa", "autos"], "E-mails (frota e multas) e decisões #59 e #60"),
   f(FORA, "Máquinas com faturamento direto (cadastro no cliente, medição, NF autorizada)", [CLARA, MARINA], "adianta", "Sob demanda (rotina da Hitachi)", "ativa", "Mandar a ficha do fornecedor e aprovar a medição", "enviar", ["Rogéria", "Renan"], ["obrasplan", "maquinas e da verba"], "E-mails (faturamento direto) e demanda #79"),
   f(FORA, "Fluxo de caixa e cenários para a diretoria", [LUCIA, JULIO], "adianta", "Todo dia", "ativa", "Escolher o cenário (prorrogar ou antecipar)", "decidir", ["Erica"], ["caixa negativo", "negativa"], "Decisões #1 e #74"),
@@ -169,7 +169,7 @@ export const FUNCOES: Funcao[] = [
   f(FORA, "Propostas de fornecedores e ferramentas novas", [], null, "Sob demanda", "sob-demanda", "Decidir o que segue e o que descarta", "decidir", [], ["proposta comercial"], "E-mails (propostas sem resposta)"),
 ];
 
-// Situação de cada função. Sem dono: ninguém prepara e ninguém do escritório executa; fica tudo com o Rafael.
+// Situação de cada função. Sem dono: ninguém prepara e ninguém do escritório executa; fica tudo com o gestor.
 export type Situacao = "sem-dono" | "para-em-voce" | "sem-agente" | "ok";
 
 export function situacao(fn: Funcao): Situacao {
@@ -179,7 +179,32 @@ export function situacao(fn: Funcao): Situacao {
   return "ok";
 }
 
-// O gargalo: o que hoje para no Rafael, por tipo de último passo, e quem poderia assumir (proposta).
+// Nível de autonomia de cada função, a partir de situacao(), modo e passo:
+// sem agente e sem pessoa = sem dono; agente que entrega ou passo "ler" = sozinha; modo "adianta" que termina em
+// aprovar = você aprova; todo o resto para em você.
+export type NivelAutonomia = "sozinha" | "aprova" | "depende" | "sem-dono";
+
+export function nivelAutonomia(fn: Funcao): NivelAutonomia {
+  if (situacao(fn) === "sem-dono") return "sem-dono";
+  if (fn.agentes.length > 0 && (fn.modo === "entrega" || fn.passo === "ler")) return "sozinha";
+  if (fn.modo === "adianta" && fn.passo === "aprovar") return "aprova";
+  return "depende";
+}
+
+export const NIVEIS_AUTONOMIA: { id: NivelAutonomia; rotulo: string; cor: string; classe: string; chip: string }[] = [
+  { id: "sozinha", rotulo: "Sozinha", cor: "ok", classe: "sozinho", chip: "bg-ok-soft text-ok" },
+  { id: "aprova", rotulo: "Você aprova", cor: "accent", classe: "aprova", chip: "bg-accent-soft text-accent" },
+  { id: "depende", rotulo: "Depende de você", cor: "warn", classe: "voce", chip: "bg-warn-soft text-warn" },
+  { id: "sem-dono", rotulo: "Sem dono", cor: "bad", classe: "sem-dono", chip: "bg-bad-soft text-bad" },
+];
+
+export function contarAutonomia(funcoes: Funcao[]) {
+  const c: Record<NivelAutonomia, number> = { sozinha: 0, aprova: 0, depende: 0, "sem-dono": 0 };
+  for (const fn of funcoes) c[nivelAutonomia(fn)] += 1;
+  return c;
+}
+
+// O gargalo: o que hoje para no gestor, por tipo de último passo, e quem poderia assumir (proposta).
 export const GARGALO: { passo: Exclude<Passo, "ler">; oque: string; quem: string }[] = [
   {
     passo: "aprovar",

@@ -3,7 +3,7 @@
 // Microfone da sala de reunião (Web Speech API, SpeechRecognition, pt-BR).
 // Dois modos: "segurar" (fala enquanto segura o botão) e "continuo" (fica ouvindo até desligar).
 // O texto reconhecido aparece antes de ir; depois de ~1,5 s de silêncio ele é enviado sozinho, a não ser que o
-// Rafael comece a corrigir. Enquanto os agentes falam (`pausado`), o microfone fica desligado para não captar o eco.
+// gestor comece a corrigir. Enquanto os agentes falam (`pausado`), o microfone fica desligado para não captar o eco.
 import { useCallback, useEffect, useRef, useState } from "react";
 
 type Reconhecimento = {
@@ -38,7 +38,7 @@ export function useMicrofone({
 }) {
   const [suportado, setSuportado] = useState<boolean | null>(null);
   const [modo, setModo] = useState<ModoMic>("segurar");
-  const [ativo, setAtivo] = useState(false); // o Rafael quer o microfone ligado (contínuo) ou está segurando o botão
+  const [ativo, setAtivo] = useState(false); // o gestor quer o microfone ligado (contínuo) ou está segurando o botão
   const [ouvindo, setOuvindo] = useState(false); // o reconhecimento está de fato rodando
   const [rascunho, setRascunhoState] = useState("");
   const [editando, setEditando] = useState(false);

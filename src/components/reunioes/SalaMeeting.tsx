@@ -1,9 +1,10 @@
 "use client";
 
-// Sala de reunião ao vivo com o Rafael, "como um meeting": grade com os participantes (quem fala acende),
+// Sala de reunião ao vivo com o gestor, "como um meeting": grade com os participantes (quem fala acende),
 // legenda, microfone (segurar para falar ou contínuo), campo de texto e a voz de cada agente.
-// Real: a fala do Rafael vai para /api/reunioes/<id>/falar, que grava e pede as respostas ao Claude;
+// Real: a fala do gestor vai para /api/reunioes/<id>/falar, que grava e pede as respostas ao Claude;
 // as falas chegam pela resposta e pelo polling de 1,5 s. Demonstração: respostas fixas, sem banco.
+import { ID_GESTOR } from "@/lib/banco";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -50,11 +51,11 @@ export function SalaMeeting({
 }) {
   const router = useRouter();
   const mapa = useMemo(() => new Map(pessoas.map((p) => [p.id, p])), [pessoas]);
-  const ids = useMemo(() => [...new Set([reuniao.convocada_por, ...reuniao.participantes])].filter((x) => x !== "rafael"), [reuniao]);
+  const ids = useMemo(() => [...new Set([reuniao.convocada_por, ...reuniao.participantes])].filter((x) => x !== ID_GESTOR), [reuniao]);
   const { falas, estado, setEstado, erro, juntar, adicionarLocal } = useFalas({
     reuniaoId: reuniao.id, inicial: falasIniciais, estadoInicial: reuniao.estado, modo, demoBase, intervalo: 1500,
   });
-  const leitor = useLeitor({ falas, ids, pularFala: (f) => f.agente === "rafael" });
+  const leitor = useLeitor({ falas, ids, pularFala: (f) => f.agente === ID_GESTOR });
   const [entrou, setEntrou] = useState(false);
   const [pensando, setPensando] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
@@ -69,13 +70,13 @@ export function SalaMeeting({
   }, []);
 
   const falandoAgora = leitor.tocando && !leitor.esperando ? leitor.falaAtual?.agente ?? null : null;
-  const agentesFalando = !!falandoAgora && falandoAgora !== "rafael";
+  const agentesFalando = !!falandoAgora && falandoAgora !== ID_GESTOR;
 
   const enviar = useCallback(async (t: string) => {
     const fala = t.trim();
     setAviso(null);
     if (modo === "demo") {
-      if (fala) adicionarLocal({ agente: "rafael", texto: fala });
+      if (fala) adicionarLocal({ agente: ID_GESTOR, texto: fala });
       setPensando(true);
       setTimeout(() => {
         respostasDemo(fala, ids).forEach((r, k) => setTimeout(() => adicionarLocal(r), k * 400));
@@ -200,7 +201,7 @@ export function SalaMeeting({
             {/* você */}
             <div className={`relative flex min-h-[120px] flex-col items-center justify-center gap-2 rounded-2xl border p-3 sm:min-h-[180px] ${
               mic.ouvindo ? "border-sky-400 bg-sky-400/10" : "border-white/10 bg-white/[0.04]"}`}>
-              <Avatar id="rafael" nome="Rafael" tamanho={64} falando={mic.ouvindo} />
+              <Avatar id={ID_GESTOR} nome="Você" tamanho={64} falando={mic.ouvindo} />
               <div className="text-center">
                 <div className="text-sm font-semibold">Você</div>
                 <div className="text-[11px] text-white/60">{mic.ouvindo ? "ouvindo…" : mic.ativo ? "microfone ligado" : "microfone desligado"}</div>
@@ -244,7 +245,7 @@ export function SalaMeeting({
                   <li key={f.id} className="flex gap-2.5">
                     <Avatar id={f.agente} nome={p?.nome ?? f.agente} setor={p?.setor} tamanho={30} selo={false} />
                     <div className="min-w-0">
-                      <div className="text-[11px] text-white/55"><span className="font-semibold text-white/85">{f.agente === "rafael" ? "Você" : p?.nome ?? f.agente}</span> · {soHoraCliente(f.ts)}</div>
+                      <div className="text-[11px] text-white/55"><span className="font-semibold text-white/85">{f.agente === ID_GESTOR ? "Você" : p?.nome ?? f.agente}</span> · {soHoraCliente(f.ts)}</div>
                       <p className="text-sm leading-snug text-white/90">{f.texto}</p>
                     </div>
                   </li>
@@ -315,7 +316,7 @@ export function SalaMeeting({
               className="inline-flex size-12 items-center justify-center rounded-full bg-white/10 hover:bg-white/15">
               {leitor.volume === 0 ? <VolumeX size={19} /> : <Volume2 size={19} />}
             </button>
-            {reuniao.convocada_por === "rafael" && (
+            {reuniao.convocada_por === ID_GESTOR && (
               <button type="button" onClick={encerrar} className="inline-flex h-12 items-center gap-1.5 rounded-full bg-red-500 px-4 text-sm font-semibold hover:bg-red-600">
                 <PhoneOff size={18} /> <span className="hidden sm:inline">Encerrar</span>
               </button>

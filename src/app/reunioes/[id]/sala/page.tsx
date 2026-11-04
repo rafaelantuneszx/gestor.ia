@@ -9,7 +9,7 @@ import { supabaseServidor } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-// Sala de reunião ao vivo: o Rafael entra, fala (voz ou texto) e escuta os participantes responderem.
+// Sala de reunião ao vivo: o gestor entra, fala (voz ou texto) e escuta os participantes responderem.
 export default async function Sala({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   if (!/^\d+$/.test(id)) notFound();

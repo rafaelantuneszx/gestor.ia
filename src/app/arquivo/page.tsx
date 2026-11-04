@@ -1,24 +1,26 @@
+import { semNomeDoGestor } from "@/lib/banco";
 import Link from "next/link";
 import { Topo, SemAcesso } from "@/components/Topo";
 import { autorizado, cadastros, haQuanto, type Documento } from "@/lib/dados";
 import { supabaseServidor } from "@/lib/supabase/server";
 import { corDa } from "@/lib/cores";
+import { comEscopo, escopoAtual } from "@/lib/escopo";
 
 export const dynamic = "force-dynamic";
 
 export default async function Arquivo() {
   if (!(await autorizado())) return <SemAcesso />;
   const sb = await supabaseServidor();
-  const [{ setores }, docs, pend] = await Promise.all([
+  const escopo = await escopoAtual();
+  const [{ setores }, docs] = await Promise.all([
     cadastros(),
-    sb.from("central_documentos").select("id, setor, agente, rotina, titulo, tipo, data_ref, criado_em").order("criado_em", { ascending: false }),
-    sb.from("central_demandas").select("id", { count: "exact", head: true }).eq("estado", "aguardando-rafael"),
+    comEscopo(sb.from("central_documentos").select("id, setor, agente, rotina, titulo, tipo, data_ref, criado_em"), escopo).order("criado_em", { ascending: false }),
   ]);
   const documentos = (docs.data ?? []) as Documento[];
 
   return (
     <>
-      <Topo aba="arquivo" pendentes={pend.count ?? 0} />
+      <Topo aba="arquivo" />
       <main className="mx-auto max-w-6xl px-4 py-6">
         <h1 className="ios-titulo mb-2">Arquivo</h1>
         <p className="mb-5 text-sm text-muted">
@@ -46,7 +48,7 @@ export default async function Arquivo() {
                   {meus.slice(0, 3).map((d) => (
                     <li key={d.id} className="truncate">
                       <span className="mr-1.5 inline-block size-2 rounded-full" style={{ background: corDa(d.rotina) }} />
-                      {d.titulo} <span className="text-xs text-muted">· {haQuanto(d.criado_em)}</span>
+                      {semNomeDoGestor(d.titulo)} <span className="text-xs text-muted">· {haQuanto(d.criado_em)}</span>
                     </li>
                   ))}
                 </ul>

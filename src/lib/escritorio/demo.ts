@@ -1,5 +1,6 @@
 // Dados fictícios só para ver o escritório funcionando sem login (página /escritorio/demo, só em
 // desenvolvimento). Nada daqui vai para o banco.
+import { ESTADO_AGUARDANDO_GESTOR, ID_GESTOR } from "@/lib/banco";
 import type { AgenteInfo, DemandaResumo, EventoCentral, SetorInfo } from "./modelo";
 import type { Reuniao } from "../reunioes";
 import { falaDoEvento, type Fala } from "../falas";
@@ -38,10 +39,10 @@ export const DEMO_CONTAGEM: Record<string, number> = {
 };
 
 export const DEMO_DEMANDAS: DemandaResumo[] = [
-  { id: 101, de: "sofia-adm-rh-frota", para: "rafael", estado: "aguardando-rafael", titulo: "Aprovar 2 revisões vencidas", prioridade: "alta" },
+  { id: 101, de: "sofia-adm-rh-frota", para: ID_GESTOR, estado: ESTADO_AGUARDANDO_GESTOR, titulo: "Aprovar 2 revisões vencidas", prioridade: "alta" },
   { id: 102, de: "marina-custos", para: "bruno-financeiro", estado: "aberta", titulo: "Conferir lançamentos da OBRA057", prioridade: "media" },
   { id: 103, de: "ricardo-diretor-sistemas", para: "otavio-pavimax", estado: "andamento", titulo: "Views ainda leem o espelho do Conta Azul", prioridade: "media" },
-  { id: 104, de: "caio-suprimentos", para: "rafael", estado: "aguardando-rafael", titulo: "Liberar pagamento de fornecedor de EPI", prioridade: "media" },
+  { id: 104, de: "caio-suprimentos", para: ID_GESTOR, estado: ESTADO_AGUARDANDO_GESTOR, titulo: "Liberar pagamento de fornecedor de EPI", prioridade: "media" },
 ];
 
 type Passo = [minAtras: number, tipo: EventoCentral["tipo"], agente: string, rotina: string, resumo?: string, extra?: Partial<EventoCentral>];
@@ -76,7 +77,7 @@ const ROTEIRO: Passo[] = [
   [57, "passo", "marina-custos", "conferencia-rdo", "rdo_relatorios: 12 obras, 3 sem RDO ontem"],
   [56, "passo", "davi-faturas", "faturas-boletos", "4 faturas de energia sem lançamento"],
   [55, "passo", "sofia-adm-rh-frota", "km-revisoes", "2 revisões vencidas, 1 multa com prazo em 5 dias"],
-  [53, "demanda", "sofia-adm-rh-frota", "criou a demanda #101 para rafael", "Aprovar 2 revisões vencidas"],
+  [53, "demanda", "sofia-adm-rh-frota", `criou a demanda #101 para ${ID_GESTOR}`, "Aprovar 2 revisões vencidas"],
   [52, "fim", "sofia-adm-rh-frota", "km-revisoes", "3 itens para esta semana", { status: "alerta", alertas: 3, documento_id: "d4" }],
   [50, "passo", "marina-custos", "conferencia-rdo", "v_avanco_item_contrato: OBRA038 em 132% do contratado"],
   [48, "demanda", "marina-custos", "criou a demanda #102 para bruno-financeiro", "Conferir lançamentos da OBRA057"],
@@ -89,7 +90,7 @@ const ROTEIRO: Passo[] = [
   [31, "fim", "igor-folha-financeiro", "folha-x-financeiro", "Provisões batem, falta a competência de outubro", { status: "alerta", alertas: 1 }],
   [30, "inicio", "caio-suprimentos", "pedidos-parados", "Pedidos parados e EPI abaixo do mínimo"],
   [28, "passo", "caio-suprimentos", "pedidos-parados", "cmp_pedidos sem NF há mais de 10 dias: 4"],
-  [26, "demanda", "caio-suprimentos", "criou a demanda #104 para rafael", "Liberar pagamento de fornecedor de EPI"],
+  [26, "demanda", "caio-suprimentos", `criou a demanda #104 para ${ID_GESTOR}`, "Liberar pagamento de fornecedor de EPI"],
   [20, "inicio", "bruno-financeiro", "demanda-102", "Conferindo lançamentos da OBRA057"],
   [19, "passo", "bruno-financeiro", "demanda-102", "SELECT * FROM movimentacoes WHERE centro_id = 57"],
   [16, "nota", "bruno-financeiro", "reuniao#1", "agendada · Faturas e boletos de outubro"],
@@ -110,18 +111,18 @@ const ROTEIRO: Passo[] = [
 // chegando a cada 7 s depois que a página abre (minAtras negativo = no futuro), para ver o modo ao vivo.
 type FalaDemo = [minAtras: number, reuniao: number, agente: string, texto: string];
 const FALAS_2: [string, string][] = [
-  ["helena", "Bom dia. Três pontos hoje: a agenda do Rafael até sexta, os pedidos parados em Suprimentos e as revisões da frota. Clara, começa pela agenda?"],
-  ["clara-assistente", "Claro. O Rafael tem três compromissos: quarta às 10h com a obra 039, quinta às 14h com a contabilidade e sexta às 9h a visita na 056."],
+  ["helena", "Bom dia. Três pontos hoje: a agenda do gestor até sexta, os pedidos parados em Suprimentos e as revisões da frota. Clara, começa pela agenda?"],
+  ["clara-assistente", "Claro. O gestor tem três compromissos: quarta às 10h com a obra 039, quinta às 14h com a contabilidade e sexta às 9h a visita na 056."],
   ["clara-assistente", "Deixei pronto o rascunho do e-mail para a obra 039. Ele só precisa dizer sim para eu mandar."],
   ["helena", "Ótimo. Caio, e os pedidos?"],
   ["caio-suprimentos", "São quatro pedidos sem nota fiscal há mais de dez dias. O maior é o de EPI, de R$ 18,4 mil."],
   ["caio-suprimentos", "E luvas e botinas estão abaixo do mínimo no almoxarifado central. Se não comprar até quinta, falta na 040."],
   ["helena", "O fornecedor de EPI está esperando pagamento?"],
-  ["caio-suprimentos", "Está. A liberação do pagamento é com o Rafael, então eu abro a demanda para ele aprovar."],
+  ["caio-suprimentos", "Está. A liberação do pagamento é com o gestor, então eu abro a demanda para ele aprovar."],
   ["helena", "Combinado. Cobra as notas dos quatro pedidos até quinta; essa eu aprovo como diretora."],
-  ["clara-assistente", "Coloco um lembrete na agenda do Rafael para olhar a demanda do EPI amanhã cedo."],
-  ["helena", "Último ponto: a Sofia achou duas revisões vencidas na frota. Ela leva a demanda para o Rafael ainda hoje."],
-  ["helena", "Resumindo: Caio cobra as notas, a liberação do EPI vai para o Rafael e a Clara manda o e-mail da 039 com o ok dele. Obrigada, pessoal."],
+  ["clara-assistente", "Coloco um lembrete na agenda do gestor para olhar a demanda do EPI amanhã cedo."],
+  ["helena", "Último ponto: a Sofia achou duas revisões vencidas na frota. Ela leva a demanda para o gestor ainda hoje."],
+  ["helena", "Resumindo: Caio cobra as notas, a liberação do EPI vai para o gestor e a Clara manda o e-mail da 039 com o ok dele. Obrigada, pessoal."],
 ];
 const FALAS_1: [string, string][] = [
   ["bruno-financeiro", "Pessoal, chamei por causa de três coisas: boletos que vencem até sexta, faturas sem lançamento e o centro 57 parado."],
@@ -132,10 +133,10 @@ const FALAS_1: [string, string][] = [
   ["bruno-financeiro", "Sobre o centro 57: não tem lançamento nenhum desde primeiro de outubro, e a obra está rodando."],
   ["lucia-financeiro", "Isso é sinal de lançamento no centro errado. Bruno, confere se não caiu tudo no 42."],
   ["bruno-financeiro", "Conferi agora: são onze lançamentos no 42 que são do 57, R$ 46 mil no total."],
-  ["lucia-financeiro", "Então preparo o ajuste com o SQL pronto e levo para o Rafael aprovar. Não mexo sem o ok dele."],
+  ["lucia-financeiro", "Então preparo o ajuste com o SQL pronto e levo para o gestor aprovar. Não mexo sem o ok dele."],
   ["davi-faturas", "Enquanto isso eu lanço as quatro faturas de energia e aviso quando terminar."],
   ["bruno-financeiro", "E os dois boletos de sexta já estão com previsão no caixa, então não precisam de decisão."],
-  ["lucia-financeiro", "Perfeito. Fechando: Davi lança as faturas, eu preparo o ajuste do centro 57 para o Rafael, e o Bruno acompanha os boletos."],
+  ["lucia-financeiro", "Perfeito. Fechando: Davi lança as faturas, eu preparo o ajuste do centro 57 para o gestor, e o Bruno acompanha os boletos."],
   ["bruno-financeiro", "Registro a ata e as decisões agora. Obrigado, Lúcia; obrigado, Davi."],
 ];
 const FALAS_DEMO: FalaDemo[] = [
@@ -197,7 +198,7 @@ export function demoReunioes(agora = Date.now()): Reuniao[] {
       convocada_por: "helena",
       participantes: ["clara-assistente", "caio-suprimentos"],
       pauta: [
-        { texto: "Agenda do Rafael até sexta" },
+        { texto: "Agenda do gestor até sexta" },
         { texto: "Pedidos parados e EPI abaixo do mínimo" },
         { texto: "Revisões vencidas da frota" },
       ],
@@ -208,13 +209,13 @@ export function demoReunioes(agora = Date.now()): Reuniao[] {
       ata: [
         "## Resumo",
         "",
-        "A semana tem **3 compromissos** do Rafael e dois pontos de atenção em Suprimentos.",
+        "A semana tem **3 compromissos** do gestor e dois pontos de atenção em Suprimentos.",
         "",
         "## Pontos discutidos",
         "",
         "1. **Agenda**: Clara confirma as reuniões de quarta e quinta e deixa o rascunho do e-mail para a obra 039.",
         "2. **Suprimentos**: 4 pedidos sem NF há mais de 10 dias; luvas e botinas abaixo do mínimo.",
-        "3. **Frota**: 2 revisões vencidas; a Sofia leva a demanda ao Rafael.",
+        "3. **Frota**: 2 revisões vencidas; a Sofia leva a demanda ao gestor.",
         "",
         "| Item | Responsável | Prazo |",
         "| --- | --- | --- |",
@@ -223,7 +224,7 @@ export function demoReunioes(agora = Date.now()): Reuniao[] {
       ].join("\n"),
       decisoes: [
         { texto: "Cobrar as NFs dos 4 pedidos parados", responsavel: "caio-suprimentos", aprovacao: "diretor", aprovador: "helena", estado: "aprovada" },
-        { texto: "Liberar pagamento do fornecedor de EPI", responsavel: "caio-suprimentos", aprovacao: "rafael", aprovador: "rafael", estado: "pendente" },
+        { texto: "Liberar pagamento do fornecedor de EPI", responsavel: "caio-suprimentos", aprovacao: ID_GESTOR, aprovador: ID_GESTOR, estado: "pendente" },
         { texto: "Enviar o rascunho do e-mail da OBRA039", responsavel: "clara-assistente", aprovacao: null, aprovador: null, estado: "feita" },
       ],
       demanda_id: 104,
@@ -272,13 +273,13 @@ const RESPOSTAS_DEMO: { chaves: RegExp; agente: string; texto: string }[] = [
 
 export function respostasDemo(texto: string, participantes: string[]): { agente: string; texto: string }[] {
   const tem = (id: string) => participantes.includes(id);
-  const quem = participantes.find((p) => p !== "rafael") ?? "helena";
+  const quem = participantes.find((p) => p !== ID_GESTOR) ?? "helena";
   const conduz = tem("helena") ? "helena" : quem;
   if (!texto.trim()) {
-    return [{ agente: conduz, texto: "Bom dia, Rafael. Estamos todos aqui. Qual é o primeiro assunto?" }];
+    return [{ agente: conduz, texto: "Bom dia. Estamos todos aqui. Qual é o primeiro assunto?" }];
   }
   const r = RESPOSTAS_DEMO.find((x) => x.chaves.test(texto) && tem(x.agente));
   const out = [r ? { agente: r.agente, texto: r.texto } : { agente: conduz, texto: "Entendido. Anoto como próximo passo e distribuo para quem é dono do assunto." }];
-  if (conduz !== out[0].agente) out.push({ agente: conduz, texto: "Fica registrado na ata. Mais algum ponto, Rafael?" });
+  if (conduz !== out[0].agente) out.push({ agente: conduz, texto: "Fica registrado na ata. Mais algum ponto?" });
   return out;
 }

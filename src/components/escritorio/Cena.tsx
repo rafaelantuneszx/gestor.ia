@@ -7,7 +7,7 @@ import { Html } from "@react-three/drei";
 import * as THREE from "three";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 import {
-  ARQUIVO_Z, CADEIRA_RAFAEL, ESPINHA, MESAS, MESA_RAFAEL, MESA_REUNIAO, SALA, SETOR_COR, TV,
+  ARQUIVO_Z, CADEIRA_GESTOR, ESPINHA, MESAS, MESA_GESTOR, MESA_REUNIAO, SALA, SETOR_COR, TV,
   ASSENTOS_REUNIAO, cadeira, estante,
   type EstadoAgente, type SetorInfo,
 } from "@/lib/escritorio/modelo";
@@ -19,7 +19,7 @@ import { Lote, type Item } from "./kit";
 import { EstanteLivros, KITS, MesaCentro, Quadro, Tapete, geometriaPlano as plano, tecidoColorivel } from "./Moveis";
 
 const TAMPO_REUNIAO = new RoundedBoxGeometry(6.4, 0.06, 1.6, 4, 0.03);
-const TAMPO_RAFAEL = new RoundedBoxGeometry(2.8, 0.06, 1.05, 3, 0.025);
+const TAMPO_GESTOR = new RoundedBoxGeometry(2.8, 0.06, 1.05, 3, 0.025);
 const BALCAO = new RoundedBoxGeometry(4.2, 1.1, 0.8, 4, 0.06);
 const CIL = new THREE.CylinderGeometry(0.5, 0.5, 1, 32);
 const ALT = 2.75; // parede do logo da recepção
@@ -42,10 +42,10 @@ export const Mobilia = memo(function Mobilia() {
     for (const a of ASSENTOS_REUNIAO) cadeiras.push({ x: a.p[0], z: a.p[1], r: a.rotacao + Math.PI, cor: "#2b3340" });
     sombras.push({ x: rx, z: rz, s: [7.6, 1, 3.2] });
     // sua sala: a sua cadeira (de frente para nós) e duas de visita
-    cadeiras.push({ x: CADEIRA_RAFAEL[0], z: CADEIRA_RAFAEL[1], r: Math.PI, cor: "#1a1d22", s: 1.08 });
-    cadeiras.push({ x: MESA_RAFAEL[0] - 0.7, z: MESA_RAFAEL[1] + 1.15, r: 0, cor: "#25405a" });
-    cadeiras.push({ x: MESA_RAFAEL[0] + 0.7, z: MESA_RAFAEL[1] + 1.15, r: 0, cor: "#25405a" });
-    sombras.push({ x: MESA_RAFAEL[0], z: MESA_RAFAEL[1], s: [3.6, 1, 2.2] });
+    cadeiras.push({ x: CADEIRA_GESTOR[0], z: CADEIRA_GESTOR[1], r: Math.PI, cor: "#1a1d22", s: 1.08 });
+    cadeiras.push({ x: MESA_GESTOR[0] - 0.7, z: MESA_GESTOR[1] + 1.15, r: 0, cor: "#25405a" });
+    cadeiras.push({ x: MESA_GESTOR[0] + 0.7, z: MESA_GESTOR[1] + 1.15, r: 0, cor: "#25405a" });
+    sombras.push({ x: MESA_GESTOR[0], z: MESA_GESTOR[1], s: [3.6, 1, 2.2] });
     // Direção: mesa redonda; Financeiro: mesinha; arquivo: consulta; copa
     for (const [x, z, r] of [[-21.5 - 0.95, -11, Math.PI / 2], [-21.5 + 0.95, -11, -Math.PI / 2], [-21.5, -11 + 0.95, 0]] as const) {
       cadeiras.push({ x, z, r: r + Math.PI, cor: "#26344a" });
@@ -80,7 +80,7 @@ export const Mobilia = memo(function Mobilia() {
     for (const s of poltronas) sombras.push({ x: s.x, z: s.z, s: [1.2, 1, 1.2] });
     const pendentes: Item[] = [
       { x: MESA_REUNIAO[0] - 1.6, z: MESA_REUNIAO[1] }, { x: MESA_REUNIAO[0] + 1.6, z: MESA_REUNIAO[1] },
-      { x: MESA_RAFAEL[0], z: MESA_RAFAEL[1] }, { x: -1, z: 13.4 },
+      { x: MESA_GESTOR[0], z: MESA_GESTOR[1] }, { x: -1, z: 13.4 },
     ];
     return { cadeiras, mesas, sombras, plantasAltas, plantasLargas, plantasBaixas, sofas, poltronas, pendentes };
   }, []);
@@ -318,7 +318,7 @@ export function Arquivo({
       ))}
       {/* mesa de consulta com caixas */}
       <group position={[13.1, 0, 2.4]}>
-        <mesh geometry={TAMPO_RAFAEL} material={mat("#1f2937", 0.45)} position={[0, 0.74, 0]} scale={[0.85, 0.7, 1.0]} castShadow receiveShadow />
+        <mesh geometry={TAMPO_GESTOR} material={mat("#1f2937", 0.45)} position={[0, 0.74, 0]} scale={[0.85, 0.7, 1.0]} castShadow receiveShadow />
         {[-1.1, 1.1].map((x) => <Caixa key={x} p={[x, 0.36, 0]} s={[0.06, 0.72, 0.9]} m={acoPreto()} />)}
         <Caixa p={[-0.5, 0.88, 0.05]} s={[0.4, 0.24, 0.3]} m={mat("#26344a", 0.9)} sombra />
         <Caixa p={[-0.05, 0.85, -0.1]} s={[0.38, 0.18, 0.28]} m={mat("#1f2d42", 0.9)} sombra r={[0, 0.3, 0]} />
@@ -389,7 +389,7 @@ function tonalidade(hex: string, f: number) {
 
 // ---------- sua sala ----------
 
-export function SalaRafael({ pendentes, onClick }: { pendentes: number; onClick: () => void }) {
+export function SalaGestor({ pendentes, onClick }: { pendentes: number; onClick: () => void }) {
   const [hover, setHover] = useState(false);
   const pilha = Math.min(pendentes, 20);
   const luz = useRef<THREE.Mesh>(null);
@@ -399,9 +399,9 @@ export function SalaRafael({ pendentes, onClick }: { pendentes: number; onClick:
       m.emissiveIntensity = pendentes > 0 ? 1.2 + Math.sin(clock.elapsedTime * 3) * 0.8 : 0.1;
     }
   });
-  const [mx, mz] = MESA_RAFAEL;
+  const [mx, mz] = MESA_GESTOR;
   const nogueira = mat(hover ? "#22344e" : "#172033", 0.4);
-  const s = SALA.rafael;
+  const s = SALA.gestor;
   return (
     <group>
       <Tapete posicao={[mx, mz + 0.5]} tamanho={[6.0, 4.4]} cor="#172033" borda="#22303f" />
@@ -410,7 +410,7 @@ export function SalaRafael({ pendentes, onClick }: { pendentes: number; onClick:
         onPointerOver={(e) => { e.stopPropagation(); setHover(true); document.body.style.cursor = "pointer"; }}
         onPointerOut={() => { setHover(false); document.body.style.cursor = ""; }}>
         {/* mesa executiva: você senta em -z; o painel da frente fica para nós */}
-        <mesh geometry={TAMPO_RAFAEL} material={nogueira} position={[0, 0.75, 0]} castShadow receiveShadow />
+        <mesh geometry={TAMPO_GESTOR} material={nogueira} position={[0, 0.75, 0]} castShadow receiveShadow />
         {[-1.3, 1.3].map((x) => <Caixa key={x} p={[x, 0.37, 0]} s={[0.08, 0.74, 1.0]} m={nogueira} sombra />)}
         <Caixa p={[0, 0.43, 0.47]} s={[2.5, 0.62, 0.04]} m={nogueira} sombra />
         <Caixa p={[0, 0.43, 0.495]} s={[2.3, 0.02, 0.01]} m={mat("#3dd6f5", 0.3, 0.8)} />

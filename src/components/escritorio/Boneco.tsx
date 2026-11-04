@@ -1,10 +1,11 @@
 "use client";
 
+import { ID_GESTOR } from "@/lib/banco";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import * as THREE from "three";
-import { CADEIRA_RAFAEL, viagemPausa, type EstadoAgente, type LugarReuniao, type Vec2, type Viagem } from "@/lib/escritorio/modelo";
+import { CADEIRA_GESTOR, viagemPausa, type EstadoAgente, type LugarReuniao, type Vec2, type Viagem } from "@/lib/escritorio/modelo";
 import { COR_STATUS, situacaoDe } from "./status";
 import { aparenciaDe, Corpo, poseAndando, poseConversando, poseSentado, type Juntas } from "./Corpo";
 import { mat, materialSombra } from "./materiais";
@@ -385,16 +386,16 @@ function gesticular(j: Juntas, t: number) {
   if (j.cabeca) j.cabeca.rotation.set(Math.sin(t * 3.3) * 0.06, Math.sin(t * 1.4) * 0.18, 0);
 }
 
-// ---------- o Rafael, na sala dele ----------
+// ---------- o gestor, na sala dele ----------
 
-export function Rafael({ pendentes, onClick, rotulos = true }: { pendentes: number; onClick: () => void; rotulos?: boolean }) {
-  const ap = useMemo(() => aparenciaDe("rafael", "#1f2a44"), []);
+export function Gestor({ pendentes, onClick, rotulos = true }: { pendentes: number; onClick: () => void; rotulos?: boolean }) {
+  const ap = useMemo(() => aparenciaDe(ID_GESTOR, "#1f2a44"), []);
   const juntas = useRef<Juntas>({});
   useFrame(({ clock }) => {
     poseSentado(juntas.current, "lendo", clock.elapsedTime);
   });
   return (
-    <group position={[CADEIRA_RAFAEL[0], 0, CADEIRA_RAFAEL[1]]}
+    <group position={[CADEIRA_GESTOR[0], 0, CADEIRA_GESTOR[1]]}
       onClick={(e) => { e.stopPropagation(); onClick(); }}
       onPointerOver={(e) => { e.stopPropagation(); document.body.style.cursor = "pointer"; }}
       onPointerOut={() => { document.body.style.cursor = ""; }}>
@@ -411,7 +412,7 @@ export function Rafael({ pendentes, onClick, rotulos = true }: { pendentes: numb
             background: "rgba(8,13,24,0.88)", color: pendentes > 0 ? "#fbbf24" : "#f1f5f9",
             border: `1px solid ${pendentes > 0 ? "#fbbf24" : "#3dd6f5"}`, boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
           }}>
-            Rafael · {pendentes > 0 ? `${pendentes} aguardando você` : "nada pendente"}
+            Você · {pendentes > 0 ? `${pendentes} aguardando você` : "nada pendente"}
           </div>
         </Html>
       </group>

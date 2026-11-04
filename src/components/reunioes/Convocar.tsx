@@ -1,19 +1,19 @@
 "use client";
 
-// O Rafael convoca uma reunião pela tela: título, pauta curta e os participantes (padrão: Helena, Ricardo,
+// O gestor convoca uma reunião pela tela: título, pauta curta e os participantes (padrão: Helena, Ricardo,
 // Otávio, Lúcia e Paulo). Ao criar, já entra na sala.
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Loader2, LogIn } from "lucide-react";
 import { Avatar } from "@/components/Avatar";
-import { PADRAO_REUNIAO_RAFAEL } from "@/lib/pessoas";
+import { PADRAO_REUNIAO_GESTOR } from "@/lib/pessoas";
 import type { Pessoa } from "./Controles";
 
 export function Convocar({ agentes, modo, base }: { agentes: Pessoa[]; modo: "real" | "demo"; base: string }) {
   const router = useRouter();
   const [titulo, setTitulo] = useState("");
   const [pauta, setPauta] = useState("");
-  const [sel, setSel] = useState<string[]>(PADRAO_REUNIAO_RAFAEL.filter((id) => agentes.some((a) => a.id === id)));
+  const [sel, setSel] = useState<string[]>(PADRAO_REUNIAO_GESTOR.filter((id) => agentes.some((a) => a.id === id)));
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const alternar = (id: string) => setSel((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));

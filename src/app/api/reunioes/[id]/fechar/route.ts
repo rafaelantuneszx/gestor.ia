@@ -1,4 +1,5 @@
-// O Rafael encerra a reunião pela tela; a ata leva a conversa registrada (RPC central_reuniao_fechar).
+// O gestor encerra a reunião pela tela; a ata leva a conversa registrada (RPC central_reuniao_fechar).
+import { ID_GESTOR } from "@/lib/banco";
 import { NextResponse } from "next/server";
 import { supabaseServidor } from "@/lib/supabase/server";
 import { CAMPOS_EVENTO, falaDoEvento, type Fala } from "@/lib/falas";
@@ -19,7 +20,7 @@ export async function POST(_: Request, { params }: { params: Promise<{ id: strin
   if (!r) return NextResponse.json({ erro: "reunião não encontrada" }, { status: 404 });
   const nomes = new Map(((ag.data ?? []) as { id: string; nome: string }[]).map((a) => [a.id, a.nome]));
   const falas = ((ev.data ?? []) as Parameters<typeof falaDoEvento>[0][]).map(falaDoEvento).filter((f): f is Fala => !!f);
-  const ata = r.ata ?? ataDaConversa(r, falas, (x) => (x === "rafael" ? "Rafael" : nomes.get(x) ?? x));
+  const ata = r.ata ?? ataDaConversa(r, falas, (x) => (x === ID_GESTOR ? "Gestor" : nomes.get(x) ?? x));
   const { error } = await sb.rpc("central_reuniao_fechar", { p_id: r.id, p_ata: ata });
   if (error) return NextResponse.json({ erro: explicarErro(error.message) }, { status: 400 });
   return NextResponse.json({ ok: true });

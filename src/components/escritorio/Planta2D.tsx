@@ -4,7 +4,7 @@
 // Quem está em viagem anda pelas mesmas rotas; quem está em reunião aparece na cadeira da sala de reunião.
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  CORREDORES, ESPINHA, MESAS, MESA_RAFAEL, MESA_REUNIAO, PAREDE_RESULTADOS, PREDIO, RACKS, SALAS, TV, cadeira,
+  CORREDORES, ESPINHA, MESAS, MESA_GESTOR, MESA_REUNIAO, PAREDE_RESULTADOS, PREDIO, RACKS, SALAS, TV, cadeira,
   type AgenteInfo, type EstadoAgente, type LugarReuniao, type Vec2, type Viagem,
 } from "@/lib/escritorio/modelo";
 import { COR_STATUS, situacaoDe } from "./status";
@@ -104,7 +104,7 @@ export function Planta2D({
   const comMesa = agentes.filter((a) => MESAS[a.id] || lugares[a.id] || andando[a.id]);
 
   return (
-    <div className="absolute inset-0 overflow-auto bg-[#060a12] pb-3 pt-[104px] lg:pt-[120px]">
+    <div className="absolute inset-0 overflow-auto bg-[#060a12] pb-3 pt-[150px] lg:pt-[120px]">
       <svg viewBox={`${PREDIO.x0 - MARGEM} ${PREDIO.z0 - MARGEM} ${w} ${d}`} role="img" aria-label="Planta baixa do escritório com o status de cada agente"
         className="mx-auto block h-full w-full min-w-[900px]" style={{ fontFamily: "system-ui, -apple-system, 'Segoe UI', sans-serif" }}>
         <defs>
@@ -155,12 +155,12 @@ export function Planta2D({
           <rect key={`${x}|${z}`} x={x - 0.42} y={z - 0.5} width="0.84" height="1" fill="#0f172a" stroke="#3dd6f5" strokeOpacity={i % 3 === 0 ? 0.95 : 0.45} strokeWidth="0.04" />
         ))}
         {/* sua mesa */}
-        <rect x={MESA_RAFAEL[0] - 1.4} y={MESA_RAFAEL[1] - 0.5} width="2.8" height="1" rx="0.08" fill="#1e293b" stroke="#475569" strokeWidth="0.03" />
-        <g transform={`translate(${MESA_RAFAEL[0]} ${MESA_RAFAEL[1] - 0.95})`}>
+        <rect x={MESA_GESTOR[0] - 1.4} y={MESA_GESTOR[1] - 0.5} width="2.8" height="1" rx="0.08" fill="#1e293b" stroke="#475569" strokeWidth="0.03" />
+        <g transform={`translate(${MESA_GESTOR[0]} ${MESA_GESTOR[1] - 0.95})`}>
           <circle r="0.6" fill="#0f172a" stroke={pendentes > 0 ? "#fbbf24" : "#34d399"} strokeWidth="0.13" />
-          <Texto y={0.23} tam={0.62} peso={700} cor="#f8fafc" meio>R</Texto>
+          <Texto y={0.23} tam={0.62} peso={700} cor="#f8fafc" meio>V</Texto>
           <Texto y={-0.82} tam={0.58} cor={pendentes > 0 ? "#fbbf24" : "#e2e8f0"} meio contorno>
-            Rafael{pendentes > 0 ? ` · ${pendentes}` : ""}
+            Você{pendentes > 0 ? ` · ${pendentes}` : ""}
           </Texto>
         </g>
 

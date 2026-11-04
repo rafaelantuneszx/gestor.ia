@@ -1,4 +1,4 @@
-// O Rafael convoca uma reunião pela tela: cria em andamento, com ele como quem convocou (RPC central_reuniao_abrir).
+// O gestor convoca uma reunião pela tela: cria em andamento, com ele como quem convocou (RPC central_reuniao_abrir).
 import { NextResponse } from "next/server";
 import { supabaseServidor } from "@/lib/supabase/server";
 import { explicarErro } from "@/lib/ia/erros";

@@ -1,3 +1,4 @@
+import { semNomeDoGestor } from "@/lib/banco";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import ReactMarkdown from "react-markdown";
@@ -13,10 +14,9 @@ export default async function VerDocumento({ params }: { params: Promise<{ id: s
   const { id } = await params;
   if (!(await autorizado())) return <SemAcesso />;
   const sb = await supabaseServidor();
-  const [{ setores, agentes }, doc, pend] = await Promise.all([
+  const [{ setores, agentes }, doc] = await Promise.all([
     cadastros(),
     sb.from("central_documentos").select("*").eq("id", id).maybeSingle(),
-    sb.from("central_demandas").select("id", { count: "exact", head: true }).eq("estado", "aguardando-rafael"),
   ]);
   const d = doc.data as Documento | null;
   if (!d) notFound();
@@ -31,12 +31,12 @@ export default async function VerDocumento({ params }: { params: Promise<{ id: s
 
   return (
     <>
-      <Topo aba="arquivo" pendentes={pend.count ?? 0} />
+      <Topo aba="arquivo" />
       <main className="mx-auto max-w-4xl px-4 py-6">
         <Link href={`/arquivo/${d.setor}`} className="mb-3 inline-flex items-center gap-1 text-sm text-muted hover:text-text">
           <ChevronLeft size={16} /> {setor?.nome ?? "Arquivo"}
         </Link>
-        <h1 className="text-xl font-semibold">{d.titulo}</h1>
+        <h1 className="text-xl font-semibold">{semNomeDoGestor(d.titulo)}</h1>
         <p className="mb-5 text-sm text-muted">
           {d.agente ? nomeDe(agentes, d.agente) : "—"} · {quando(d.criado_em)}
           {d.rotina ? ` · rotina ${d.rotina}` : ""}
@@ -47,7 +47,7 @@ export default async function VerDocumento({ params }: { params: Promise<{ id: s
         {d.storage_path && !pdf && <p className="mb-6 text-sm text-bad">Não foi possível abrir o arquivo anexado.</p>}
         {d.conteudo_md && (
           <article className="md ios-card p-5 text-[15px]">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{d.conteudo_md}</ReactMarkdown>
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{semNomeDoGestor(d.conteudo_md)}</ReactMarkdown>
           </article>
         )}
       </main>

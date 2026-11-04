@@ -1,14 +1,17 @@
 // Vozes reais (ElevenLabs) de cada agente. Só roda no servidor: a chave ELEVENLABS_API_KEY fica na Vercel.
 // O mapa agente → voz está em vozes-reais.json, gerado por scripts/vozes-elevenlabs.mjs (ids de voz não são
 // segredo). Agente sem voz no mapa, ou sem a chave, continua com a voz do navegador.
+import { ID_GESTOR } from "@/lib/banco";
 import VOZES from "./vozes-reais.json";
 
 export type VozReal = { voice_id: string; nome: string; preview_url?: string };
 
 const MAPA = VOZES as Record<string, VozReal>;
+// No mapa de vozes, o gestor fica com a chave neutra; no banco, o id é o legado.
+const chaveDe = (agente: string) => (agente === ID_GESTOR ? "gestor" : agente);
 
 export function vozReal(agente: string): VozReal | null {
-  return MAPA[agente] ?? null;
+  return MAPA[chaveDe(agente)] ?? null;
 }
 
 export function vozesReaisLigadas(): boolean {
@@ -16,7 +19,7 @@ export function vozesReaisLigadas(): boolean {
 }
 
 export function agentesComVozReal(): string[] {
-  return Object.keys(MAPA);
+  return Object.keys(MAPA).map((k) => (k === "gestor" ? ID_GESTOR : k));
 }
 
 // Fala → áudio MP3. Lança erro com a mensagem da ElevenLabs quando falha (cota, chave inválida, voz removida).

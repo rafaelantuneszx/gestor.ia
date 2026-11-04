@@ -183,7 +183,7 @@ function barra(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, r
   }
 }
 
-// Parede de independência: quanto anda sem depender do Rafael.
+// Parede de independência: quanto anda sem depender do gestor.
 export function desenharIndependencia(ctx: CanvasRenderingContext2D, w: number, h: number, d: DadosLed) {
   fundoLed(ctx, w, h);
   ctx.textBaseline = "alphabetic";

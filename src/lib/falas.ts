@@ -1,3 +1,4 @@
+import { semNomeDoGestor } from "@/lib/banco";
 // Falas das reuniões. Cada fala é um evento em central_eventos com tipo 'nota', rotina 'reuniao#<id>' e
 // resumo começando com "fala: " (o agente do evento é quem falou). Funções puras: servem no servidor e no navegador.
 
@@ -10,7 +11,7 @@ export function falaDoEvento(ev: { id: number; ts: string; tipo: string; agente:
   if (ev.tipo !== "nota" || !RE_FALA.test(ev.resumo ?? "")) return null;
   const m = RE_ROTINA.exec(ev.rotina ?? "");
   if (!m) return null;
-  const texto = ev.resumo.replace(RE_FALA, "").trim();
+  const texto = semNomeDoGestor(ev.resumo.replace(RE_FALA, "").trim());
   if (!texto) return null;
   return { id: ev.id, ts: ev.ts, agente: ev.agente, texto, reuniaoId: Number(m[1]) };
 }

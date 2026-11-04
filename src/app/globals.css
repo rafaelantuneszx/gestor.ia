@@ -168,6 +168,16 @@ body:has(.ios-abas) {
     animation: gi-pulso 1.6s ease-out infinite;
   }
 }
+/* Infra: a energia corre só na ligação da peça escolhida, para nada piscar sem motivo. */
+@media (prefers-reduced-motion: no-preference) {
+  .infra-fluxo {
+    stroke-dasharray: 8 6;
+    animation: infra-fluxo 0.9s linear infinite;
+  }
+}
+@keyframes infra-fluxo {
+  to { stroke-dashoffset: -14; }
+}
 @keyframes gi-pulso {
   0% { box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 55%, transparent); }
   100% { box-shadow: 0 0 0 6px transparent; }
