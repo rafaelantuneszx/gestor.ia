@@ -1,4 +1,4 @@
--- PROPOSTA, NÃO APLICADA. Aplicar só com o ok do Rafael.
+-- Aplicada no projeto Pavimax-ERP em 03/11/2026, com o ok do Rafael.
 -- Cartões da tela "Supervisão de e-mails" do escritório. Guarda só o necessário para o cartão: conta, pasta, data, nome do
 -- remetente, assunto, quantos anexos e o agente que supervisiona. NÃO guarda o texto do e-mail, o endereço do remetente nem os
 -- anexos. Só quem está em central_usuarios lê; só o token dos agentes grava; cada cartão some depois de 30 dias.
