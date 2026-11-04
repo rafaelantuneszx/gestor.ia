@@ -29,7 +29,7 @@ import { Boneco, Rafael } from "./Boneco";
 import { Efeitos } from "./Efeitos";
 import { Mosaico, layoutMosaico } from "./Mosaico";
 import type { PainelTV } from "./tv";
-import { LogoGestor } from "@/components/LogoGestor";
+import { Logo } from "@/components/marca/Logo";
 import { DataCenter, PainelSuspenso, ParedeResultados } from "./Tech";
 import { Planta2D } from "./Planta2D";
 import { TelaEmails, TelaEquipe, TelaResultados } from "./Telas";
@@ -563,7 +563,7 @@ export default function Escritorio({ modo }: { modo: "real" | "demo" }) {
   const topoMosaico = largo ? 112 : 170;
   const base = modo === "demo" ? "/reunioes/demo" : "/reunioes";
 
-  const botao = "tech-vidro inline-flex h-10 shrink-0 items-center gap-1.5 rounded-xl px-3 text-sm font-medium transition hover:border-cyan-300";
+  const botao = "tech-vidro inline-flex h-10 shrink-0 items-center gap-1.5 rounded-xl px-3 text-sm font-medium transition hover:border-sinal";
   const botaoTela = (t: "emails" | "equipe" | "resultados") => `${botao} ${tela2 === t ? "!bg-accent-fill !border-accent-fill text-white" : ""}`;
 
   return (
@@ -588,11 +588,11 @@ export default function Escritorio({ modo }: { modo: "real" | "demo" }) {
           shadow-radius={4}
           shadow-camera-left={-34} shadow-camera-right={34} shadow-camera-top={26} shadow-camera-bottom={-26}
           shadow-camera-near={5} shadow-camera-far={90} />
-        <directionalLight position={[14, 10, -26]} intensity={0.55} color="#22d3ee" />
+        <directionalLight position={[14, 10, -26]} intensity={0.55} color="#3dd6f5" />
         {/* reflexos: painéis de luz como num teto de escritório e as janelas */}
         <Environment resolution={fraca ? 64 : 256} frames={1} environmentIntensity={0.42}>
           <Lightformer form="rect" intensity={2.2} color="#dbeafe" position={[0, 9, 0]} rotation-x={Math.PI / 2} scale={[52, 36, 1]} />
-          <Lightformer form="rect" intensity={1.6} color="#22d3ee" position={[0, 3, PREDIO.z0 - 6]} scale={[52, 5, 1]} />
+          <Lightformer form="rect" intensity={1.6} color="#3dd6f5" position={[0, 3, PREDIO.z0 - 6]} scale={[52, 5, 1]} />
           <Lightformer form="rect" intensity={1.0} color="#3b82f6" position={[0, 3, PREDIO.z1 + 8]} rotation-y={Math.PI} scale={[52, 5, 1]} />
           <Lightformer form="rect" intensity={0.8} color="#818cf8" position={[PREDIO.x1 + 6, 3, 0]} rotation-y={-Math.PI / 2} scale={[36, 5, 1]} />
         </Environment>
@@ -646,7 +646,7 @@ export default function Escritorio({ modo }: { modo: "real" | "demo" }) {
         <div className="flex flex-wrap items-start gap-2">
           <div className="tech-vidro pointer-events-auto rounded-xl px-3.5 py-2">
             <div className="flex items-center gap-2 text-sm font-semibold">
-              <LogoGestor tamanho={20} className="mr-1 border-r border-line pr-2.5" />
+              <Logo escuro altura={24} className="mr-1 border-r border-line pr-2.5" />
               {reproduzindo ? (
                 <><Play size={14} className="text-warn" /> Reproduzindo o dia · {reproduzindo.hora}</>
               ) : (
@@ -655,7 +655,7 @@ export default function Escritorio({ modo }: { modo: "real" | "demo" }) {
               )}
             </div>
             <div className="mt-0.5 text-xs text-muted">
-              <span className="text-cyan-300">{trabalhando} trabalhando</span>{emReuniao > 0 ? ` · ${emReuniao} em reunião` : ""} · {pendentes} aguardando você <span className="hidden sm:inline">· {indicadores.aFazer} a fazer · {indicadores.feitas} feitas</span>
+              <span className="text-sinal">{trabalhando} trabalhando</span>{emReuniao > 0 ? ` · ${emReuniao} em reunião` : ""} · {pendentes} aguardando você <span className="hidden sm:inline">· {indicadores.aFazer} a fazer · {indicadores.feitas} feitas</span>
               {erro && <span className="ml-1 text-bad">· sem conexão ({erro.slice(0, 60)})</span>}
             </div>
           </div>
@@ -713,7 +713,7 @@ export default function Escritorio({ modo }: { modo: "real" | "demo" }) {
           <div className="tech-vidro flex gap-1 overflow-x-auto rounded-2xl p-1.5 [scrollbar-width:none]">
             {dados.agentes.filter((a) => MESAS[a.id]).map((a) => {
               const e = estados[a.id];
-              const cor = e?.status === "trabalhando" ? "bg-cyan-400" : e?.status === "erro" ? "bg-bad" : "bg-ok";
+              const cor = e?.status === "trabalhando" ? "bg-sinal" : e?.status === "erro" ? "bg-bad" : "bg-ok";
               return (
                 <button key={a.id} type="button" onClick={() => focar(a.id)} title={`${a.nome} · ${a.cargo}`}
                   className={`relative flex shrink-0 flex-col items-center gap-0.5 rounded-xl px-1.5 py-1 text-[11px] font-medium transition ${

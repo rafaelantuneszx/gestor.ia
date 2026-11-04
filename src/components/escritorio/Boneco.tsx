@@ -331,7 +331,7 @@ export function Boneco({
       {selecionado && mostrar && (
         <mesh ref={anel} position={[0, 0.012, 0]} rotation-x={-Math.PI / 2}>
           <ringGeometry args={[0.45, 0.54, 40]} />
-          <meshBasicMaterial color="#22d3ee" transparent opacity={0.9} toneMapped={false} />
+          <meshBasicMaterial color="#3dd6f5" transparent opacity={0.9} toneMapped={false} />
         </mesh>
       )}
       <group ref={rotulo} position={[0, 1.95, 0]}>
@@ -356,7 +356,7 @@ export function Boneco({
                 <div style={{
                   position: "relative", maxWidth: 260, minWidth: 140, padding: "7px 11px", borderRadius: 14, marginBottom: 2,
                   background: "#0b1220", color: "#f1f5f9", fontSize: 12.5, lineHeight: 1.35, fontWeight: 500,
-                  boxShadow: "0 6px 18px rgba(0,0,0,0.4)", border: "2px solid #22d3ee", order: -1,
+                  boxShadow: "0 6px 18px rgba(0,0,0,0.4)", border: "2px solid #3dd6f5", order: -1,
                   display: "-webkit-box", WebkitLineClamp: 4, WebkitBoxOrient: "vertical", overflow: "hidden",
                 }}>
                   {falando}
@@ -409,7 +409,7 @@ export function Rafael({ pendentes, onClick, rotulos = true }: { pendentes: numb
             display: rotulos ? "flex" : "none", alignItems: "center", gap: 6, padding: "3px 10px", borderRadius: 999, whiteSpace: "nowrap",
             fontFamily: "system-ui", fontSize: 12.5, fontWeight: 700, cursor: "pointer",
             background: "rgba(8,13,24,0.88)", color: pendentes > 0 ? "#fbbf24" : "#f1f5f9",
-            border: `1px solid ${pendentes > 0 ? "#fbbf24" : "#22d3ee"}`, boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
+            border: `1px solid ${pendentes > 0 ? "#fbbf24" : "#3dd6f5"}`, boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
           }}>
             Rafael · {pendentes > 0 ? `${pendentes} aguardando você` : "nada pendente"}
           </div>

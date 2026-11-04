@@ -52,7 +52,7 @@ function Pisos() {
         r={[-Math.PI / 2, 0, 0]} m={materialPiso("concreto", ESPINHA.x1 - ESPINHA.x0, ESPINHA.z1 - ESPINHA.z0)} />
       {/* faixas de piso tátil/guia no meio dos corredores */}
       {Object.values(CORREDORES).map((c) => (
-        <Plano key={`g${c.z0}`} p={[cx, 0.004, c.faixa]} s={[w - 1, 0.05]} r={[-Math.PI / 2, 0, 0]} m={emissivo("#22d3ee", 1.7)} />
+        <Plano key={`g${c.z0}`} p={[cx, 0.004, c.faixa]} s={[w - 1, 0.05]} r={[-Math.PI / 2, 0, 0]} m={emissivo("#3dd6f5", 1.7)} />
       ))}
     </group>
   );
@@ -296,7 +296,7 @@ export const Predio = memo(function Predio() {
       <mesh geometry={plano()} material={vidro()} position={[S.datacenter.x0, H / 2, (S.datacenter.z0 + S.datacenter.z1) / 2]} rotation-y={Math.PI / 2} scale={[S.datacenter.z1 - S.datacenter.z0, H - 0.1, 1]} />
       <Caixa p={[S.datacenter.x0, 0.05, (S.datacenter.z0 + S.datacenter.z1) / 2]} s={[0.08, 0.1, S.datacenter.z1 - S.datacenter.z0]} m={aluminio()} />
       <Caixa p={[S.datacenter.x0, H - 0.04, (S.datacenter.z0 + S.datacenter.z1) / 2]} s={[0.08, 0.08, S.datacenter.z1 - S.datacenter.z0]} m={aluminio()} />
-      <mesh geometry={plano()} material={emissivo("#22d3ee", 1.8)} position={[S.datacenter.x0 + 0.05, 0.13, (S.datacenter.z0 + S.datacenter.z1) / 2]} rotation-y={Math.PI / 2} scale={[S.datacenter.z1 - S.datacenter.z0, 0.03, 1]} />
+      <mesh geometry={plano()} material={emissivo("#3dd6f5", 1.8)} position={[S.datacenter.x0 + 0.05, 0.13, (S.datacenter.z0 + S.datacenter.z1) / 2]} rotation-y={Math.PI / 2} scale={[S.datacenter.z1 - S.datacenter.z0, 0.03, 1]} />
       {/* placas das salas do meio que abrem para o corredor 1, também do lado da câmera */}
       {[S["frota-rh"], S.suprimentos].map((s) => <Placa key={s.id} sala={s} x={(s.x0 + s.x1) / 2} z={CORREDORES.c2.z0} />)}
 

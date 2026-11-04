@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Archive, Building2, Inbox, ListChecks, LogOut, Users } from "lucide-react";
 import { sair } from "@/app/acoes";
-import { LogoGestor } from "@/components/LogoGestor";
+import { Logo } from "@/components/marca/Logo";
 
 type Aba = "mesa" | "arquivo" | "escritorio" | "reunioes" | "funcoes";
 
@@ -20,7 +20,7 @@ export function Topo({ aba, pendentes }: { aba: Aba; pendentes: number }) {
       <header className="ios-vidro sticky top-0 z-30 h-[57px] border-b border-line">
         <div className="mx-auto flex h-full max-w-6xl items-center gap-2 px-4">
           <Link href="/" className="mr-3 text-[17px]" aria-label="Gestor.IA, ir para a Mesa">
-            <LogoGestor tamanho={26} />
+            <span className="hidden md:inline-flex"><Logo /></span><span className="md:hidden"><Logo simbolo /></span>
           </Link>
           <nav aria-label="Seções" className="ios-segmento hidden md:inline-flex">
             {ABAS.map(({ id, href, rotulo, Icone }) => (

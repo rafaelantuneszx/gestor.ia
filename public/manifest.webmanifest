@@ -1,0 +1,13 @@
+{
+  "name": "Gestor.IA",
+  "short_name": "Gestor.IA",
+  "description": "Seu escritório remoto 24 horas. Sua empresa e seu grupo em um só lugar.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a1424",
+  "theme_color": "#0066d6",
+  "lang": "pt-BR",
+  "icons": [
+    { "src": "/marca/app-icon-1024.png", "sizes": "1024x1024", "type": "image/png", "purpose": "any" }
+  ]
+}

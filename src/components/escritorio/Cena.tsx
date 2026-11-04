@@ -413,7 +413,7 @@ export function SalaRafael({ pendentes, onClick }: { pendentes: number; onClick:
         <mesh geometry={TAMPO_RAFAEL} material={nogueira} position={[0, 0.75, 0]} castShadow receiveShadow />
         {[-1.3, 1.3].map((x) => <Caixa key={x} p={[x, 0.37, 0]} s={[0.08, 0.74, 1.0]} m={nogueira} sombra />)}
         <Caixa p={[0, 0.43, 0.47]} s={[2.5, 0.62, 0.04]} m={nogueira} sombra />
-        <Caixa p={[0, 0.43, 0.495]} s={[2.3, 0.02, 0.01]} m={mat("#22d3ee", 0.3, 0.8)} />
+        <Caixa p={[0, 0.43, 0.495]} s={[2.3, 0.02, 0.01]} m={mat("#3dd6f5", 0.3, 0.8)} />
         {Array.from({ length: pilha }).map((_, i) => (
           <Caixa key={i} p={[-0.85 + (i % 2) * 0.02, 0.795 + i * 0.022, 0.05 + (i % 3) * 0.015]}
             s={[0.3, 0.018, 0.42]} r={[0, (i % 4) * 0.06, 0]} m={mat(i % 2 ? "#334155" : "#3b4a5e", 0.9)} sombra />
@@ -436,7 +436,7 @@ export function SalaRafael({ pendentes, onClick }: { pendentes: number; onClick:
       {/* aparador e quadro atrás de você, estante na parede da recepção */}
       <group position={[mx, 0, s.z0 + 0.35]}>
         <Caixa p={[0, 0.36, 0]} s={[3.6, 0.72, 0.5]} m={mat("#111827", 0.45)} sombra recebe />
-        <Caixa p={[0, 0.735, 0]} s={[3.64, 0.03, 0.52]} m={mat("#22d3ee", 0.35, 0.6)} />
+        <Caixa p={[0, 0.735, 0]} s={[3.64, 0.03, 0.52]} m={mat("#3dd6f5", 0.35, 0.6)} />
         <mesh geometry={CIL} material={mat("#1e293b", 0.4)} position={[-1.3, 0.9, 0]} scale={[0.18, 0.3, 0.18]} castShadow />
         <Caixa p={[1.1, 0.84, 0]} s={[0.5, 0.18, 0.3]} m={mat("#0e7490", 0.7)} />
       </group>
@@ -585,7 +585,7 @@ export const Recepcao = memo(function Recepcao() {
         <mesh geometry={plano()} position={[0, ALT / 2, 0.123]} scale={[5.4, 2.7, 1]}>
           <meshStandardMaterial map={logo} roughness={0.55} emissive="#ffffff" emissiveMap={logo} emissiveIntensity={0.18} />
         </mesh>
-        <mesh geometry={plano()} material={emissivo("#22d3ee", 1.6)} position={[0, 0.02, 0.2]} rotation-x={-Math.PI / 2} scale={[6.8, 0.08, 1]} />
+        <mesh geometry={plano()} material={emissivo("#3dd6f5", 1.6)} position={[0, 0.02, 0.2]} rotation-x={-Math.PI / 2} scale={[6.8, 0.08, 1]} />
       </group>
       {/* balcão */}
       <group position={[-1, 0, 13.6]}>
@@ -594,7 +594,7 @@ export const Recepcao = memo(function Recepcao() {
         {Array.from({ length: 20 }).map((_, i) => (
           <Caixa key={i} p={[-1.9 + i * 0.2, 0.55, 0.405]} s={[0.12, 1.0, 0.02]} m={mat("#14304a", 0.5)} />
         ))}
-        <mesh geometry={plano()} material={emissivo("#22d3ee", 1.2)} position={[0, 0.03, 0.43]} rotation-x={-Math.PI / 2} scale={[4.0, 0.06, 1]} />
+        <mesh geometry={plano()} material={emissivo("#3dd6f5", 1.2)} position={[0, 0.03, 0.43]} rotation-x={-Math.PI / 2} scale={[4.0, 0.06, 1]} />
         <group position={[0.9, 1.14, -0.15]} rotation-y={Math.PI}>
           <Caixa p={[0, 0.25, 0]} s={[0.55, 0.34, 0.02]} m={mat("#111214", 0.35)} />
           <mesh geometry={plano()} material={emissivo("#38bdf8", 0.5)} position={[0, 0.255, 0.011]} scale={[0.52, 0.31, 1]} />

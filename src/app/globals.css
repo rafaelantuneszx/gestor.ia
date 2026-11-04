@@ -22,6 +22,19 @@
   --bad: #c9000f;
   --bad-soft: #ffe9ea;
   --barra-vidro: rgba(249, 249, 251, 0.78);
+  --marca-50: #eef5ff;
+  --marca-100: #d9e8ff;
+  --marca-300: #6aa9f5;
+  --marca-400: #1a7cf0;
+  --marca-500: #0066d6;
+  --marca-600: #0052b4;
+  --marca-700: #003d87;
+  --marca-900: #0a1f3d;
+  --noite: #0a1424;
+  --on-marca: #ffffff;
+  --sinal: #00728f;
+  --sinal-soft: #e0f6fb;
+  --font-display: var(--fonte-space), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --altura-topo: 57px;
   --altura-abas: calc(56px + env(safe-area-inset-bottom, 0px));
   --altura-barras: calc(var(--altura-topo) + var(--altura-abas));
@@ -51,6 +64,8 @@
     --bad: #ff6961;
     --bad-soft: #33110f;
     --barra-vidro: rgba(28, 28, 30, 0.74);
+    --sinal: #3dd6f5;
+    --sinal-soft: #062a33;
   }
 }
 
@@ -70,6 +85,19 @@
   --color-warn-soft: var(--warn-soft);
   --color-bad: var(--bad);
   --color-bad-soft: var(--bad-soft);
+  --color-marca-50: var(--marca-50);
+  --color-marca-100: var(--marca-100);
+  --color-marca-300: var(--marca-300);
+  --color-marca-400: var(--marca-400);
+  --color-marca-500: var(--marca-500);
+  --color-marca-600: var(--marca-600);
+  --color-marca-700: var(--marca-700);
+  --color-marca-900: var(--marca-900);
+  --color-noite: var(--noite);
+  --color-on-marca: var(--on-marca);
+  --color-sinal: var(--sinal);
+  --color-sinal-soft: var(--sinal-soft);
+  --font-display: var(--fonte-space), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --radius-lg: 0.75rem;
   --radius-xl: 1rem;
   --radius-2xl: 1.375rem;
@@ -130,12 +158,24 @@ body:has(.ios-abas) {
   --warn-soft: #2e2408;
   --bad: #f87171;
   --bad-soft: #33151a;
+  --sinal: #3dd6f5;
+  --sinal-soft: #062a33;
   color: var(--text);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .gi-agente[data-ativo="true"]::before {
+    animation: gi-pulso 1.6s ease-out infinite;
+  }
+}
+@keyframes gi-pulso {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 55%, transparent); }
+  100% { box-shadow: 0 0 0 6px transparent; }
 }
 
 @layer components {
   .tech-vidro {
-    border: 1px solid rgba(34, 211, 238, 0.24);
+    border: 1px solid rgba(61, 214, 245, 0.24);
     background: rgba(8, 13, 24, 0.84);
     -webkit-backdrop-filter: blur(16px) saturate(150%);
     backdrop-filter: blur(16px) saturate(150%);
@@ -152,10 +192,170 @@ body:has(.ios-abas) {
     color: var(--muted);
   }
   .ios-titulo {
+    font-family: var(--font-display);
     font-size: 1.75rem;
     line-height: 1.15;
     font-weight: 700;
-    letter-spacing: -0.022em;
+    letter-spacing: -0.02em;
+  }
+  .gi-numero {
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+  .gi-agente {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    flex-shrink: 0;
+    border-radius: 999px;
+    padding: 0.125rem 0.625rem 0.125rem 0.5rem;
+    background: var(--sinal-soft);
+    color: var(--sinal);
+    white-space: nowrap;
+    font-size: 0.75rem;
+    line-height: 1rem;
+    font-weight: 600;
+  }
+  .gi-agente::before {
+    content: "";
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: currentColor;
+    box-shadow: 0 0 0 0 currentColor;
+  }
+  .gi-agente--parado {
+    background: var(--fill);
+    color: var(--muted);
+  }
+  .gi-escopo {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 2.25rem;
+    border-radius: 999px;
+    background: var(--fill);
+    color: var(--text);
+    padding: 0 0.75rem 0 0.375rem;
+    white-space: nowrap;
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+  .gi-monograma {
+    display: inline-grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 0.4375rem;
+    background: var(--marca-500);
+    color: var(--on-marca);
+    font-family: var(--font-display);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  .gi-monograma--grupo {
+    background: var(--text);
+    color: var(--card);
+  }
+  .gi-plantao {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    border-radius: var(--radius-xl);
+    background: var(--card);
+    padding: 0.75rem 1rem;
+  }
+  .gi-plantao-titulo {
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: 0.9375rem;
+  }
+  .gi-linha-tempo {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .gi-linha-tempo li {
+    position: relative;
+    display: grid;
+    grid-template-columns: 3rem 1fr;
+    gap: 0.75rem;
+    padding: 0.5rem 0;
+    font-size: 0.875rem;
+  }
+  .gi-linha-tempo li::before {
+    content: "";
+    position: absolute;
+    left: 3.6rem;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--line);
+  }
+  .gi-linha-tempo time {
+    font-family: var(--font-display);
+    font-variant-numeric: tabular-nums;
+    color: var(--muted);
+    font-size: 0.8125rem;
+    padding-top: 1px;
+  }
+  .gi-linha-tempo .gi-fato {
+    position: relative;
+    min-width: 0;
+    padding-left: 1.25rem;
+  }
+  .gi-linha-tempo .gi-fato::before {
+    content: "";
+    position: absolute;
+    left: -0.03rem;
+    top: 0.375rem;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: var(--marca-300);
+    box-shadow: 0 0 0 3px var(--card);
+  }
+  .gi-linha-tempo .gi-fato[data-tipo="decidir"]::before {
+    background: var(--warn);
+  }
+  .gi-linha-tempo .gi-fato[data-tipo="agora"]::before {
+    background: var(--sinal);
+  }
+  .gi-autonomia {
+    display: flex;
+    height: 0.5rem;
+    border-radius: 999px;
+    overflow: hidden;
+    gap: 2px;
+    background: var(--fill);
+  }
+  .gi-autonomia > span {
+    display: block;
+    height: 100%;
+  }
+  .gi-autonomia .sozinho { background: var(--ok); }
+  .gi-autonomia .aprova { background: var(--accent); }
+  .gi-autonomia .voce { background: var(--warn); }
+  .gi-autonomia .sem-dono { background: var(--bad); }
+  .gi-legenda-autonomia {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+  .gi-legenda-autonomia i {
+    display: inline-block;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 2px;
+    margin-right: 0.375rem;
+    vertical-align: 0.05em;
   }
   .ios-campo {
     width: 100%;

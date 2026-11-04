@@ -27,10 +27,10 @@ export function TelaSuspensa({ titulo, subtitulo, icone, onFechar, children, rod
       className="absolute inset-x-2 bottom-2 z-40 flex h-[68%] flex-col min-[900px]:inset-x-auto min-[900px]:bottom-4 min-[900px]:right-4 min-[900px]:top-[132px] min-[900px]:h-auto min-[900px]:w-[440px]">
       {/* cabos que seguram a tela */}
       <div aria-hidden className="pointer-events-none absolute -top-[132px] hidden h-[132px] w-full min-[900px]:block">
-        <span className="absolute left-14 h-full w-px bg-gradient-to-b from-transparent to-cyan-400/50" />
-        <span className="absolute right-14 h-full w-px bg-gradient-to-b from-transparent to-cyan-400/50" />
+        <span className="absolute left-14 h-full w-px bg-gradient-to-b from-transparent to-sinal/50" />
+        <span className="absolute right-14 h-full w-px bg-gradient-to-b from-transparent to-sinal/50" />
       </div>
-      <div className="tech-vidro flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl shadow-[0_0_40px_rgba(34,211,238,0.14)]">
+      <div className="tech-vidro flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl shadow-[0_0_40px_rgba(61,214,245,0.14)]">
         <header className="flex items-start gap-3 border-b border-line px-4 py-3">
           <span className="mt-0.5 text-accent">{icone}</span>
           <div className="min-w-0 flex-1">
@@ -368,7 +368,7 @@ function Barra({ titulo, detalhe, f, cor }: { titulo: string; detalhe: string; f
 
 export function TelaResultados({ ind, agentes, onFechar }: { ind: Indicadores; agentes: AgenteInfo[]; onFechar: () => void }) {
   const cards: [string, number, string, string][] = [
-    ["Atualizadas hoje", ind.atualizadasHoje, "#22d3ee", "demandas que mudaram hoje"],
+    ["Atualizadas hoje", ind.atualizadasHoje, "#3dd6f5", "demandas que mudaram hoje"],
     ["Entregues", ind.entregues, "#a78bfa", `relatórios no Arquivo · ${ind.entreguesHoje} hoje`],
     ["Feitas", ind.feitas, "#34d399", "demandas concluídas"],
     ["A fazer", ind.aFazer, "#fbbf24", `${ind.aguardandoVoce} aguardando você`],
@@ -393,7 +393,7 @@ export function TelaResultados({ ind, agentes, onFechar }: { ind: Indicadores; a
       </div>
       <section className="space-y-4 border-t border-line p-4">
         <h3 className="text-sm font-semibold text-muted">Quanto anda sem depender de você</h3>
-        <Barra titulo="Agentes resolvem sem você" f={ind.agentesSemVoce} cor="#22d3ee"
+        <Barra titulo="Agentes resolvem sem você" f={ind.agentesSemVoce} cor="#3dd6f5"
           detalhe={`${ind.agentesSemVoce.feitos} de ${ind.agentesSemVoce.total} demandas feitas não precisaram da sua decisão na Mesa.`} />
         <Barra titulo="Rotinas terminam sem erro" f={ind.rotinasSemErro} cor="#34d399"
           detalhe={`${ind.rotinasSemErro.feitos} de ${ind.rotinasSemErro.total} execuções nos últimos 30 dias.`} />
