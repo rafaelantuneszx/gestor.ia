@@ -31,8 +31,8 @@ function Plano({ p, s, m, r }: { p: V3; s: [number, number]; m: THREE.Material; 
   return <mesh geometry={plano()} material={m} position={p} scale={[s[0], s[1], 1]} rotation={r} receiveShadow />;
 }
 
-const rodape = () => mat("#3a3d42", 0.6);
-const roda = () => mat("#9c968e", 0.8);
+const rodape = () => mat("#0a0f17", 0.5);
+const roda = () => mat("#22303f", 0.6);
 
 // ---------- pisos ----------
 function Pisos() {
@@ -52,7 +52,7 @@ function Pisos() {
         r={[-Math.PI / 2, 0, 0]} m={materialPiso("concreto", ESPINHA.x1 - ESPINHA.x0, ESPINHA.z1 - ESPINHA.z0)} />
       {/* faixas de piso tátil/guia no meio dos corredores */}
       {Object.values(CORREDORES).map((c) => (
-        <Plano key={`g${c.z0}`} p={[cx, 0.004, c.faixa]} s={[w - 1, 0.08]} r={[-Math.PI / 2, 0, 0]} m={mat("#b9b3aa", 0.4)} />
+        <Plano key={`g${c.z0}`} p={[cx, 0.004, c.faixa]} s={[w - 1, 0.05]} r={[-Math.PI / 2, 0, 0]} m={emissivo("#22d3ee", 1.7)} />
       ))}
     </group>
   );
@@ -122,7 +122,7 @@ function Fachada({ eixo, fixo, de, ate, pilares, lado }: { eixo: "x" | "z"; fixo
       <Caixa p={pos(meio, H + 0.1)} s={esc(len + 0.24, 0.02, 0.26)} m={roda()} />
       {marcos.map((v, i) => <Caixa key={`p${i}`} p={pos(v, H / 2)} s={esc(0.5, H, 0.26)} m={parede()} sombra recebe />)}
       {montantes.map((v) => <Caixa key={v} p={pos(v, (PEITORIL + VERGA) / 2)} s={esc(0.05, VERGA - PEITORIL, 0.08)} m={aluminio()} />)}
-      <Caixa p={pos(meio, PEITORIL + 0.02, -0.18)} s={esc(len - 0.4, 0.04, 0.22)} m={mat("#ece9e3", 0.4)} recebe />
+      <Caixa p={pos(meio, PEITORIL + 0.02, -0.18)} s={esc(len - 0.4, 0.04, 0.22)} m={mat("#1a2230", 0.35)} recebe />
       <Caixa p={pos(meio, PEITORIL, 0)} s={esc(len, 0.04, 0.1)} m={aluminio()} />
       <Caixa p={pos(meio, VERGA, 0)} s={esc(len, 0.04, 0.1)} m={aluminio()} />
       <mesh geometry={plano()} material={vidro()} position={pos(meio, (PEITORIL + VERGA) / 2)} rotation={rot} scale={[len, VERGA - PEITORIL, 1]} />
@@ -252,9 +252,9 @@ export const Predio = memo(function Predio() {
   return (
     <group>
       {/* terreno, calçada e laje */}
-      <mesh geometry={plano()} rotation-x={-Math.PI / 2} position={[cx, -0.32, cz + 6]} scale={[260, 260, 1]} receiveShadow material={mat("#cfd6d2", 1)} />
-      <Caixa p={[cx, -0.16, cz + 1]} s={[w + 3, 0.32, d + 6]} m={mat("#d9d4cc", 0.85)} recebe />
-      <Caixa p={[cx, -0.15, PREDIO.z1 + 2.2]} s={[w + 3, 0.3, 0.2]} m={mat("#b9b2a8", 0.8)} />
+      <mesh geometry={plano()} rotation-x={-Math.PI / 2} position={[cx, -0.32, cz + 6]} scale={[260, 260, 1]} receiveShadow material={mat("#05080e", 1)} />
+      <Caixa p={[cx, -0.16, cz + 1]} s={[w + 3, 0.32, d + 6]} m={mat("#0c111a", 0.7)} recebe />
+      <Caixa p={[cx, -0.15, PREDIO.z1 + 2.2]} s={[w + 3, 0.3, 0.2]} m={emissivo("#0e7490", 1)} />
       <Pisos />
       <Forro />
 
@@ -288,7 +288,15 @@ export const Predio = memo(function Predio() {
         ...trechosDaSala(S.arquivo, "vidro", true, -1),
         ...trechosDaSala(S.copa, "vidro", true, -1),
       ]} />
-      <ParedeZ z={CORREDORES.c2.z1} trechos={trechosDaSala(S.rafael, "vidro", true, 1, [[-23.2, -14.8]])} />
+      <ParedeZ z={CORREDORES.c2.z1} trechos={[
+        ...trechosDaSala(S.rafael, "vidro", true, 1, [[-23.2, -14.8]]),
+        ...trechosDaSala(S.datacenter, "vidro", true, 1),
+      ]} />
+      {/* vidro entre a recepção e o data center */}
+      <mesh geometry={plano()} material={vidro()} position={[S.datacenter.x0, H / 2, (S.datacenter.z0 + S.datacenter.z1) / 2]} rotation-y={Math.PI / 2} scale={[S.datacenter.z1 - S.datacenter.z0, H - 0.1, 1]} />
+      <Caixa p={[S.datacenter.x0, 0.05, (S.datacenter.z0 + S.datacenter.z1) / 2]} s={[0.08, 0.1, S.datacenter.z1 - S.datacenter.z0]} m={aluminio()} />
+      <Caixa p={[S.datacenter.x0, H - 0.04, (S.datacenter.z0 + S.datacenter.z1) / 2]} s={[0.08, 0.08, S.datacenter.z1 - S.datacenter.z0]} m={aluminio()} />
+      <mesh geometry={plano()} material={emissivo("#22d3ee", 1.8)} position={[S.datacenter.x0 + 0.05, 0.13, (S.datacenter.z0 + S.datacenter.z1) / 2]} rotation-y={Math.PI / 2} scale={[S.datacenter.z1 - S.datacenter.z0, 0.03, 1]} />
       {/* placas das salas do meio que abrem para o corredor 1, também do lado da câmera */}
       {[S["frota-rh"], S.suprimentos].map((s) => <Placa key={s.id} sala={s} x={(s.x0 + s.x1) / 2} z={CORREDORES.c2.z0} />)}
 

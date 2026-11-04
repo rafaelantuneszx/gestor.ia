@@ -34,7 +34,8 @@ export type Viagem = {
   agente: string;
   caminho: Vec2[]; // da cadeira até o destino; a volta é o caminho invertido
   rotulo: string;
-  tipo: "documento" | "demanda" | "buscar";
+  tipo: "documento" | "demanda" | "buscar" | "pausa";
+  espera?: number; // segundos parado no destino
 };
 
 // ---------- planta ----------
@@ -96,7 +97,8 @@ export const SALAS: Sala[] = [
   { id: "arquivo", nome: "Arquivo", cor: "#78716c", icone: "arquivo", fileira: "meio", x0: 7, x1: 17, z0: -4, z1: 6, corredor: "c2", porta: 7.9, faixa: -1.9, piso: "madeira" },
   { id: "copa", nome: "Copa", cor: "#0f766e", icone: "copa", fileira: "meio", x0: 17, x1: 26, z0: -4, z1: 6, corredor: "c2", porta: 17.9, faixa: 3.6, piso: "porcelanato" },
   { id: "rafael", nome: "Sala do Rafael", cor: "#b8875a", icone: "rafael", fileira: "frente", x0: -26, x1: -10, z0: 10, z1: 17, corredor: "c2", porta: -11.0, faixa: 11.2, piso: "carpete-quente" },
-  { id: "recepcao", nome: "Recepção", cor: "#1f2937", icone: "recepcao", fileira: "frente", x0: -10, x1: 26, z0: 10, z1: 17, corredor: "c2", porta: 8.5, faixa: 15.8, piso: "porcelanato", aberta: true },
+  { id: "recepcao", nome: "Recepção", cor: "#1f2937", icone: "recepcao", fileira: "frente", x0: -10, x1: 12, z0: 10, z1: 17, corredor: "c2", porta: 8.5, faixa: 15.8, piso: "porcelanato", aberta: true },
+  { id: "datacenter", nome: "Data center", cor: "#22d3ee", icone: "sistemas", fileira: "frente", x0: 12, x1: 26, z0: 10, z1: 17, corredor: "c2", porta: 13.0, faixa: 13.3, piso: "concreto" },
 ];
 
 export const SALA = Object.fromEntries(SALAS.map((s) => [s.id, s])) as Record<string, Sala>;
@@ -137,6 +139,17 @@ export const ARQUIVO_FRENTE = -2.75; // onde se para para guardar o relatório
 // Sala de reunião: a TV fica na parede do fundo (z = -4), virada para a mesa e para a câmera.
 export const MESA_REUNIAO: Vec2 = [-4.5, 1.0];
 export const TV = { x: -4.5, y: 1.62, z: -4 + 0.09, largura: 2.6, altura: 1.46 };
+
+// Telas de resultados na parede do fundo da sala de reunião, uma de cada lado da TV.
+export const PAREDE_RESULTADOS = { y: 1.5, z: -4 + 0.1, largura: 4.0, altura: 1.8, xResultados: -8.0, xIndependencia: -1.0 };
+
+// Data center: duas fileiras de servidores viradas para a frente do prédio.
+export const SISTEMAS_RACK = ["PaviMax ERP", "FPAV Financeiro", "FPAV RH", "Gestor.IA"];
+export const RACKS: Vec2[] = [12.0, 15.0].flatMap((z) =>
+  Array.from({ length: 12 }, (_, i) => [14.05 + i * 0.95, z] as Vec2));
+
+// Onde cada agente fica na copa durante uma pausa.
+export const PONTOS_COPA: Vec2[] = [[19.2, 3.6], [20.6, 3.6], [22.4, 3.6], [24.0, 3.6]];
 
 export function cadeira(agente: string): Vec2 {
   const m = MESAS[agente] ?? [0, 0];
@@ -282,8 +295,14 @@ function cameraDaSala(s: Sala, lado: "esq" | "dir" = "dir"): Vista {
   return [lado === "dir" ? s.x1 - 0.45 : s.x0 + 0.45, 2.72, s.z1 - 0.35, cx - sinal * w * 0.08, 0.55, s.z0 + d * 0.36];
 }
 
+// Pausa na copa, para quem está livre há um tempo. Não é trabalho e não conta em nenhum número.
+export function viagemPausa(agente: string, n: number): Viagem {
+  const ponto = PONTOS_COPA[Math.abs(n) % PONTOS_COPA.length];
+  return { id: `pausa-${agente}-${n}`, agente, caminho: rota(cadeira(agente), ponto), rotulo: "pausa na copa", tipo: "pausa", espera: 14 };
+}
+
 export const CAMERAS: Camera[] = [
-  { id: "geral", nome: "Visão geral", atalho: "1", icone: "geral", vista: [0, 38, 47, 0, 0, -3.5] },
+  { id: "geral", nome: "Visão geral", atalho: "1", icone: "geral", vista: [0, 40, 52, 0, 3.4, -3.5] },
   { id: "direcao", nome: "Direção", atalho: "2", icone: "direcao", vista: cameraDaSala(SALA.direcao, "esq") },
   { id: "sistemas", nome: "Sistemas", atalho: "3", icone: "sistemas", vista: cameraDaSala(SALA.sistemas) },
   { id: "financeiro", nome: "Financeiro", atalho: "4", icone: "financeiro", vista: cameraDaSala(SALA.financeiro) },
@@ -293,7 +312,9 @@ export const CAMERAS: Camera[] = [
   { id: "reuniao", nome: "Reunião", atalho: "8", icone: "reuniao", vista: [-0.6, 2.75, 5.6, -5.0, 0.95, -1.4] },
   { id: "rafael", nome: "Sala do Rafael", atalho: "9", icone: "rafael", vista: [-13.4, 2.9, 16.7, -19.6, 0.85, 12.2] },
   { id: "arquivo", nome: "Arquivo", atalho: "A", icone: "arquivo", vista: [16.5, 2.72, 5.6, 11.2, 0.9, -3.0] },
-  { id: "recepcao", nome: "Recepção", atalho: "R", icone: "recepcao", vista: [24.6, 3.4, 16.7, 4.0, 0.6, 12.0] },
+  { id: "recepcao", nome: "Recepção", atalho: "R", icone: "recepcao", vista: [11.4, 3.2, 16.8, -6.0, 0.9, 11.2] },
+  { id: "datacenter", nome: "Data center", atalho: "D", icone: "sistemas", vista: [13.0, 2.7, 16.9, 22.0, 1.15, 11.0] },
+  { id: "parede", nome: "Parede de resultados", atalho: "P", icone: "reuniao", vista: [-4.5, 1.95, 5.75, -4.5, 1.5, -3.9] },
   { id: "cima", nome: "Vista de cima", atalho: "0", icone: "cima", vista: [0, 64, -0.99, 0, 0, -1] },
 ];
 export const CAMERA = Object.fromEntries(CAMERAS.map((c) => [c.id, c])) as Record<string, Camera>;

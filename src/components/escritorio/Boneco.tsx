@@ -4,7 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import * as THREE from "three";
-import { CADEIRA_RAFAEL, type EstadoAgente, type LugarReuniao, type Vec2, type Viagem } from "@/lib/escritorio/modelo";
+import { CADEIRA_RAFAEL, viagemPausa, type EstadoAgente, type LugarReuniao, type Vec2, type Viagem } from "@/lib/escritorio/modelo";
+import { COR_STATUS, situacaoDe } from "./status";
 import { aparenciaDe, Corpo, poseAndando, poseConversando, poseSentado, type Juntas } from "./Corpo";
 import { mat, materialSombra } from "./materiais";
 
@@ -54,8 +55,20 @@ const PAPEL = new THREE.BoxGeometry(0.24, 0.32, 0.012);
 
 const SOMBRA = new THREE.PlaneGeometry(0.9, 0.9).rotateX(-Math.PI / 2);
 
+// Aro de status sobre a cabeça: inteiro quando parado, aberto e girando quando está trabalhando.
+const ARO = new THREE.TorusGeometry(0.21, 0.024, 8, 40).rotateX(Math.PI / 2);
+const ARCO = new THREE.TorusGeometry(0.21, 0.03, 8, 40, Math.PI * 1.4).rotateX(Math.PI / 2);
+const materiaisAro = new Map<string, THREE.MeshBasicMaterial>();
+function materialAro(cor: string) {
+  let m = materiaisAro.get(cor);
+  if (!m) { m = new THREE.MeshBasicMaterial({ color: cor, toneMapped: false }); materiaisAro.set(cor, m); }
+  return m;
+}
+const ALTURA_ARO_SENTADO = 1.68;
+const ALTURA_ARO_EM_PE = 2.02;
+
 export function Boneco({
-  id, nome, cor, cadeira, temMesa = true, estado, viagem, reuniao, selecionado, onClick, onViagemFim, falando = null, rotulos = true,
+  id, nome, cor, cadeira, temMesa = true, estado, viagem, reuniao, selecionado, onClick, onViagemFim, falando = null, rotulos = true, demandas = 0,
 }: {
   id: string;
   nome: string;
@@ -70,8 +83,11 @@ export function Boneco({
   onViagemFim: (viagemId: string) => void;
   falando?: string | null; // o que está dizendo agora (balão sobre a cabeça)
   rotulos?: boolean; // nome e legenda em HTML (o mosaico desliga)
+  demandas?: number; // demandas abertas com este agente
 }) {
   const s = semente(id);
+  const selecionadoRef = useRef(selecionado);
+  selecionadoRef.current = selecionado;
   const falandoRef = useRef(falando);
   falandoRef.current = falando;
   const ap = useMemo(() => aparenciaDe(id, cor), [id, cor]);
@@ -81,6 +97,19 @@ export function Boneco({
   const anel = useRef<THREE.Mesh>(null);
   const juntas = useRef<Juntas>({});
   const papel = useRef<THREE.Mesh>(null);
+  const aro = useRef<THREE.Group>(null);
+  const proximaPausa = useRef<number | null>(null);
+  const pausas = useRef(0);
+  const [concluiu, setConcluiu] = useState(false);
+  const statusAnterior = useRef(estado.status);
+  useEffect(() => {
+    const antes = statusAnterior.current;
+    statusAnterior.current = estado.status;
+    if (antes !== "trabalhando" || estado.status !== "disponivel") return;
+    setConcluiu(true);
+    const t = setTimeout(() => setConcluiu(false), 9000);
+    return () => clearTimeout(t);
+  }, [estado.status]);
 
   const fase = useRef<Fase>("sentado");
   const dist = useRef(0);
@@ -118,12 +147,19 @@ export function Boneco({
   // Em câmeras baixas (dentro das salas), esconde os nomes de quem está longe, para não poluir a imagem.
   const caixaRotulo = useRef<HTMLDivElement>(null);
   const longe = useRef(false);
+  const compacto = useRef<boolean | null>(null);
   const v = useMemo(() => new THREE.Vector3(), []);
   useFrame(({ camera }) => {
     const g = raiz.current;
     if (!g || !caixaRotulo.current) return;
     g.getWorldPosition(v);
-    const esconder = camera.position.y < 6 && camera.position.distanceTo(v) > 15;
+    const distancia = camera.position.distanceTo(v);
+    const fazerCompacto = distancia > 34 && !selecionadoRef.current;
+    if (fazerCompacto !== compacto.current) {
+      compacto.current = fazerCompacto;
+      caixaRotulo.current.dataset.compacto = fazerCompacto ? "1" : "0";
+    }
+    const esconder = camera.position.y < 6 && distancia > 15;
     if (esconder !== longe.current) {
       longe.current = esconder;
       caixaRotulo.current.style.visibility = esconder ? "hidden" : "visible";
@@ -148,11 +184,17 @@ export function Boneco({
       } else if (v && v.id !== viagemFeita.current && v.caminho.length > 1) {
         viagemAtual.current = v;
         comecar("indo", v.caminho, v.rotulo);
+      } else if (temMesa && estado.status === "disponivel" && (proximaPausa.current ??= clock.elapsedTime + 45 + (s % 280)) < clock.elapsedTime) {
+        // quem está livre há um tempo dá uma volta até a copa
+        proximaPausa.current = clock.elapsedTime + 240 + (s % 300);
+        const pausa = viagemPausa(id, s + pausas.current++);
+        viagemAtual.current = pausa;
+        comecar("indo", pausa.caminho, pausa.rotulo);
       } else {
         g.visible = temMesa;
         g.position.set(cadeira[0], 0, cadeira[1]);
         g.rotation.y = Math.PI; // de frente para o monitor
-        poseSentado(j, trabalhando ? "digitando" : "relaxado", t);
+        poseSentado(j, trabalhando ? ((s + Math.floor(t / 13)) % 4 === 0 ? "lendo" : "digitando") : (s + Math.floor(t / 19)) % 3 === 0 ? "lendo" : "relaxado", t);
         if (papel.current) papel.current.visible = false;
         if (rotulo.current) rotulo.current.position.y = 1.95;
         return;
@@ -218,7 +260,7 @@ export function Boneco({
       }
     } else if (fase.current === "pausa") {
       pausa.current += dt;
-      if (pausa.current >= PAUSA_DESTINO) fase.current = "voltando";
+      if (pausa.current >= (v.espera ?? PAUSA_DESTINO)) fase.current = "voltando";
     } else if (fase.current === "voltando") {
       dist.current -= VELOCIDADE * dt;
       if (dist.current <= 0) {
@@ -229,7 +271,7 @@ export function Boneco({
       }
     }
     // leva o papel na ida (documento/demanda) ou na volta (buscar decisão)
-    const levando = (v.tipo !== "buscar" && fase.current === "indo") || (v.tipo === "buscar" && fase.current === "voltando");
+    const levando = (v.tipo !== "buscar" && v.tipo !== "pausa" && fase.current === "indo") || (v.tipo === "buscar" && fase.current === "voltando");
     if (papel.current) papel.current.visible = levando;
     if (fase.current === "pausa") {
       const { p } = pontoEm(caminho.current, acum.current, dist.current);
@@ -253,12 +295,21 @@ export function Boneco({
     if (rotulo.current) rotulo.current.position.y = 2.12;
   }
 
-  useFrame(({ clock }) => {
+  useFrame(({ clock }, dt) => {
     if (anel.current) anel.current.scale.setScalar(1 + Math.sin(clock.elapsedTime * 4) * 0.06);
+    if (aro.current) {
+      const emPe = fase.current !== "sentado" && fase.current !== "naReuniao";
+      aro.current.position.y = emPe ? ALTURA_ARO_EM_PE : ALTURA_ARO_SENTADO;
+      if (estado.status === "trabalhando") aro.current.rotation.y += dt * 3.2;
+    }
   });
 
-  const corStatus = estado.status === "trabalhando" ? "#2563eb" : estado.status === "erro" ? "#c0362c" : "#12805c";
-  const legenda = legendaFora ?? (estado.status === "trabalhando" ? estado.passo ?? estado.rotina ?? "trabalhando" : null);
+  const emPausa = legendaFora === "pausa na copa";
+  const andando = fora && !reuniao && !emPausa;
+  const sit = situacaoDe(estado, !!reuniao, andando, emPausa);
+  const corStatus = concluiu && sit.tipo === "livre" ? "#34d399" : COR_STATUS[sit.tipo];
+  const textoStatus = concluiu && sit.tipo === "livre" ? "concluiu ✓" : sit.texto;
+  const legenda = emPausa ? null : legendaFora ?? (estado.status === "trabalhando" ? estado.passo ?? estado.rotina ?? "trabalhando" : null);
   const mostrar = (temMesa || fora) && rotulos;
 
   return (
@@ -272,10 +323,15 @@ export function Boneco({
             visible={false} castShadow />
         } />
       <mesh geometry={SOMBRA} material={materialSombra()} position={[0, 0.007, 0]} />
+      {mostrar && (
+        <group ref={aro} position={[0, ALTURA_ARO_SENTADO, 0]}>
+          <mesh geometry={sit.tipo === "trabalhando" ? ARCO : ARO} material={materialAro(corStatus)} />
+        </group>
+      )}
       {selecionado && mostrar && (
         <mesh ref={anel} position={[0, 0.012, 0]} rotation-x={-Math.PI / 2}>
           <ringGeometry args={[0.45, 0.54, 40]} />
-          <meshBasicMaterial color="#2563eb" transparent opacity={0.85} />
+          <meshBasicMaterial color="#22d3ee" transparent opacity={0.9} toneMapped={false} />
         </mesh>
       )}
       <group ref={rotulo} position={[0, 1.95, 0]}>
@@ -286,26 +342,30 @@ export function Boneco({
                 transform: "translate(-50%, -100%)", width: "max-content" }}>
               <div style={{
                 display: "flex", alignItems: "center", gap: 5, padding: "2px 8px", borderRadius: 999, whiteSpace: "nowrap",
-                background: selecionado ? "#2563eb" : "rgba(255,255,255,0.95)", color: selecionado ? "#fff" : "#1b1f24",
-                fontSize: 12, fontWeight: 600, boxShadow: "0 1px 3px rgba(0,0,0,0.15)",
+                background: selecionado ? "#0a6fdc" : "rgba(8,13,24,0.86)", color: "#f1f5f9",
+                border: `1px solid ${corStatus}`, fontSize: 12, fontWeight: 600, boxShadow: `0 0 10px ${corStatus}55`,
               }}>
-                <span style={{ width: 7, height: 7, borderRadius: 999, background: corStatus }} />
+                <span style={{ width: 7, height: 7, borderRadius: 999, background: corStatus, boxShadow: `0 0 6px ${corStatus}` }} />
                 {nome}
+                <span className="boneco-extra" style={{ fontWeight: 500, color: corStatus }}>{textoStatus}</span>
+                {demandas > 0 && (
+                  <span title={`${demandas} demandas abertas`} style={{ padding: "0 5px", borderRadius: 999, background: "#a78bfa", color: "#0b111c", fontSize: 10.5, fontWeight: 700 }}>{demandas}</span>
+                )}
               </div>
               {falando && (
                 <div style={{
                   position: "relative", maxWidth: 260, minWidth: 140, padding: "7px 11px", borderRadius: 14, marginBottom: 2,
-                  background: "#ffffff", color: "#111827", fontSize: 12.5, lineHeight: 1.35, fontWeight: 500,
-                  boxShadow: "0 6px 18px rgba(0,0,0,0.22)", border: "2px solid #22c55e", order: -1,
+                  background: "#0b1220", color: "#f1f5f9", fontSize: 12.5, lineHeight: 1.35, fontWeight: 500,
+                  boxShadow: "0 6px 18px rgba(0,0,0,0.4)", border: "2px solid #22d3ee", order: -1,
                   display: "-webkit-box", WebkitLineClamp: 4, WebkitBoxOrient: "vertical", overflow: "hidden",
                 }}>
                   {falando}
                 </div>
               )}
               {legenda && !falando && (
-                <div style={{
+                <div className="boneco-extra" style={{
                   maxWidth: 190, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 10.5,
-                  padding: "1px 7px", borderRadius: 6, background: "rgba(13,17,23,0.85)", color: "#e3b341",
+                  padding: "1px 7px", borderRadius: 6, background: "rgba(8,13,24,0.86)", color: "#7dd3fc",
                 }}>
                   {legenda}
                 </div>
@@ -348,8 +408,8 @@ export function Rafael({ pendentes, onClick, rotulos = true }: { pendentes: numb
           <div onClick={onClick} style={{
             display: rotulos ? "flex" : "none", alignItems: "center", gap: 6, padding: "3px 10px", borderRadius: 999, whiteSpace: "nowrap",
             fontFamily: "system-ui", fontSize: 12.5, fontWeight: 700, cursor: "pointer",
-            background: pendentes > 0 ? "#fdf2e1" : "rgba(255,255,255,0.95)", color: pendentes > 0 ? "#9a5b0a" : "#1b1f24",
-            border: "1px solid rgba(0,0,0,0.08)", boxShadow: "0 1px 3px rgba(0,0,0,0.15)",
+            background: "rgba(8,13,24,0.88)", color: pendentes > 0 ? "#fbbf24" : "#f1f5f9",
+            border: `1px solid ${pendentes > 0 ? "#fbbf24" : "#22d3ee"}`, boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
           }}>
             Rafael · {pendentes > 0 ? `${pendentes} aguardando você` : "nada pendente"}
           </div>

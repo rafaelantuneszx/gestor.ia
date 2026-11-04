@@ -68,7 +68,7 @@ function partesCadeira(): Parte[] {
 
 // ---------- mesa em L com monitor, notebook e acessórios (o agente fica em +z, olhando para -z) ----------
 function partesMesaL(): Parte[] {
-  const madeira = mat("#d6bf9c", 0.45);
+  const madeira = mat("#2a3547", 0.55, 0.15);
   const p: Parte[] = [
     { geo: G.tampo, mat: madeira, p: [0, 0.74, 0], s: [1.8, 0.035, 0.8], sombra: true },
     { geo: G.tampo, mat: madeira, p: [-0.625, 0.74, 0.775], s: [0.55, 0.035, 0.75], sombra: true },
@@ -76,29 +76,31 @@ function partesMesaL(): Parte[] {
     { geo: G.caixa, mat: brancoFosco(), p: [0.87, 0.36, 0], s: [0.04, 0.72, 0.72], sombra: true },
     { geo: G.caixa, mat: brancoFosco(), p: [-0.625, 0.36, 1.12], s: [0.5, 0.72, 0.04], sombra: true },
     { geo: G.caixa, mat: brancoFosco(), p: [-0.64, 0.3, 0.2], s: [0.46, 0.6, 0.5], sombra: true },
-    { geo: G.caixa, mat: mat("#9aa0a6", 0.6, 0.3), p: [0.1, 0.5, -0.38], s: [1.5, 0.32, 0.02] },
+    { geo: G.caixa, mat: mat("#1a2230", 0.5, 0.4), p: [0.1, 0.5, -0.38], s: [1.5, 0.32, 0.02] },
+    // fita de LED sob o tampo
+    { geo: G.caixa, mat: emissivo("#22d3ee", 1.5), p: [0.05, 0.715, 0.405], s: [1.7, 0.012, 0.012] },
     // monitor (moldura e pé; a tela é outra malha, com o terminal)
     { geo: G.caixa, mat: mat("#111214", 0.35), p: [0, 1.26, -0.24], s: [1.0, 0.6, 0.025], sombra: true },
     { geo: G.caixa, mat: aluminio(), p: [0, 0.96, -0.28], s: [0.05, 0.36, 0.025] },
     { geo: G.caixa, mat: aluminio(), p: [0, 0.765, -0.25], s: [0.24, 0.012, 0.17] },
     // teclado, mouse, papéis
-    { geo: G.caixa, mat: mat("#e2e4e7", 0.6), p: [0.05, 0.765, 0.2], s: [0.44, 0.018, 0.14] },
+    { geo: G.caixa, mat: mat("#1f2937", 0.5), p: [0.05, 0.765, 0.2], s: [0.44, 0.018, 0.14] },
     { geo: G.caixa, mat: plastico(), p: [0.38, 0.765, 0.21], s: [0.06, 0.025, 0.1] },
-    { geo: G.caixa, mat: mat("#fbfaf7", 0.9), p: [0.55, 0.759, -0.02], r: [0, 0.25, 0], s: [0.21, 0.004, 0.29] },
+    { geo: G.caixa, mat: mat("#334155", 0.6), p: [0.55, 0.759, -0.02], r: [0, 0.25, 0], s: [0.21, 0.004, 0.29] },
     // notebook aberto no retorno, virado para o agente
-    { geo: G.caixa, mat: mat("#c7cbd1", 0.3, 0.6), p: [-0.62, 0.765, 0.78], r: [0, Math.PI / 2 + 0.3, 0], s: [0.34, 0.015, 0.24] },
-    { geo: G.caixa, mat: mat("#c7cbd1", 0.3, 0.6), p: [-0.74, 0.88, 0.74], r: [0, Math.PI / 2 + 0.3, -0.25], s: [0.34, 0.23, 0.012] },
-    { geo: G.plano, mat: emissivo("#8fb7f0", 0.55), p: [-0.732, 0.88, 0.743], r: [0, Math.PI / 2 + 0.3, -0.25], s: [0.31, 0.2, 1] },
+    { geo: G.caixa, mat: mat("#3a4556", 0.3, 0.7), p: [-0.62, 0.765, 0.78], r: [0, Math.PI / 2 + 0.3, 0], s: [0.34, 0.015, 0.24] },
+    { geo: G.caixa, mat: mat("#3a4556", 0.3, 0.7), p: [-0.74, 0.88, 0.74], r: [0, Math.PI / 2 + 0.3, -0.25], s: [0.34, 0.23, 0.012] },
+    { geo: G.plano, mat: emissivo("#38bdf8", 0.8), p: [-0.732, 0.88, 0.743], r: [0, Math.PI / 2 + 0.3, -0.25], s: [0.31, 0.2, 1] },
     // caneca e vasinho
-    { geo: G.cil, mat: mat("#f5f5f4", 0.3), p: [0.7, 0.805, 0.15], s: [0.08, 0.1, 0.08] },
-    { geo: G.cil, mat: mat("#ece8e1", 0.5), p: [0.75, 0.81, -0.28], s: [0.12, 0.1, 0.12] },
+    { geo: G.cil, mat: mat("#0f172a", 0.3), p: [0.7, 0.805, 0.15], s: [0.08, 0.1, 0.08] },
+    { geo: G.cil, mat: mat("#1e293b", 0.5), p: [0.75, 0.81, -0.28], s: [0.12, 0.1, 0.12] },
     { geo: G.esfera, mat: mat("#4e8a45", 0.7), p: [0.75, 0.9, -0.28], s: [0.16, 0.12, 0.16] },
     // luminária articulada
     { geo: G.caixa, mat: acoPreto(), p: [-0.78, 0.77, -0.28], s: [0.14, 0.02, 0.14] },
     { geo: G.caixa, mat: acoPreto(), p: [-0.78, 0.96, -0.32], r: [0.25, 0, 0], s: [0.02, 0.4, 0.02] },
     { geo: G.caixa, mat: acoPreto(), p: [-0.78, 1.15, -0.22], r: [-1.1, 0, 0], s: [0.02, 0.26, 0.02] },
     { geo: G.cone, mat: acoPreto(), p: [-0.78, 1.1, -0.11], r: [0.35, 0, 0], s: [0.14, 0.11, 0.14] },
-    { geo: G.plano, mat: emissivo("#fff1d0", 1.6), p: [-0.78, 1.07, -0.1], r: [-Math.PI / 2 + 0.35, 0, 0], s: [0.1, 0.1, 1] },
+    { geo: G.plano, mat: emissivo("#bae6fd", 1.6), p: [-0.78, 1.07, -0.1], r: [-Math.PI / 2 + 0.35, 0, 0], s: [0.1, 0.1, 1] },
   ];
   return p;
 }
@@ -111,7 +113,7 @@ function partesPlantaAlta(): Parte[] {
     [-0.08, 1.18, 0.2, 0.7], [0.16, 1.72, -0.1, 0.7], [-0.15, 1.7, 0.12, 0.65],
   ];
   return [
-    { geo: G.vaso, mat: mat("#d8d2c8", 0.45), p: [0, 0.25, 0], sombra: true },
+    { geo: G.vaso, mat: mat("#1a2230", 0.35, 0.4), p: [0, 0.25, 0], sombra: true },
     { geo: G.terra, mat: mat("#3b2a1e", 1), p: [0, 0.49, 0] },
     { geo: G.tronco, mat: mat("#6b4f36", 0.9), p: [0, 1.0, 0] },
     ...copas.map(([x, y, z, s], i) => ({ geo: G.copa, mat: mat(verdes[i % 4], 0.75), p: [x, y, z] as [number, number, number], s: [s, s * 0.85, s] as [number, number, number], sombra: true })),
@@ -119,7 +121,7 @@ function partesPlantaAlta(): Parte[] {
 }
 function partesPlantaBaixa(): Parte[] {
   const p: Parte[] = [
-    { geo: G.vasoBaixo, mat: mat("#ece8e1", 0.5), p: [0, 0.18, 0], sombra: true },
+    { geo: G.vasoBaixo, mat: mat("#1a2230", 0.35, 0.4), p: [0, 0.18, 0], sombra: true },
     { geo: G.terra, mat: mat("#3b2a1e", 1), p: [0, 0.35, 0], s: [0.75, 1, 0.75] },
   ];
   for (let i = 0; i < 9; i++) {
@@ -174,8 +176,8 @@ function partesPoltrona(): Parte[] {
 // ---------- luminária de embutir no forro (vista de baixo; de cima ela some junto com o forro) ----------
 function partesLuminaria(): Parte[] {
   return [
-    { geo: G.planoTeto, mat: emissivo("#fff8ea", 1.25), p: [0, -0.005, 0], s: [1.15, 1, 0.28] },
-    { geo: G.planoTeto, mat: mat("#d9d7d2", 0.4, 0.4), p: [0, -0.002, 0], s: [1.25, 1, 0.38] },
+    { geo: G.planoTeto, mat: emissivo("#dbeafe", 1.1), p: [0, -0.005, 0], s: [1.15, 1, 0.28] },
+    { geo: G.planoTeto, mat: mat("#334155", 0.4, 0.5), p: [0, -0.002, 0], s: [1.25, 1, 0.38] },
   ];
 }
 
@@ -183,7 +185,7 @@ function partesLuminaria(): Parte[] {
 function partesPendente(): Parte[] {
   return [
     { geo: G.caixa, mat: acoPreto(), p: [0, 2.32, 0], s: [1.6, 0.05, 0.08] },
-    { geo: G.plano, mat: emissivo("#fff3dc", 1.8), p: [0, 2.294, 0], r: [Math.PI / 2, 0, 0], s: [1.55, 0.05, 1] },
+    { geo: G.plano, mat: emissivo("#bae6fd", 1.8), p: [0, 2.294, 0], r: [Math.PI / 2, 0, 0], s: [1.55, 0.05, 1] },
     { geo: G.caixa, mat: acoPreto(), p: [-0.7, 2.62, 0], s: [0.008, 0.56, 0.008] },
     { geo: G.caixa, mat: acoPreto(), p: [0.7, 2.62, 0], s: [0.008, 0.56, 0.008] },
   ];
@@ -218,9 +220,9 @@ export const KITS = {
 export function MesaCentro({ posicao, tamanho = [0.6, 1.1] }: { posicao: [number, number]; tamanho?: [number, number] }) {
   return (
     <group position={[posicao[0], 0, posicao[1]]}>
-      <mesh geometry={G.tampo} material={mat("#3b2f28", 0.35)} position={[0, 0.4, 0]} scale={[tamanho[0], 0.035, tamanho[1]]} castShadow receiveShadow />
+      <mesh geometry={G.tampo} material={mat("#111827", 0.25, 0.5)} position={[0, 0.4, 0]} scale={[tamanho[0], 0.035, tamanho[1]]} castShadow receiveShadow />
       <mesh geometry={G.caixa} material={acoPreto()} position={[0, 0.2, 0]} scale={[tamanho[0] - 0.1, 0.38, 0.03]} />
-      <mesh geometry={G.caixa} material={mat("#e7e2d9", 0.6)} position={[0.05, 0.43, 0.2]} scale={[0.22, 0.03, 0.3]} rotation-y={0.2} />
+      <mesh geometry={G.caixa} material={mat("#334155", 0.5)} position={[0.05, 0.43, 0.2]} scale={[0.22, 0.03, 0.3]} rotation-y={0.2} />
     </group>
   );
 }
@@ -236,7 +238,7 @@ export function Tapete({ posicao, tamanho, cor, borda }: { posicao: [number, num
 
 // Estante de livros (olha para +z).
 export function EstanteLivros({ posicao, largura = 2, rotacao = 0, altura = 2.2 }: { posicao: [number, number]; largura?: number; rotacao?: number; altura?: number }) {
-  const madeira = mat("#4a3426", 0.55);
+  const madeira = mat("#1f2937", 0.4, 0.4);
   const livros = texturaLivros();
   const prateleiras = 5;
   return (
@@ -244,7 +246,7 @@ export function EstanteLivros({ posicao, largura = 2, rotacao = 0, altura = 2.2 
       {[-largura / 2, largura / 2].map((x) => (
         <mesh key={x} geometry={G.caixa} material={madeira} position={[x, altura / 2, 0]} scale={[0.04, altura, 0.36]} castShadow />
       ))}
-      <mesh geometry={G.caixa} material={mat("#3a291e", 0.7)} position={[0, altura / 2, -0.17]} scale={[largura, altura, 0.02]} />
+      <mesh geometry={G.caixa} material={mat("#0b1220", 0.6)} position={[0, altura / 2, -0.17]} scale={[largura, altura, 0.02]} />
       {Array.from({ length: prateleiras + 1 }).map((_, i) => (
         <mesh key={i} geometry={G.caixa} material={madeira} position={[0, 0.06 + i * (altura - 0.08) / prateleiras, 0]}
           scale={[largura, 0.035, 0.36]} castShadow receiveShadow />

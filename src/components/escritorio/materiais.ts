@@ -3,6 +3,7 @@
 import * as THREE from "three";
 import type { Piso } from "@/lib/escritorio/modelo";
 import { svgIcone } from "@/lib/escritorio/icones";
+import { desenharMarca, desenharNome } from "./paineis";
 
 const materiais = new Map<string, THREE.Material>();
 
@@ -36,20 +37,20 @@ function unico<T extends THREE.Material>(k: string, criar: () => T): T {
 }
 
 export const vidro = () => unico("vidro", () => new THREE.MeshStandardMaterial({
-  color: "#cfe3ee", transparent: true, opacity: 0.14, roughness: 0.03, metalness: 0.4,
+  color: "#7dd3fc", transparent: true, opacity: 0.1, roughness: 0.03, metalness: 0.5,
   depthWrite: false, side: THREE.DoubleSide, envMapIntensity: 1.4,
 }));
 
 export const vidroFosco = () => unico("vidro-fosco", () => new THREE.MeshStandardMaterial({
-  color: "#f4f7f9", transparent: true, opacity: 0.55, roughness: 0.6, depthWrite: false, side: THREE.DoubleSide,
+  color: "#1e3a5f", transparent: true, opacity: 0.55, roughness: 0.5, depthWrite: false, side: THREE.DoubleSide,
 }));
 
-export const aluminio = () => mat("#9aa1a8", 0.35, 0.85);
+export const aluminio = () => mat("#5b6675", 0.32, 0.9);
 export const acoPreto = () => mat("#2a2d31", 0.45, 0.6);
-export const parede = () => mat("#f3f1ed", 0.92);
-export const madeiraClara = () => mat("#c9a77c", 0.5);
-export const madeiraEscura = () => mat("#4a3426", 0.5);
-export const brancoFosco = () => mat("#f1efea", 0.55);
+export const parede = () => mat("#161d29", 0.72, 0.15);
+export const madeiraClara = () => mat("#2b3445", 0.4, 0.3);
+export const madeiraEscura = () => mat("#1a2230", 0.45, 0.3);
+export const brancoFosco = () => mat("#232b39", 0.45, 0.35);
 
 // ---------- texturas em canvas ----------
 
@@ -72,69 +73,40 @@ function novoCanvas(w: number, h: number, desenhar: (ctx: CanvasRenderingContext
 
 // Piso de madeira: 2 x 2 m, réguas de 25 cm com veios e juntas.
 function desenharMadeira(ctx: CanvasRenderingContext2D, w: number, h: number) {
+  // piso elevado técnico: placas escuras de 50 cm com a junta iluminada de leve
   const r = sorteio(7);
-  const linhas = 8;
-  const alt = h / linhas;
-  for (let l = 0; l < linhas; l++) {
-    let x = -r() * 400;
-    while (x < w) {
-      const comp = 320 + r() * 380;
-      const hue = 28 + r() * 7;
-      const luz = 55 + r() * 9;
-      ctx.fillStyle = `hsl(${hue}, ${36 + r() * 10}%, ${luz}%)`;
-      ctx.fillRect(x, l * alt, comp, alt);
-      // veios
-      for (let v = 0; v < 12; v++) {
-        ctx.strokeStyle = `rgba(90, 55, 25, ${0.05 + r() * 0.1})`;
-        ctx.lineWidth = 0.6 + r() * 1.4;
-        ctx.beginPath();
-        const y0 = l * alt + 6 + r() * (alt - 12);
-        const amp = 1 + r() * 3;
-        const fase = r() * 6;
-        for (let px = 0; px <= comp; px += 16) {
-          const y = y0 + Math.sin(px / 60 + fase) * amp;
-          if (px === 0) ctx.moveTo(x + px, y);
-          else ctx.lineTo(x + px, y);
-        }
-        ctx.stroke();
-      }
-      // nó ocasional
-      if (r() < 0.25) {
-        const nx = x + r() * comp;
-        const ny = l * alt + alt / 2;
-        const g = ctx.createRadialGradient(nx, ny, 1, nx, ny, 10);
-        g.addColorStop(0, "rgba(80,45,20,0.45)");
-        g.addColorStop(1, "rgba(80,45,20,0)");
-        ctx.fillStyle = g;
-        ctx.beginPath();
-        ctx.ellipse(nx, ny, 14, 6, 0, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      ctx.fillStyle = "rgba(60, 38, 18, 0.45)";
-      ctx.fillRect(x, l * alt, 2, alt); // junta de topo
-      x += comp;
+  ctx.fillStyle = "#121824";
+  ctx.fillRect(0, 0, w, h);
+  const n = 4;
+  const t = w / n;
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < n; j++) {
+      ctx.fillStyle = `rgba(148,163,184,${0.012 + r() * 0.03})`;
+      ctx.fillRect(i * t, j * t, t, t);
     }
-    ctx.fillStyle = "rgba(60, 38, 18, 0.5)";
-    ctx.fillRect(0, l * alt, w, 2); // junta lateral
+  }
+  ctx.fillStyle = "rgba(34,211,238,0.16)";
+  for (let i = 0; i <= n; i++) {
+    ctx.fillRect(i * t - 1, 0, 2, h);
+    ctx.fillRect(0, i * t - 1, w, 2);
   }
 }
 
 // Porcelanato: placas de 1,2 m (2 x 2 no canvas), com manchas suaves e rejunte.
 function desenharPorcelanato(ctx: CanvasRenderingContext2D, w: number, h: number) {
   const r = sorteio(11);
-  ctx.fillStyle = "#e4e1dc";
+  ctx.fillStyle = "#0d121b";
   ctx.fillRect(0, 0, w, h);
-  for (let i = 0; i < 2600; i++) {
-    const tom = 200 + Math.floor(r() * 40);
-    ctx.fillStyle = `rgba(${tom}, ${tom - 3}, ${tom - 8}, 0.06)`;
+  for (let i = 0; i < 1200; i++) {
+    ctx.fillStyle = `rgba(148,163,184,${r() * 0.02})`;
     ctx.beginPath();
     ctx.ellipse(r() * w, r() * h, 4 + r() * 30, 2 + r() * 14, r() * Math.PI, 0, Math.PI * 2);
     ctx.fill();
   }
-  ctx.fillStyle = "#cbc6be";
+  ctx.fillStyle = "rgba(34,211,238,0.1)";
   for (let i = 0; i <= 2; i++) {
-    ctx.fillRect((i * w) / 2 - 2, 0, 4, h);
-    ctx.fillRect(0, (i * h) / 2 - 2, w, 4);
+    ctx.fillRect((i * w) / 2 - 1, 0, 2, h);
+    ctx.fillRect(0, (i * h) / 2 - 1, w, 2);
   }
 }
 
@@ -178,26 +150,26 @@ function desenharCarpete(base: string) {
 
 // Cimento queimado (hall e áreas técnicas).
 function desenharConcreto(ctx: CanvasRenderingContext2D, w: number, h: number) {
-  const r = sorteio(41);
-  ctx.fillStyle = "#c9c6c0";
+  // piso do data center: placas perfuradas de 60 cm
+  ctx.fillStyle = "#0a0f17";
   ctx.fillRect(0, 0, w, h);
-  for (let i = 0; i < 1800; i++) {
-    const tom = 170 + Math.floor(r() * 60);
-    ctx.fillStyle = `rgba(${tom},${tom - 2},${tom - 6},0.08)`;
-    ctx.beginPath();
-    ctx.ellipse(r() * w, r() * h, 6 + r() * 60, 4 + r() * 30, r() * Math.PI, 0, Math.PI * 2);
-    ctx.fill();
+  const n = 5;
+  const t = w / n;
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < n; j++) {
+      ctx.fillStyle = "#101722";
+      ctx.fillRect(i * t + 3, j * t + 3, t - 6, t - 6);
+      ctx.fillStyle = "rgba(34,211,238,0.12)";
+      for (let a = 1; a < 7; a++) for (let b = 1; b < 7; b++) ctx.fillRect(i * t + (a * t) / 7 - 1, j * t + (b * t) / 7 - 1, 3, 3);
+    }
   }
-  ctx.fillStyle = "rgba(90,85,78,0.35)";
-  ctx.fillRect(0, 0, w, 2);
-  ctx.fillRect(0, 0, 2, h);
 }
 
 const PISO_CANVAS: Record<Piso, { metros: number; px: number; desenhar: (ctx: CanvasRenderingContext2D, w: number, h: number) => void }> = {
   madeira: { metros: 2, px: 1024, desenhar: desenharMadeira },
   porcelanato: { metros: 2.4, px: 1024, desenhar: desenharPorcelanato },
-  carpete: { metros: 1, px: 512, desenhar: desenharCarpete("#5d6673") },
-  "carpete-quente": { metros: 1, px: 512, desenhar: desenharCarpete("#8a7d6c") },
+  carpete: { metros: 1, px: 512, desenhar: desenharCarpete("#1a2333") },
+  "carpete-quente": { metros: 1, px: 512, desenhar: desenharCarpete("#20283a") },
   concreto: { metros: 3, px: 1024, desenhar: desenharConcreto },
 };
 
@@ -220,9 +192,9 @@ export function materialPiso(piso: Piso, largura: number, profundidade: number) 
     t.anisotropy = 8;
     return new THREE.MeshStandardMaterial({
       map: t,
-      roughness: piso === "porcelanato" ? 0.2 : piso === "madeira" ? 0.42 : piso === "concreto" ? 0.6 : 0.96,
-      metalness: 0,
-      envMapIntensity: piso === "porcelanato" ? 1.0 : piso === "madeira" ? 0.7 : 0.4,
+      roughness: piso === "porcelanato" ? 0.16 : piso === "madeira" ? 0.28 : piso === "concreto" ? 0.35 : 0.9,
+      metalness: 0.2,
+      envMapIntensity: piso === "porcelanato" ? 1.3 : piso === "madeira" ? 0.9 : 0.5,
     });
   });
 }
@@ -243,44 +215,34 @@ function texturaCanvas(k: string, w: number, h: number, desenhar: (ctx: CanvasRe
 export function texturaCeu() {
   return texturaCanvas("ceu", 4096, 420, (ctx, w, h) => {
     const r = sorteio(5);
-    const ceu = ctx.createLinearGradient(0, 0, 0, h * 0.7);
-    ceu.addColorStop(0, "#5b9bd8");
-    ceu.addColorStop(0.55, "#a9cdee");
-    ceu.addColorStop(1, "#f3e9da");
+    const ceu = ctx.createLinearGradient(0, 0, 0, h * 0.75);
+    ceu.addColorStop(0, "#030712");
+    ceu.addColorStop(0.6, "#0b1b3a");
+    ceu.addColorStop(1, "#1d3a6e");
     ctx.fillStyle = ceu;
     ctx.fillRect(0, 0, w, h);
-    for (let i = 0; i < 30; i++) {
-      const cx = r() * w;
-      const cy = h * (0.08 + r() * 0.3);
-      for (let j = 0; j < 7; j++) {
-        const rr = 14 + r() * 34;
-        const g = ctx.createRadialGradient(cx + j * 20, cy + r() * 8, 1, cx + j * 20, cy, rr);
-        g.addColorStop(0, "rgba(255,255,255,0.8)");
-        g.addColorStop(1, "rgba(255,255,255,0)");
-        ctx.fillStyle = g;
-        ctx.beginPath();
-        ctx.arc(cx + j * 20, cy, rr, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
-    const base = h * 0.72;
-    const camadas: [string, number, string, number][] = [
-      ["#c3cfdb", 0.42, "#dbe4ec", 0.25],
-      ["#9fb0c2", 0.32, "#e8eef3", 0.4],
-      ["#7a8da3", 0.2, "#f6e7b8", 0.5],
+    const base = h * 0.8;
+    const camadas: [string, number, string[], number][] = [
+      ["#0b1630", 0.46, ["#1e3a8a"], 0.25],
+      ["#070f22", 0.36, ["#38bdf8", "#1e40af"], 0.3],
+      ["#040914", 0.24, ["#fde68a", "#22d3ee", "#93c5fd"], 0.42],
     ];
-    for (const [cor, alturaMax, janela, acesas] of camadas) {
+    for (const [cor, alturaMax, janelas, acesas] of camadas) {
       let x = -20;
       while (x < w) {
         const bw = 40 + r() * 110;
-        const bh = h * (0.06 + r() * alturaMax);
+        const bh = h * (0.08 + r() * alturaMax);
         ctx.fillStyle = cor;
         ctx.fillRect(x, base - bh, bw, bh);
-        if (r() < 0.25) ctx.fillRect(x + bw * 0.4, base - bh - 18, 3, 18); // antena
+        if (r() < 0.3) {
+          ctx.fillRect(x + bw * 0.4, base - bh - 18, 3, 18);
+          ctx.fillStyle = "#ef4444";
+          ctx.fillRect(x + bw * 0.4 - 1, base - bh - 21, 5, 4);
+        }
         for (let wy = base - bh + 7; wy < base - 6; wy += 10) {
           for (let wx = x + 6; wx < x + bw - 6; wx += 9) {
             if (r() < acesas) {
-              ctx.fillStyle = janela;
+              ctx.fillStyle = janelas[Math.floor(r() * janelas.length)];
               ctx.fillRect(wx, wy, 5, 6);
             }
           }
@@ -288,32 +250,26 @@ export function texturaCeu() {
         x += bw + r() * 14;
       }
     }
-    ctx.fillStyle = "#5f7a55";
-    for (let x = 0; x < w; x += 12) {
-      ctx.beginPath();
-      ctx.arc(x, base + 5, 9 + r() * 9, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.fillStyle = "#7f8f78";
-    ctx.fillRect(0, base + 10, w, h - base);
+    ctx.fillStyle = "#02050c";
+    ctx.fillRect(0, base, w, h - base);
   });
 }
 
 // Quadro branco da sala de Sistemas: um kanban desenhado a caneta.
 export function texturaQuadro() {
   return texturaCanvas("quadro", 1024, 600, (ctx, w, h) => {
-    ctx.fillStyle = "#fbfbf9";
+    ctx.fillStyle = "#0b1220";
     ctx.fillRect(0, 0, w, h);
-    ctx.strokeStyle = "#2b3a55";
+    ctx.strokeStyle = "#334155";
     ctx.lineWidth = 4;
-    ctx.font = "600 44px 'Comic Sans MS', 'Marker Felt', system-ui";
-    ctx.fillStyle = "#2b3a55";
+    ctx.font = "600 44px system-ui";
+    ctx.fillStyle = "#e2e8f0";
     ctx.fillText("Sistemas · semana", 40, 70);
     const cols = ["A fazer", "Fazendo", "Feito"];
     cols.forEach((c, i) => {
       const x = 40 + i * 320;
-      ctx.font = "500 32px 'Marker Felt', system-ui";
-      ctx.fillStyle = ["#b42318", "#1d4ed8", "#15803d"][i];
+      ctx.font = "500 32px system-ui";
+      ctx.fillStyle = ["#fbbf24", "#22d3ee", "#34d399"][i];
       ctx.fillText(c, x, 140);
       ctx.beginPath();
       ctx.moveTo(x, 155);
@@ -321,20 +277,20 @@ export function texturaQuadro() {
       ctx.stroke();
       const notas = [3, 2, 4][i];
       for (let n = 0; n < notas; n++) {
-        ctx.fillStyle = ["#fde68a", "#fbcfe8", "#bfdbfe", "#bbf7d0"][(i + n) % 4];
+        ctx.fillStyle = ["#1e293b", "#172554", "#134e4a", "#312e81"][(i + n) % 4];
         const nx = x + (n % 2) * 130;
         const ny = 180 + Math.floor(n / 2) * 140;
         ctx.save();
         ctx.translate(nx + 55, ny + 55);
         ctx.rotate(((n * 7) % 5 - 2) * 0.03);
         ctx.fillRect(-55, -55, 110, 110);
-        ctx.fillStyle = "rgba(40,40,40,0.55)";
+        ctx.fillStyle = "rgba(226,232,240,0.5)";
         for (let k = 0; k < 3; k++) ctx.fillRect(-42, -32 + k * 22, 60 + ((n + k) % 3) * 12, 4);
         ctx.restore();
       }
     });
-    ctx.strokeStyle = "#9aa1a8";
-    ctx.lineWidth = 10;
+    ctx.strokeStyle = "#22d3ee";
+    ctx.lineWidth = 6;
     ctx.strokeRect(5, 5, w - 10, h - 10);
   });
 }
@@ -384,8 +340,8 @@ export function texturaParedeSetor(nome: string, cor: string, icone: string) {
   let t = texturas.get(k) as THREE.CanvasTexture | undefined;
   if (!t) {
     const c = new THREE.Color(cor);
-    const fundo = `#${c.clone().lerp(new THREE.Color("#f4f1ec"), 0.72).getHexString()}`;
-    const tinta = `#${c.clone().lerp(new THREE.Color("#1b1f24"), 0.15).getHexString()}`;
+    const fundo = `#${c.clone().lerp(new THREE.Color("#0b1220"), 0.86).getHexString()}`;
+    const tinta = `#${c.clone().lerp(new THREE.Color("#ffffff"), 0.35).getHexString()}`;
     t = new THREE.CanvasTexture(novoCanvas(1024, 512, (ctx, w, h) => {
       ctx.fillStyle = fundo;
       ctx.fillRect(0, 0, w, h);
@@ -396,7 +352,7 @@ export function texturaParedeSetor(nome: string, cor: string, icone: string) {
       ctx.fillText(nome, 330, h * 0.56, w - 360);
       ctx.globalAlpha = 0.55;
       ctx.font = "500 34px system-ui, -apple-system, 'Segoe UI', sans-serif";
-      ctx.fillText("Rafael Enterprises", 334, h * 0.56 + 56);
+      ctx.fillText("Gestor.IA", 334, h * 0.56 + 56);
       ctx.globalAlpha = 1;
       ctx.fillRect(334, h * 0.56 + 80, 120, 8);
     }));
@@ -413,10 +369,10 @@ export function texturaArte(semente: number) {
   return texturaCanvas(`arte|${semente}`, 512, 384, (ctx, w, h) => {
     const r = sorteio(semente * 97 + 13);
     const paletas = [
-      ["#f4efe6", "#1f3a5f", "#e0a458", "#c8553d", "#588b8b"],
-      ["#efe9e1", "#2d3142", "#bfc0c0", "#ef8354", "#4f5d75"],
-      ["#f6f1e7", "#264653", "#2a9d8f", "#e9c46a", "#e76f51"],
-      ["#ece7df", "#3d405b", "#81b29a", "#f2cc8f", "#e07a5f"],
+      ["#070c16", "#0e7490", "#1d4ed8", "#22d3ee", "#334155"],
+      ["#080d18", "#312e81", "#4f46e5", "#38bdf8", "#1e293b"],
+      ["#060b14", "#134e4a", "#0d9488", "#2dd4bf", "#1e3a5f"],
+      ["#090e1a", "#1e40af", "#7c3aed", "#60a5fa", "#0f172a"],
     ];
     const p = paletas[semente % paletas.length];
     ctx.fillStyle = p[0];
@@ -447,14 +403,14 @@ export function texturaArte(semente: number) {
 // Forro modular (placas de 62,5 cm) visto de baixo.
 export function texturaForro() {
   return texturaCanvas("forro", 256, 256, (ctx, w, h) => {
-    ctx.fillStyle = "#f2f1ee";
+    ctx.fillStyle = "#1a212d";
     ctx.fillRect(0, 0, w, h);
     const r = sorteio(3);
     for (let i = 0; i < 900; i++) {
       ctx.fillStyle = `rgba(0,0,0,${r() * 0.04})`;
       ctx.fillRect(r() * w, r() * h, 2, 2);
     }
-    ctx.fillStyle = "#d4d2cd";
+    ctx.fillStyle = "#0e131c";
     ctx.fillRect(0, 0, w, 4);
     ctx.fillRect(0, 0, 4, h);
   });
@@ -477,64 +433,31 @@ export const materialSombra = () => unico("sombra", () => new THREE.MeshBasicMat
   polygonOffset: true, polygonOffsetFactor: -2,
 }));
 
-// Logo da recepção: "Rafael Enterprises" com o Gestor.IA embaixo, sobre ripado de madeira escura.
+// Logo da recepção: a marca do Gestor.IA em LED sobre painel escuro.
 export function texturaLogoRecepcao() {
   return texturaCanvas("logo-recepcao", 2048, 1024, (ctx, w, h) => {
-    const r = sorteio(77);
-    // ripado
-    for (let x = 0; x < w; x += 48) {
-      const l = 22 + r() * 6;
-      ctx.fillStyle = `hsl(26, 32%, ${l}%)`;
-      ctx.fillRect(x, 0, 44, h);
-      ctx.fillStyle = "rgba(0,0,0,0.45)";
-      ctx.fillRect(x + 44, 0, 4, h);
-    }
-    const g = ctx.createLinearGradient(0, 0, 0, h);
-    g.addColorStop(0, "rgba(0,0,0,0.25)");
-    g.addColorStop(0.5, "rgba(0,0,0,0)");
-    g.addColorStop(1, "rgba(0,0,0,0.35)");
+    const g = ctx.createLinearGradient(0, 0, w, h);
+    g.addColorStop(0, "#060b14");
+    g.addColorStop(1, "#0c1a33");
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = "rgba(34,211,238,0.05)";
+    for (let x = 0; x < w; x += 64) ctx.fillRect(x, 0, 2, h);
+    for (let y = 0; y < h; y += 64) ctx.fillRect(0, y, w, 2);
+    ctx.shadowColor = "rgba(34,211,238,0.85)";
+    ctx.shadowBlur = 40;
+    desenharMarca(ctx, w / 2 - 190, 120, 380);
+    desenharMarca(ctx, w / 2 - 190, 120, 380);
+    ctx.shadowBlur = 24;
     ctx.textAlign = "center";
     ctx.textBaseline = "alphabetic";
-    ctx.fillStyle = "#f3e2c0";
-    ctx.shadowColor = "rgba(255,210,140,0.55)";
-    ctx.shadowBlur = 30;
-    ctx.font = "300 170px system-ui, -apple-system, 'Segoe UI', sans-serif";
-    ctx.fillText("RAFAEL ENTERPRISES", w / 2, h * 0.47);
+    desenharNome(ctx, w / 2, 700, 210, true);
     ctx.shadowBlur = 0;
-    ctx.fillStyle = "#e3b341";
-    ctx.fillRect(w / 2 - 160, h * 0.54, 320, 6);
-    ctx.font = "700 120px system-ui, -apple-system, 'Segoe UI', sans-serif";
-    const gl = ctx.measureText("Gestor").width;
-    const total = gl + ctx.measureText(".IA").width;
-    ctx.textAlign = "left";
-    ctx.fillStyle = "#f5f5f4";
-    ctx.fillText("Gestor", w / 2 - total / 2, h * 0.74);
-    ctx.fillStyle = "#e3b341";
-    ctx.fillText(".IA", w / 2 - total / 2 + gl, h * 0.74);
-    ctx.fillStyle = "rgba(245,245,244,0.6)";
-    ctx.font = "500 46px system-ui, -apple-system, 'Segoe UI', sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText("FPAV · BRACTOS · PAVIMAX", w / 2, h * 0.86);
-  });
-}
-
-// Letreiro da recepção.
-export function texturaLogo() {
-  return texturaCanvas("logo", 1024, 256, (ctx, w, h) => {
-    ctx.fillStyle = "#1c1f24";
-    ctx.fillRect(0, 0, w, h);
-    ctx.fillStyle = "#f5f5f4";
-    ctx.font = "700 110px system-ui, -apple-system, 'Segoe UI', sans-serif";
-    ctx.textBaseline = "middle";
-    ctx.fillText("Gestor", 70, h / 2 - 18);
-    const largura = ctx.measureText("Gestor").width;
-    ctx.fillStyle = "#e3b341";
-    ctx.fillText(".IA", 70 + largura, h / 2 - 18);
-    ctx.fillStyle = "#9ca3af";
-    ctx.font = "500 40px system-ui, -apple-system, 'Segoe UI', sans-serif";
-    ctx.fillText("Rafael Enterprises · FPAV · BRACTOS · PAVIMAX", 72, h / 2 + 70);
+    ctx.fillStyle = "#94a3b8";
+    ctx.font = "500 58px system-ui, -apple-system, 'Segoe UI', sans-serif";
+    ctx.fillText("Agentes capacitados em gestão", w / 2, 810);
+    ctx.fillStyle = "#22d3ee";
+    ctx.fillRect(w / 2 - 170, 860, 340, 6);
   });
 }
 
@@ -542,7 +465,7 @@ export function texturaLogo() {
 export function texturaLivros() {
   return texturaCanvas("livros", 512, 128, (ctx, w, h) => {
     const r = sorteio(31);
-    const cores = ["#7c2d12", "#1e3a8a", "#14532d", "#78350f", "#334155", "#9f1239", "#e7e5e4", "#a16207"];
+    const cores = ["#0f172a", "#1e3a8a", "#134e4a", "#1e293b", "#334155", "#312e81", "#475569", "#0e7490"];
     let x = 0;
     while (x < w) {
       const lw = 10 + r() * 16;

@@ -108,7 +108,38 @@ body:has(.ios-abas) {
   }
 }
 
+/* De longe, o nome do agente fica só com a cor do status, para não embolar. */
+[data-compacto="1"] .boneco-extra {
+  display: none;
+}
+
+/* O escritório é sempre escuro, nos dois temas do aparelho. */
+.tech-escuro {
+  --bg: #0b1220;
+  --card: #111a2b;
+  --text: #f1f5f9;
+  --muted: #a3b3c7;
+  --line: #27364b;
+  --fill: rgba(148, 163, 184, 0.16);
+  --accent: #38bdf8;
+  --accent-fill: #0a6fdc;
+  --accent-soft: #10233d;
+  --ok: #34d399;
+  --ok-soft: #0f2c22;
+  --warn: #fbbf24;
+  --warn-soft: #2e2408;
+  --bad: #f87171;
+  --bad-soft: #33151a;
+  color: var(--text);
+}
+
 @layer components {
+  .tech-vidro {
+    border: 1px solid rgba(34, 211, 238, 0.24);
+    background: rgba(8, 13, 24, 0.84);
+    -webkit-backdrop-filter: blur(16px) saturate(150%);
+    backdrop-filter: blur(16px) saturate(150%);
+  }
   .ios-card {
     border: 1px solid transparent;
     border-radius: var(--radius-xl);

@@ -178,7 +178,7 @@ export function desenharTV(ctx: CanvasRenderingContext2D, p: PainelTV, agora = p
     desenharReuniao(ctx, p.reuniao, agora);
     return;
   }
-  cabecalho(ctx, "Painel do dia · Rafael Enterprises", agora);
+  cabecalho(ctx, "Painel do dia · Operação 24 horas", agora);
 
   // indicadores
   const kpis: [string, number, string][] = [
