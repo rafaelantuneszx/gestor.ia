@@ -1,6 +1,7 @@
 "use client";
 
 // Telas suspensas do escritório: supervisão de e-mails, fala com a equipe (voz ou texto) e resultados.
+import { CONTA_GESTOR, ID_GESTOR } from "@/lib/banco";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Bot, Loader2, Mail, Mic, Paperclip, Send, Square, Volume2, VolumeX, X } from "lucide-react";
 import { Avatar } from "@/components/Avatar";
@@ -27,10 +28,10 @@ export function TelaSuspensa({ titulo, subtitulo, icone, onFechar, children, rod
       className="absolute inset-x-2 bottom-2 z-40 flex h-[68%] flex-col min-[900px]:inset-x-auto min-[900px]:bottom-4 min-[900px]:right-4 min-[900px]:top-[132px] min-[900px]:h-auto min-[900px]:w-[440px]">
       {/* cabos que seguram a tela */}
       <div aria-hidden className="pointer-events-none absolute -top-[132px] hidden h-[132px] w-full min-[900px]:block">
-        <span className="absolute left-14 h-full w-px bg-gradient-to-b from-transparent to-cyan-400/50" />
-        <span className="absolute right-14 h-full w-px bg-gradient-to-b from-transparent to-cyan-400/50" />
+        <span className="absolute left-14 h-full w-px bg-gradient-to-b from-transparent to-sinal/50" />
+        <span className="absolute right-14 h-full w-px bg-gradient-to-b from-transparent to-sinal/50" />
       </div>
-      <div className="tech-vidro flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl shadow-[0_0_40px_rgba(34,211,238,0.14)]">
+      <div className="tech-vidro flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl shadow-[0_0_40px_rgba(61,214,245,0.14)]">
         <header className="flex items-start gap-3 border-b border-line px-4 py-3">
           <span className="mt-0.5 text-accent">{icone}</span>
           <div className="min-w-0 flex-1">
@@ -61,14 +62,14 @@ type CartaoEmail = {
 };
 
 const CONTAS: Record<string, string> = {
-  "rafael@fpav.com.br": "Rafael",
+  [CONTA_GESTOR]: "Sua caixa",
   "faturamento@fpav.com.br": "Faturamento FPAV",
   "faturamento@bractos.com.br": "Faturamento BRACTOS",
 };
 const QUANDO = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" });
 const DEMO_EMAILS: CartaoEmail[] = [
   { id: "1", conta: "faturamento@fpav.com.br", pasta: "INBOX", data: new Date(Date.now() - 18 * 60_000).toISOString(), remetente: "Fornecedor Exemplo", assunto: "Exemplo fictício: nota fiscal de outubro", anexos: 2, agente: "bruno-financeiro", situacao: "novo" },
-  { id: "2", conta: "rafael@fpav.com.br", pasta: "INBOX", data: new Date(Date.now() - 66 * 60_000).toISOString(), remetente: "Cliente Exemplo", assunto: "Exemplo fictício: medição da obra para conferir", anexos: 1, agente: "otavio-pavimax", situacao: "com-agente" },
+  { id: "2", conta: CONTA_GESTOR, pasta: "INBOX", data: new Date(Date.now() - 66 * 60_000).toISOString(), remetente: "Cliente Exemplo", assunto: "Exemplo fictício: medição da obra para conferir", anexos: 1, agente: "otavio-pavimax", situacao: "com-agente" },
   { id: "3", conta: "faturamento@bractos.com.br", pasta: "INBOX", data: new Date(Date.now() - 140 * 60_000).toISOString(), remetente: "Empresa Exemplo", assunto: "Exemplo fictício: boleto com vencimento na sexta", anexos: 1, agente: "davi-faturas", situacao: "com-agente" },
 ];
 
@@ -167,7 +168,7 @@ export function TelaEquipe({ modo, agentes, reunioes, falasDoBanco, onFechar }: 
   onFechar: () => void;
 }) {
   const aberta = useMemo(
-    () => reunioes.find((r) => r.estado === "em_andamento" && r.titulo === TITULO_CONVERSA && r.convocada_por === "rafael") ?? null,
+    () => reunioes.find((r) => r.estado === "em_andamento" && r.titulo === TITULO_CONVERSA && r.convocada_por === ID_GESTOR) ?? null,
     [reunioes],
   );
   const [id, setId] = useState<number | null>(aberta?.id ?? null);
@@ -191,7 +192,7 @@ export function TelaEquipe({ modo, agentes, reunioes, falasDoBanco, onFechar }: 
     return [...mapa.values()].sort((a, b) => a.ts.localeCompare(b.ts));
   }, [id, falasDoBanco, locais]);
 
-  const leitor = useLeitor({ falas, pularFala: (f) => f.agente === "rafael", aoVivoInicial: true, ids: sel });
+  const leitor = useLeitor({ falas, pularFala: (f) => f.agente === ID_GESTOR, aoVivoInicial: true, ids: sel });
   const leitorRef = useRef(leitor);
   leitorRef.current = leitor;
   useEffect(() => { fim.current?.scrollIntoView({ block: "end" }); }, [falas.length, pensando]);
@@ -208,7 +209,7 @@ export function TelaEquipe({ modo, agentes, reunioes, falasDoBanco, onFechar }: 
     setTexto("");
     if (!leitorRef.current.tocando) leitorRef.current.play(falas.length);
     if (modo === "demo") {
-      adicionarLocal("rafael", fala);
+      adicionarLocal(ID_GESTOR, fala);
       setPensando(true);
       setTimeout(() => {
         respostasDemo(fala, sel).forEach((r) => adicionarLocal(r.agente, r.texto));
@@ -248,7 +249,7 @@ export function TelaEquipe({ modo, agentes, reunioes, falasDoBanco, onFechar }: 
     }
   }, [adicionarLocal, falas.length, id, modo, sel]);
 
-  const falandoAgora = leitor.tocando && !leitor.esperando && leitor.falaAtual?.agente !== "rafael";
+  const falandoAgora = leitor.tocando && !leitor.esperando && leitor.falaAtual?.agente !== ID_GESTOR;
   const mic = useMicrofone({ pausado: pensando || falandoAgora, onEnviar: enviar });
 
   const encerrar = async () => {
@@ -265,7 +266,7 @@ export function TelaEquipe({ modo, agentes, reunioes, falasDoBanco, onFechar }: 
   };
 
   const conversaAberta = id !== null || (modo === "demo" && locais.length > 0);
-  const nome = (a: string) => (a === "rafael" ? "Você" : agentes.find((x) => x.id === a)?.nome ?? a);
+  const nome = (a: string) => (a === ID_GESTOR ? "Você" : agentes.find((x) => x.id === a)?.nome ?? a);
 
   return (
     <TelaSuspensa titulo="Falar com a equipe" subtitulo="Por voz ou texto. Quem você chamar vai para a sala de reunião e responde aqui."
@@ -330,7 +331,7 @@ export function TelaEquipe({ modo, agentes, reunioes, falasDoBanco, onFechar }: 
           <p className="py-6 text-center text-sm text-muted">Escreva ou segure o microfone para falar. As respostas usam só o que está nas demandas, atas e relatórios.</p>
         )}
         {falas.map((f) => {
-          const eu = f.agente === "rafael";
+          const eu = f.agente === ID_GESTOR;
           const ag = agentes.find((a) => a.id === f.agente);
           return (
             <div key={f.id} className={`flex items-start gap-2 ${eu ? "flex-row-reverse" : ""}`}>
@@ -368,7 +369,7 @@ function Barra({ titulo, detalhe, f, cor }: { titulo: string; detalhe: string; f
 
 export function TelaResultados({ ind, agentes, onFechar }: { ind: Indicadores; agentes: AgenteInfo[]; onFechar: () => void }) {
   const cards: [string, number, string, string][] = [
-    ["Atualizadas hoje", ind.atualizadasHoje, "#22d3ee", "demandas que mudaram hoje"],
+    ["Atualizadas hoje", ind.atualizadasHoje, "#3dd6f5", "demandas que mudaram hoje"],
     ["Entregues", ind.entregues, "#a78bfa", `relatórios no Arquivo · ${ind.entreguesHoje} hoje`],
     ["Feitas", ind.feitas, "#34d399", "demandas concluídas"],
     ["A fazer", ind.aFazer, "#fbbf24", `${ind.aguardandoVoce} aguardando você`],
@@ -393,7 +394,7 @@ export function TelaResultados({ ind, agentes, onFechar }: { ind: Indicadores; a
       </div>
       <section className="space-y-4 border-t border-line p-4">
         <h3 className="text-sm font-semibold text-muted">Quanto anda sem depender de você</h3>
-        <Barra titulo="Agentes resolvem sem você" f={ind.agentesSemVoce} cor="#22d3ee"
+        <Barra titulo="Agentes resolvem sem você" f={ind.agentesSemVoce} cor="#3dd6f5"
           detalhe={`${ind.agentesSemVoce.feitos} de ${ind.agentesSemVoce.total} demandas feitas não precisaram da sua decisão na Mesa.`} />
         <Barra titulo="Rotinas terminam sem erro" f={ind.rotinasSemErro} cor="#34d399"
           detalhe={`${ind.rotinasSemErro.feitos} de ${ind.rotinasSemErro.total} execuções nos últimos 30 dias.`} />

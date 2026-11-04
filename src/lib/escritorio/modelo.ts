@@ -45,8 +45,8 @@ export type Viagem = {
 //   corredor 1 (z -8 a -4);
 //   meio (z -4 a 6): Frota e RH, Suprimentos, sala de reunião, hall, Arquivo e copa;
 //   corredor 2 (z 6 a 10);
-//   frente (z 10 a 17): a sala do Rafael e a recepção aberta, com balcão, logo e sofás.
-// Os agentes sentam de costas para a câmera, olhando o monitor; o Rafael senta de frente.
+//   frente (z 10 a 17): a sala do gestor e a recepção aberta, com balcão, logo e sofás.
+// Os agentes sentam de costas para a câmera, olhando o monitor; o gestor senta de frente.
 
 export const GRUPO_COR: Record<string, string> = {
   "Direção": "#7F77DD",
@@ -55,6 +55,7 @@ export const GRUPO_COR: Record<string, string> = {
 };
 
 export { COR_SETOR as SETOR_COR } from "@/lib/pessoas";
+import { ID_GESTOR, semNomeDoGestor } from "@/lib/banco";
 import { COR_SETOR } from "@/lib/pessoas";
 
 export const PREDIO = { x0: -26, x1: 26, z0: -19, z1: 17 };
@@ -96,7 +97,7 @@ export const SALAS: Sala[] = [
   { id: "reuniao", nome: "Sala de reunião", cor: "#475569", icone: "reuniao", fileira: "meio", x0: -12, x1: 3, z0: -4, z1: 6, corredor: "c2", porta: -11.0, faixa: 4.3, piso: "carpete" },
   { id: "arquivo", nome: "Arquivo", cor: "#78716c", icone: "arquivo", fileira: "meio", x0: 7, x1: 17, z0: -4, z1: 6, corredor: "c2", porta: 7.9, faixa: -1.9, piso: "madeira" },
   { id: "copa", nome: "Copa", cor: "#0f766e", icone: "copa", fileira: "meio", x0: 17, x1: 26, z0: -4, z1: 6, corredor: "c2", porta: 17.9, faixa: 3.6, piso: "porcelanato" },
-  { id: "rafael", nome: "Sala do Rafael", cor: "#b8875a", icone: "rafael", fileira: "frente", x0: -26, x1: -10, z0: 10, z1: 17, corredor: "c2", porta: -11.0, faixa: 11.2, piso: "carpete-quente" },
+  { id: "gestor", nome: "Sua sala", cor: "#b8875a", icone: "gestor", fileira: "frente", x0: -26, x1: -10, z0: 10, z1: 17, corredor: "c2", porta: -11.0, faixa: 11.2, piso: "carpete-quente" },
   { id: "recepcao", nome: "Recepção", cor: "#1f2937", icone: "recepcao", fileira: "frente", x0: -10, x1: 12, z0: 10, z1: 17, corredor: "c2", porta: 8.5, faixa: 15.8, piso: "porcelanato", aberta: true },
   { id: "datacenter", nome: "Data center", cor: "#22d3ee", icone: "sistemas", fileira: "frente", x0: 12, x1: 26, z0: 10, z1: 17, corredor: "c2", porta: 13.0, faixa: 13.3, piso: "concreto" },
 ];
@@ -125,10 +126,10 @@ export const MESAS: Record<string, Vec2> = {
   "caio-suprimentos": [-15.8, MESA_Z_MEIO],
 };
 
-// Sala do Rafael: a mesa fica de frente para a câmera; ele senta atrás dela (z menor), olhando para nós.
-export const MESA_RAFAEL: Vec2 = [-19, 13.4];
-export const CADEIRA_RAFAEL: Vec2 = [MESA_RAFAEL[0], MESA_RAFAEL[1] - 0.85];
-const VISITA_RAFAEL: Vec2 = [-16.9, 13.2]; // onde quem traz uma demanda para, ao lado da mesa
+// Sala do gestor: a mesa fica de frente para a câmera; ele senta atrás dela (z menor), olhando para nós.
+export const MESA_GESTOR: Vec2 = [-19, 13.4];
+export const CADEIRA_GESTOR: Vec2 = [MESA_GESTOR[0], MESA_GESTOR[1] - 0.85];
+const VISITA_GESTOR: Vec2 = [-16.9, 13.2]; // onde quem traz uma demanda para, ao lado da mesa
 
 // Arquivo: uma estante por setor, encostada na parede do fundo da sala e aberta para a frente (para a câmera).
 export const ARQUIVO_X0 = 8.2;
@@ -213,7 +214,7 @@ export function rota(de: Vec2, para: Vec2): Vec2[] {
 }
 
 function destinoAgente(id: string): Vec2 {
-  if (id === "rafael") return VISITA_RAFAEL;
+  if (id === ID_GESTOR) return VISITA_GESTOR;
   const c = cadeira(id);
   return [c[0] + 1.15, c[1] + 0.2]; // ao lado da cadeira do colega (o retorno da mesa fica à esquerda)
 }
@@ -310,7 +311,7 @@ export const CAMERAS: Camera[] = [
   { id: "frota-rh", nome: "Frota e RH", atalho: "6", icone: "frota-rh", vista: cameraDaSala(SALA["frota-rh"]) },
   { id: "suprimentos", nome: "Suprimentos", atalho: "7", icone: "suprimentos", vista: cameraDaSala(SALA.suprimentos) },
   { id: "reuniao", nome: "Reunião", atalho: "8", icone: "reuniao", vista: [-0.6, 2.75, 5.6, -5.0, 0.95, -1.4] },
-  { id: "rafael", nome: "Sala do Rafael", atalho: "9", icone: "rafael", vista: [-13.4, 2.9, 16.7, -19.6, 0.85, 12.2] },
+  { id: "gestor", nome: "Sua sala", atalho: "9", icone: "gestor", vista: [-13.4, 2.9, 16.7, -19.6, 0.85, 12.2] },
   { id: "arquivo", nome: "Arquivo", atalho: "A", icone: "arquivo", vista: [16.5, 2.72, 5.6, 11.2, 0.9, -3.0] },
   { id: "recepcao", nome: "Recepção", atalho: "R", icone: "recepcao", vista: [11.4, 3.2, 16.8, -6.0, 0.9, 11.2] },
   { id: "datacenter", nome: "Data center", atalho: "D", icone: "sistemas", vista: [13.0, 2.7, 16.9, 22.0, 1.15, 11.0] },
@@ -320,7 +321,7 @@ export const CAMERAS: Camera[] = [
 export const CAMERA = Object.fromEntries(CAMERAS.map((c) => [c.id, c])) as Record<string, Camera>;
 
 // Visões do mosaico (CFTV): 6 em tela larga, 4 no celular.
-export const MOSAICO = ["reuniao", "sistemas", "financeiro", "custos", "direcao", "rafael"];
+export const MOSAICO = ["reuniao", "sistemas", "financeiro", "custos", "direcao", "gestor"];
 
 // ---------- eventos → estado e viagens ----------
 
@@ -335,7 +336,8 @@ const MAX_LINHAS = 60;
 const ABERTA_DEMAIS_MS = 2 * 3600 * 1000;
 
 // Aplica um evento ao estado do agente dono dele (imutável). `agora` permite reproduzir o dia.
-export function aplicarEvento(estado: EstadoAgente, ev: EventoCentral): EstadoAgente {
+export function aplicarEvento(estado: EstadoAgente, bruto: EventoCentral): EstadoAgente {
+  const ev = { ...bruto, rotina: semNomeDoGestor(bruto.rotina), resumo: semNomeDoGestor(bruto.resumo) };
   const h = hora(ev.ts);
   const linhas = [...estado.linhas];
   let { status, rotina, passo, desde } = estado;
@@ -408,12 +410,12 @@ export function viagemDoEvento(
   const criou = RE_CRIOU.exec(ev.rotina) ?? RE_REPASSOU.exec(ev.rotina);
   if (criou && agentes.has(ev.agente)) {
     const para = criou[2];
-    if (para !== "rafael" && !agentes.has(para)) return null;
+    if (para !== ID_GESTOR && !agentes.has(para)) return null;
     return {
       id: `dem-${ev.id}`,
       agente: ev.agente,
       caminho: rota(cadeira(ev.agente), destinoAgente(para)),
-      rotulo: para === "rafael" ? `levando a demanda #${criou[1]} para a sua mesa` : `entregando a demanda #${criou[1]}`,
+      rotulo: para === ID_GESTOR ? `levando a demanda #${criou[1]} para a sua mesa` : `entregando a demanda #${criou[1]}`,
       tipo: "demanda",
     };
   }
@@ -426,7 +428,7 @@ export function viagemDoEvento(
     return {
       id: `dec-${ev.id}`,
       agente: quem,
-      caminho: rota(cadeira(quem), destinoAgente("rafael")),
+      caminho: rota(cadeira(quem), destinoAgente(ID_GESTOR)),
       rotulo: `buscando a sua decisão da demanda #${decisao[1]}`,
       tipo: "buscar",
     };

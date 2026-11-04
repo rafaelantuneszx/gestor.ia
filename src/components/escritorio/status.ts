@@ -4,7 +4,7 @@ import type { EstadoAgente } from "@/lib/escritorio/modelo";
 export type TipoStatus = "trabalhando" | "livre" | "atencao" | "reuniao" | "andando" | "pausa";
 
 export const COR_STATUS: Record<TipoStatus, string> = {
-  trabalhando: "#22d3ee",
+  trabalhando: "#3dd6f5",
   livre: "#34d399",
   atencao: "#f87171",
   reuniao: "#fbbf24",

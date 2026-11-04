@@ -1,6 +1,9 @@
+import { ESTADO_AGUARDANDO_GESTOR, ID_GESTOR } from "@/lib/banco";
+import { comEscopo } from "./escopo";
 import { supabaseServidor } from "./supabase/server";
 
-export type Agente = { id: string; nome: string; cargo: string; grupo: string; setor: string | null };
+export type Agente = { id: string; nome: string; cargo: string; grupo: string; setor: string | null; empresa?: string | null };
+export type Empresa = { id: string; nome: string; sigla: string; ordem: number };
 export type Setor = { id: string; nome: string; descricao: string | null; ordem: number };
 export type Documento = {
   id: string;
@@ -13,6 +16,7 @@ export type Documento = {
   storage_path: string | null;
   data_ref: string | null;
   criado_em: string;
+  empresa?: string | null;
 };
 export type Demanda = {
   id: number;
@@ -21,7 +25,7 @@ export type Demanda = {
   titulo: string;
   detalhe: string;
   prioridade: "alta" | "media" | "baixa";
-  estado: "aberta" | "andamento" | "aguardando-rafael" | "feita" | "cancelada";
+  estado: "aberta" | "andamento" | typeof ESTADO_AGUARDANDO_GESTOR | "feita" | "cancelada";
   setor: string | null;
   documento_id: string | null;
   decisao: "aprovada" | "recusada" | "ajuste" | null;
@@ -29,6 +33,7 @@ export type Demanda = {
   decidida_em: string | null;
   criada: string;
   atualizada: string;
+  empresa?: string | null;
 };
 export type Historico = { id: number; demanda_id: number; ts: string; por: string; acao: string; nota: string };
 
@@ -40,16 +45,53 @@ export async function autorizado() {
 
 export async function cadastros() {
   const sb = await supabaseServidor();
-  const [ag, st] = await Promise.all([
+  const [ag, st, emp] = await Promise.all([
     sb.from("central_agentes").select("*"),
     sb.from("central_setores").select("*").order("ordem"),
+    listarEmpresas(),
   ]);
   const agentes = new Map<string, Agente>((ag.data ?? []).map((a: Agente) => [a.id, a]));
-  return { agentes, setores: (st.data ?? []) as Setor[] };
+  return { agentes, setores: (st.data ?? []) as Setor[], empresas: emp };
+}
+
+// Antes da migration central_empresas a tabela não existe: o sistema segue só com o grupo.
+export async function listarEmpresas(): Promise<Empresa[]> {
+  const sb = await supabaseServidor();
+  const { data, error } = await sb.from("central_empresas").select("*").order("ordem");
+  return error ? [] : ((data ?? []) as Empresa[]);
+}
+
+export async function pendentesNoEscopo(escopo: string) {
+  const sb = await supabaseServidor();
+  const { count } = await comEscopo(sb.from("central_demandas").select("id", { count: "exact", head: true }), escopo)
+    .eq("estado", ESTADO_AGUARDANDO_GESTOR);
+  return count ?? 0;
+}
+
+export async function empresasComPendencias() {
+  const empresas = await listarEmpresas();
+  const pendencias = await Promise.all(empresas.map((e) => pendentesNoEscopo(e.id)));
+  return empresas.map((e, i) => ({ ...e, pendencias: pendencias[i] }));
+}
+
+// Agentes com rotina começada e sem fim nos últimos 30 minutos.
+export async function agentesAtivos(escopo: string) {
+  const sb = await supabaseServidor();
+  const desde = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+  const { data } = await comEscopo(sb.from("central_eventos").select("agente, rotina, tipo"), escopo)
+    .gte("ts", desde).in("tipo", ["inicio", "fim"]).order("id").limit(1000);
+  const abertas = new Set<string>();
+  for (const e of (data ?? []) as { agente: string; rotina: string; tipo: string }[]) {
+    if (e.rotina.startsWith("reuniao#")) continue;
+    const k = `${e.agente}|${e.rotina}`;
+    if (e.tipo === "inicio") abertas.add(k);
+    else abertas.delete(k);
+  }
+  return new Set([...abertas].map((k) => k.split("|")[0])).size;
 }
 
 export function nomeDe(agentes: Map<string, Agente>, id: string) {
-  if (id === "rafael") return "Você";
+  if (id === ID_GESTOR) return "Você";
   return agentes.get(id)?.nome ?? id;
 }
 

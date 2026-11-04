@@ -3,7 +3,7 @@
 import * as THREE from "three";
 import type { Piso } from "@/lib/escritorio/modelo";
 import { svgIcone } from "@/lib/escritorio/icones";
-import { desenharMarca, desenharNome } from "./paineis";
+import { fonteMarca } from "./paineis";
 
 const materiais = new Map<string, THREE.Material>();
 
@@ -85,7 +85,7 @@ function desenharMadeira(ctx: CanvasRenderingContext2D, w: number, h: number) {
       ctx.fillRect(i * t, j * t, t, t);
     }
   }
-  ctx.fillStyle = "rgba(34,211,238,0.16)";
+  ctx.fillStyle = "rgba(61,214,245,0.16)";
   for (let i = 0; i <= n; i++) {
     ctx.fillRect(i * t - 1, 0, 2, h);
     ctx.fillRect(0, i * t - 1, w, 2);
@@ -103,7 +103,7 @@ function desenharPorcelanato(ctx: CanvasRenderingContext2D, w: number, h: number
     ctx.ellipse(r() * w, r() * h, 4 + r() * 30, 2 + r() * 14, r() * Math.PI, 0, Math.PI * 2);
     ctx.fill();
   }
-  ctx.fillStyle = "rgba(34,211,238,0.1)";
+  ctx.fillStyle = "rgba(61,214,245,0.1)";
   for (let i = 0; i <= 2; i++) {
     ctx.fillRect((i * w) / 2 - 1, 0, 2, h);
     ctx.fillRect(0, (i * h) / 2 - 1, w, 2);
@@ -159,7 +159,7 @@ function desenharConcreto(ctx: CanvasRenderingContext2D, w: number, h: number) {
     for (let j = 0; j < n; j++) {
       ctx.fillStyle = "#101722";
       ctx.fillRect(i * t + 3, j * t + 3, t - 6, t - 6);
-      ctx.fillStyle = "rgba(34,211,238,0.12)";
+      ctx.fillStyle = "rgba(61,214,245,0.12)";
       for (let a = 1; a < 7; a++) for (let b = 1; b < 7; b++) ctx.fillRect(i * t + (a * t) / 7 - 1, j * t + (b * t) / 7 - 1, 3, 3);
     }
   }
@@ -225,7 +225,7 @@ export function texturaCeu() {
     const camadas: [string, number, string[], number][] = [
       ["#0b1630", 0.46, ["#1e3a8a"], 0.25],
       ["#070f22", 0.36, ["#38bdf8", "#1e40af"], 0.3],
-      ["#040914", 0.24, ["#fde68a", "#22d3ee", "#93c5fd"], 0.42],
+      ["#040914", 0.24, ["#fde68a", "#3dd6f5", "#93c5fd"], 0.42],
     ];
     for (const [cor, alturaMax, janelas, acesas] of camadas) {
       let x = -20;
@@ -269,7 +269,7 @@ export function texturaQuadro() {
     cols.forEach((c, i) => {
       const x = 40 + i * 320;
       ctx.font = "500 32px system-ui";
-      ctx.fillStyle = ["#fbbf24", "#22d3ee", "#34d399"][i];
+      ctx.fillStyle = ["#fbbf24", "#3dd6f5", "#34d399"][i];
       ctx.fillText(c, x, 140);
       ctx.beginPath();
       ctx.moveTo(x, 155);
@@ -289,7 +289,7 @@ export function texturaQuadro() {
         ctx.restore();
       }
     });
-    ctx.strokeStyle = "#22d3ee";
+    ctx.strokeStyle = "#3dd6f5";
     ctx.lineWidth = 6;
     ctx.strokeRect(5, 5, w - 10, h - 10);
   });
@@ -369,7 +369,7 @@ export function texturaArte(semente: number) {
   return texturaCanvas(`arte|${semente}`, 512, 384, (ctx, w, h) => {
     const r = sorteio(semente * 97 + 13);
     const paletas = [
-      ["#070c16", "#0e7490", "#1d4ed8", "#22d3ee", "#334155"],
+      ["#070c16", "#0e7490", "#1d4ed8", "#3dd6f5", "#334155"],
       ["#080d18", "#312e81", "#4f46e5", "#38bdf8", "#1e293b"],
       ["#060b14", "#134e4a", "#0d9488", "#2dd4bf", "#1e3a5f"],
       ["#090e1a", "#1e40af", "#7c3aed", "#60a5fa", "#0f172a"],
@@ -433,32 +433,36 @@ export const materialSombra = () => unico("sombra", () => new THREE.MeshBasicMat
   polygonOffset: true, polygonOffsetFactor: -2,
 }));
 
-// Logo da recepção: a marca do Gestor.IA em LED sobre painel escuro.
+// Parede da recepção: o logotipo oficial em negativo, sobre a cor noite da marca.
 export function texturaLogoRecepcao() {
-  return texturaCanvas("logo-recepcao", 2048, 1024, (ctx, w, h) => {
-    const g = ctx.createLinearGradient(0, 0, w, h);
-    g.addColorStop(0, "#060b14");
-    g.addColorStop(1, "#0c1a33");
-    ctx.fillStyle = g;
+  const k = "logo-recepcao";
+  let t = texturas.get(k) as THREE.CanvasTexture | undefined;
+  if (t) return t;
+  t = new THREE.CanvasTexture(novoCanvas(2048, 1024, (ctx, w, h) => {
+    ctx.fillStyle = "#0a1424";
     ctx.fillRect(0, 0, w, h);
-    ctx.fillStyle = "rgba(34,211,238,0.05)";
-    for (let x = 0; x < w; x += 64) ctx.fillRect(x, 0, 2, h);
-    for (let y = 0; y < h; y += 64) ctx.fillRect(0, y, w, 2);
-    ctx.shadowColor = "rgba(34,211,238,0.85)";
-    ctx.shadowBlur = 40;
-    desenharMarca(ctx, w / 2 - 190, 120, 380);
-    desenharMarca(ctx, w / 2 - 190, 120, 380);
-    ctx.shadowBlur = 24;
     ctx.textAlign = "center";
     ctx.textBaseline = "alphabetic";
-    desenharNome(ctx, w / 2, 700, 210, true);
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = "#94a3b8";
-    ctx.font = "500 58px system-ui, -apple-system, 'Segoe UI', sans-serif";
-    ctx.fillText("Agentes capacitados em gestão", w / 2, 810);
-    ctx.fillStyle = "#22d3ee";
-    ctx.fillRect(w / 2 - 170, 860, 340, 6);
-  });
+    ctx.fillStyle = "#f1f5f9";
+    ctx.font = `700 92px ${fonteMarca()}`;
+    ctx.fillText("Seu escritório remoto 24 horas", w / 2, 720);
+    ctx.fillStyle = "#6aa9f5";
+    ctx.font = `500 44px ${fonteMarca()}`;
+    ctx.fillText("Sua empresa e seu grupo em um só lugar", w / 2, 800);
+  }));
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
+  texturas.set(k, t);
+  const pronta = t;
+  const img = new Image();
+  img.onload = () => {
+    const ctx = (pronta.image as HTMLCanvasElement).getContext("2d");
+    if (!ctx) return;
+    ctx.drawImage(img, 1024 - 640, 210, 1280, 320);
+    pronta.needsUpdate = true;
+  };
+  img.src = "/marca/gestor-ia-logo-negativo.svg";
+  return t;
 }
 
 // Lombadas de livros numa textura só, para a estante da sua sala.

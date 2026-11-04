@@ -1,3 +1,4 @@
+import { ID_GESTOR, semNomeDoGestor } from "@/lib/banco";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -41,10 +42,10 @@ function Pessoas({ ids, agentes }: { ids: string[]; agentes: Agentes }) {
   );
 }
 
-// Pessoas para os componentes do navegador (nome, cargo e setor de cada um, e o Rafael).
+// Pessoas para os componentes do navegador (nome, cargo e setor de cada um, e o gestor).
 export function pessoasDe(agentes: Agentes) {
   return [
-    { id: "rafael", nome: "Rafael", cargo: "Dono", setor: null },
+    { id: ID_GESTOR, nome: "Você", cargo: "Gestor", setor: null },
     ...[...agentes.values()].map((a) => ({ id: a.id, nome: a.nome, cargo: a.cargo, setor: a.setor })),
   ];
 }
@@ -76,7 +77,7 @@ export function CartaoReuniao({ r, agentes, base, falas = 0 }: { r: Reuniao; age
         <span className="text-muted">{quandoTexto(r)} · #{r.id}</span>
       </div>
       <h3 className="text-[15px] font-semibold leading-snug">
-        <Link href={`${base}/${r.id}`} className="hover:text-accent">{r.titulo}</Link>
+        <Link href={`${base}/${r.id}`} className="hover:text-accent">{semNomeDoGestor(r.titulo)}</Link>
       </h3>
       <p className="mt-0.5 text-sm text-muted">
         Convocada por {nomeDe(agentes, r.convocada_por)}{convocou ? `, ${convocou.cargo}` : ""}
@@ -86,7 +87,7 @@ export function CartaoReuniao({ r, agentes, base, falas = 0 }: { r: Reuniao; age
       </div>
       {pauta.length > 0 && (
         <ol className="mt-2 list-decimal space-y-0.5 pl-5 text-sm">
-          {pauta.slice(0, 4).map((p, i) => <li key={i}>{p}</li>)}
+          {pauta.slice(0, 4).map((p, i) => <li key={i}>{semNomeDoGestor(p)}</li>)}
           {pauta.length > 4 && <li className="list-none text-xs text-muted">+ {pauta.length - 4} itens</li>}
         </ol>
       )}
@@ -167,7 +168,7 @@ export function ListaReunioes({
               Próxima reunião {diaEHora(proxima.agendada_para!)} · {emQuanto(proxima.agendada_para!)}
             </div>
             <div className="truncate text-sm text-text">
-              {proxima.titulo} <span className="text-muted">· {presentes(proxima).map((id) => nomeDe(agentes, id)).join(", ")}</span>
+              {semNomeDoGestor(proxima.titulo)} <span className="text-muted">· {presentes(proxima).map((id) => nomeDe(agentes, id)).join(", ")}</span>
             </div>
           </div>
         </Link>
@@ -224,7 +225,7 @@ export function DetalheReuniao({
               {pauta.map((p, i) => (
                 <li key={i} className="flex gap-3 px-4 py-2.5 text-sm">
                   <span className="w-5 shrink-0 text-right font-semibold tabular-nums text-muted">{i + 1}</span>
-                  <span>{p}</span>
+                  <span>{semNomeDoGestor(p)}</span>
                 </li>
               ))}
             </ol>
@@ -235,7 +236,7 @@ export function DetalheReuniao({
           <h2 className="mb-2 ios-secao">Ata</h2>
           {r.ata ? (
             <article className="md ios-card p-5 text-[15px]">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{r.ata}</ReactMarkdown>
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{semNomeDoGestor(r.ata)}</ReactMarkdown>
             </article>
           ) : (
             <p className="ios-card px-4 py-4 text-sm text-muted">
@@ -252,7 +253,7 @@ export function DetalheReuniao({
             <ul className="divide-y divide-line ios-card">
               {decisoes.map((d, i) => {
                 const e = ESTADO_DECISAO[d.estado ?? "pendente"] ?? ESTADO_DECISAO.pendente;
-                const aprova = d.aprovacao === "rafael"
+                const aprova = d.aprovacao === ID_GESTOR
                   ? "Você aprova"
                   : d.aprovacao === "diretor"
                     ? `Diretor aprova${d.aprovador ? ` (${nomeDe(agentes, d.aprovador)})` : ""}`
@@ -264,7 +265,7 @@ export function DetalheReuniao({
                         tamanho={30} selo={false} className="mt-0.5" />
                     )}
                     <div className="min-w-0 flex-1">
-                      <div className="font-medium">{d.texto}</div>
+                      <div className="font-medium">{semNomeDoGestor(d.texto)}</div>
                       <div className="mt-0.5 text-xs text-muted">
                         {d.responsavel ? `Responsável: ${nomeDe(agentes, d.responsavel)} · ` : ""}{aprova}
                       </div>
@@ -314,7 +315,7 @@ export function DetalheReuniao({
         <span className="text-muted">#{r.id}</span>
       </div>
       <div className="flex flex-wrap items-start gap-3">
-        <h1 className="min-w-0 flex-1 text-xl font-semibold sm:text-2xl">{r.titulo}</h1>
+        <h1 className="min-w-0 flex-1 text-xl font-semibold sm:text-2xl">{semNomeDoGestor(r.titulo)}</h1>
         {aoVivo && (
           <Link href={`${base}/${r.id}/sala`}
             className="inline-flex h-10 items-center gap-1.5 rounded-full bg-accent-fill px-4 text-sm font-semibold text-white hover:opacity-90">

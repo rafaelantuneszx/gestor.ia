@@ -1,3 +1,4 @@
+import { semNomeDoGestor } from "@/lib/banco";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronLeft, FileText } from "lucide-react";
@@ -5,6 +6,7 @@ import { Topo, SemAcesso } from "@/components/Topo";
 import { autorizado, cadastros, nomeDe, quando, type Documento } from "@/lib/dados";
 import { supabaseServidor } from "@/lib/supabase/server";
 import { corDa } from "@/lib/cores";
+import { comEscopo, escopoAtual } from "@/lib/escopo";
 
 export const dynamic = "force-dynamic";
 
@@ -15,11 +17,11 @@ export default async function Prateleira({ params }: { params: Promise<{ setor: 
   const { setor } = await params;
   if (!(await autorizado())) return <SemAcesso />;
   const sb = await supabaseServidor();
-  const [{ setores, agentes }, docs, pend] = await Promise.all([
+  const escopo = await escopoAtual();
+  const [{ setores, agentes }, docs] = await Promise.all([
     cadastros(),
-    sb.from("central_documentos").select("id, setor, agente, rotina, titulo, tipo, data_ref, criado_em")
+    comEscopo(sb.from("central_documentos").select("id, setor, agente, rotina, titulo, tipo, data_ref, criado_em"), escopo)
       .eq("setor", setor).order("criado_em", { ascending: false }),
-    sb.from("central_demandas").select("id", { count: "exact", head: true }).eq("estado", "aguardando-rafael"),
   ]);
   const s = setores.find((x) => x.id === setor);
   if (!s) notFound();
@@ -32,7 +34,7 @@ export default async function Prateleira({ params }: { params: Promise<{ setor: 
 
   return (
     <>
-      <Topo aba="arquivo" pendentes={pend.count ?? 0} />
+      <Topo aba="arquivo" />
       <main className="mx-auto max-w-4xl px-4 py-6">
         <Link href="/arquivo" className="mb-3 inline-flex items-center gap-1 text-sm text-muted hover:text-text">
           <ChevronLeft size={16} /> Arquivo
@@ -50,7 +52,7 @@ export default async function Prateleira({ params }: { params: Promise<{ setor: 
                     <span className="h-8 w-1.5 rounded-sm" style={{ background: corDa(d.rotina) }} />
                     <FileText size={18} className="text-muted" />
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate font-medium">{d.titulo}</span>
+                      <span className="block truncate font-medium">{semNomeDoGestor(d.titulo)}</span>
                       <span className="block text-xs text-muted">
                         {TIPO[d.tipo]} · {d.agente ? nomeDe(agentes, d.agente) : "—"} · {quando(d.criado_em)}
                       </span>

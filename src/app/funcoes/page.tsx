@@ -1,12 +1,14 @@
+import { ESTADO_AGUARDANDO_GESTOR, ID_GESTOR } from "@/lib/banco";
 import Link from "next/link";
 import { CircleAlert, TriangleAlert } from "lucide-react";
+import { Autonomia } from "@/components/Autonomia";
 import { Topo, SemAcesso } from "@/components/Topo";
 import { Avatar } from "@/components/Avatar";
 import { autorizado, cadastros, type Demanda } from "@/lib/dados";
 import { supabaseServidor } from "@/lib/supabase/server";
 import {
-  AREAS, FUNCOES, GARGALO, NOME_AGENTE, liga, normalizar, situacao, type Funcao, type Situacao, type Status,
-} from "@/lib/funcoes-rafael";
+  AREAS, FUNCOES, GARGALO, NIVEIS_AUTONOMIA, NOME_AGENTE, liga, nivelAutonomia, normalizar, situacao, type Funcao, type Situacao, type Status,
+} from "@/lib/funcoes-gestor";
 
 export const dynamic = "force-dynamic";
 
@@ -19,10 +21,10 @@ const LINHA: Record<Situacao, string> = {
   ok: "border-l-4 border-l-transparent",
 };
 const ESTADO: Record<Demanda["estado"], string> = {
-  "aguardando-rafael": "aguardando você", aberta: "aberta", andamento: "em andamento", feita: "feita", cancelada: "cancelada",
+  [ESTADO_AGUARDANDO_GESTOR]: "aguardando você", aberta: "aberta", andamento: "em andamento", feita: "feita", cancelada: "cancelada",
 };
 const ESTADO_CHIP: Record<Demanda["estado"], string> = {
-  "aguardando-rafael": "bg-warn-soft text-warn",
+  [ESTADO_AGUARDANDO_GESTOR]: "bg-warn-soft text-warn",
   aberta: "bg-bg text-muted",
   andamento: "bg-accent-soft text-accent",
   feita: "bg-ok-soft text-ok",
@@ -40,7 +42,7 @@ export default async function Funcoes({ searchParams }: { searchParams: Promise<
     sb.from("central_demandas").select("id, titulo, estado, de, para").not("estado", "in", "(feita,cancelada)").order("id"),
   ]);
   const abertas = (dem.data ?? []) as DemandaCurta[];
-  const aguardando = abertas.filter((d) => d.estado === "aguardando-rafael").length;
+  const aguardando = abertas.filter((d) => d.estado === ESTADO_AGUARDANDO_GESTOR).length;
   const titulos = abertas.map((d) => ({ d, t: normalizar(d.titulo) }));
   const ligadas = new Map<Funcao, DemandaCurta[]>(
     FUNCOES.map((fn) => [fn, titulos.filter(({ t }) => liga(fn, t)).map(({ d }) => d)]),
@@ -50,39 +52,24 @@ export default async function Funcoes({ searchParams }: { searchParams: Promise<
 
   const sit = new Map(FUNCOES.map((fn) => [fn, situacao(fn)]));
   const semDono = FUNCOES.filter((fn) => sit.get(fn) === "sem-dono");
-  const paraEmVoce = FUNCOES.filter((fn) => sit.get(fn) === "para-em-voce");
-  const semAgente = FUNCOES.filter((fn) => sit.get(fn) === "sem-agente");
   const visiveis = so ? FUNCOES.filter((fn) => sit.get(fn) !== "ok") : FUNCOES;
 
   return (
     <>
-      <Topo aba="funcoes" pendentes={aguardando} />
+      <Topo aba="funcoes" />
       <main className="mx-auto max-w-[1600px] px-4 py-6 2xl:text-[17px]">
-        <h1 className="ios-titulo">Funções do Rafael</h1>
+        <h1 className="ios-titulo">Suas funções</h1>
         <p className="mt-1 max-w-4xl text-sm text-muted">
           Cada função sua, o agente que prepara, a pessoa do escritório que pode executar e as demandas abertas ligadas.
           Vem do mapa de funções por agente (outubro/2026), dos assuntos dos seus e-mails e das suas decisões.
           A coluna da pessoa é uma proposta para você validar.
         </p>
 
-        <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          {([
-            [FUNCOES.length, "funções", ""],
-            [FUNCOES.filter((fn) => fn.agentes.length > 0).length, "com agente que prepara", ""],
-            [FUNCOES.filter((fn) => fn.pessoas.length > 0).length, "com pessoa do escritório", ""],
-            [paraEmVoce.length + semAgente.length, "param em você ou sem agente", "text-warn"],
-            [semDono.length, "sem dono", "text-bad"],
-          ] as const).map(([n, rotulo, cor]) => (
-            <div key={rotulo} className="ios-card px-4 py-3">
-              <div className={`text-3xl font-semibold tabular-nums ${cor}`}>{n}</div>
-              <div className="text-sm text-muted">{rotulo}</div>
-            </div>
-          ))}
-        </div>
+        <div className="ios-card mt-5 p-4"><Autonomia frase /></div>
 
         <section className="mt-6 rounded-xl border border-bad/40 bg-card p-4 sm:p-5">
           <h2 className="flex items-center gap-2 text-lg font-semibold">
-            <CircleAlert size={20} className="text-bad" /> Onde está o gargalo do Rafael
+            <CircleAlert size={20} className="text-bad" /> Onde está o seu gargalo
           </h2>
           <p className="mt-1 text-sm text-muted">
             O que hoje para em você, quantas funções terminam nesse passo e quem poderia assumir.
@@ -184,7 +171,7 @@ function Chip({ d, nome }: { d: DemandaCurta; nome: (id: string) => string }) {
   return (
     <span className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs ${ESTADO_CHIP[d.estado]}`}>
       <span className="font-semibold tabular-nums">#{d.id}</span>
-      <span>{d.para === "rafael" ? "com você" : nome(d.para)} · {ESTADO[d.estado]}</span>
+      <span>{d.para === ID_GESTOR ? "com você" : nome(d.para)} · {ESTADO[d.estado]}</span>
     </span>
   );
 }
@@ -196,6 +183,10 @@ function Linha({ fn, s, demandas, nome, setor }: {
   return (
     <li className={`grid gap-3 px-4 py-3 lg:grid-cols-[minmax(0,2.3fr)_minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1.7fr)] lg:gap-4 ${LINHA[s]}`}>
       <div className="min-w-0">
+        {(() => {
+          const n = NIVEIS_AUTONOMIA.find((x) => x.id === nivelAutonomia(fn))!;
+          return <span className={`mb-1 inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${n.chip}`}>{n.rotulo}</span>;
+        })()}
         <div className={`font-semibold leading-snug ${s === "sem-dono" ? "text-bad" : ""}`}>
           {s === "sem-dono" && <CircleAlert size={15} className="mr-1 inline -translate-y-px" />}
           {fn.nome}

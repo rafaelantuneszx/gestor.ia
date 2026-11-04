@@ -1,4 +1,5 @@
 import { Topo, SemAcesso } from "@/components/Topo";
+import { SecoesEscritorio } from "@/components/SecoesEscritorio";
 import { ListaReunioes } from "@/components/reunioes/Reunioes";
 import { autorizado, cadastros } from "@/lib/dados";
 import type { Reuniao } from "@/lib/reunioes";
@@ -9,10 +10,9 @@ export const dynamic = "force-dynamic";
 export default async function Reunioes() {
   if (!(await autorizado())) return <SemAcesso />;
   const sb = await supabaseServidor();
-  const [{ agentes }, reu, pend] = await Promise.all([
+  const [{ agentes }, reu] = await Promise.all([
     cadastros(),
     sb.from("central_reunioes").select("*").order("id", { ascending: false }).limit(200),
-    sb.from("central_demandas").select("id", { count: "exact", head: true }).eq("estado", "aguardando-rafael"),
   ]);
   const reunioes = (reu.data ?? []) as Reuniao[];
 
@@ -29,8 +29,9 @@ export default async function Reunioes() {
 
   return (
     <>
-      <Topo aba="reunioes" pendentes={pend.count ?? 0} />
+      <Topo aba="escritorio" />
       <main className="mx-auto max-w-6xl px-4 py-6">
+        <SecoesEscritorio atual="reunioes" className="mb-4" />
         <h1 className="ios-titulo mb-3">Reuniões</h1>
         {reu.error && (
           <p className="mb-5 rounded-xl border border-bad/40 bg-bad-soft px-4 py-3 text-sm text-bad">

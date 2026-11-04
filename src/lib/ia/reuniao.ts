@@ -1,6 +1,7 @@
-// Respostas dos agentes na sala de reunião com o Rafael (só no servidor).
-// A cada fala do Rafael, monta o contexto com a sessão dele (só leitura, pelo RLS) e pede ao Claude as próximas
+// Respostas dos agentes na sala de reunião com o gestor (só no servidor).
+// A cada fala do gestor, monta o contexto com a sessão dele (só leitura, pelo RLS) e pede ao Claude as próximas
 // 1 a 3 falas, em JSON com esquema fixo. Quem grava as falas é a rota, pela RPC central_reuniao_falar.
+import { ESTADO_AGUARDANDO_GESTOR, ID_GESTOR } from "@/lib/banco";
 import Anthropic from "@anthropic-ai/sdk";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { CAMPOS_EVENTO, falaDoEvento, type Fala } from "@/lib/falas";
@@ -21,8 +22,8 @@ const cortar = (t: string | null | undefined, n: number) => {
 };
 
 // Regras fixas (primeiro bloco do system, igual em toda chamada: entra no cache).
-const REGRAS = `Você dá voz aos agentes de IA da Rafael Enterprises numa reunião ao vivo com o Rafael, o dono do grupo
-(empresas FPAV, BRACTOS e PAVIMAX; sistemas PaviMax ERP, FPAV Financeiro e FPAV RH). O Rafael fala por voz ou texto
+const REGRAS = `Você dá voz aos agentes de IA do Gestor.IA numa reunião ao vivo com o gestor, o dono do grupo
+(empresas FPAV, BRACTOS e PAVIMAX; sistemas PaviMax ERP, FPAV Financeiro e FPAV RH). O gestor fala por voz ou texto
 pela tela do Gestor.IA e escuta as respostas com a voz de cada agente.
 
 Como responder:
@@ -36,8 +37,9 @@ Como responder:
 - Ninguém promete pagamento, aprova valor, grava no banco ou manda mensagem para fora. Decisão que grava ou mexe
   em dinheiro vira "vou preparar e trazer para a sua aprovação".
 - Nada de dados pessoais (CPF, salário individual, endereço).
-- Responda ao que o Rafael acabou de dizer; não repita o que já foi dito na transcrição.
-- O campo "agente" é o id de um participante da reunião (lista abaixo). Nunca fale pelo Rafael.`;
+- Fale com o gestor por "você", sem nome próprio.
+- Responda ao que o gestor acabou de dizer; não repita o que já foi dito na transcrição.
+- O campo "agente" é o id de um participante da reunião (lista abaixo). Nunca fale pelo gestor.`;
 
 const ESQUEMA = (ids: string[]) => ({
   type: "object",
@@ -61,14 +63,14 @@ const ESQUEMA = (ids: string[]) => ({
 
 type Agente = { id: string; nome: string; cargo: string; grupo: string; setor: string | null };
 
-// Contexto da reunião, lido com a sessão do Rafael.
+// Contexto da reunião, lido com a sessão do gestor.
 export async function montarContexto(sb: SupabaseClient, r: Reuniao) {
-  const ids = presentes(r).filter((id) => id !== "rafael");
+  const ids = presentes(r).filter((id) => id !== ID_GESTOR);
   const [ag, ev, dem, reu] = await Promise.all([
     sb.from("central_agentes").select("id, nome, cargo, grupo, setor"),
     sb.from("central_eventos").select(CAMPOS_EVENTO).eq("rotina", `reuniao#${r.id}`).eq("tipo", "nota").order("id").limit(1000),
     sb.from("central_demandas").select("id, de, para, titulo, detalhe, prioridade, estado, atualizada")
-      .in("estado", ["aberta", "andamento", "aguardando-rafael"]).order("id", { ascending: false }).limit(40),
+      .in("estado", ["aberta", "andamento", ESTADO_AGUARDANDO_GESTOR]).order("id", { ascending: false }).limit(40),
     sb.from("central_reunioes").select("id, titulo, encerrada_em, ata").eq("estado", "encerrada").neq("id", r.id)
       .order("encerrada_em", { ascending: false }).limit(4),
   ]);
@@ -84,7 +86,7 @@ export async function montarContexto(sb: SupabaseClient, r: Reuniao) {
     if (l.length < 2) porSetor.set(d.setor, [...l, d]);
   }
   const falas = ((ev.data ?? []) as Parameters<typeof falaDoEvento>[0][]).map(falaDoEvento).filter((f): f is Fala => !!f);
-  const nome = (id: string) => (id === "rafael" ? "Rafael" : agentes.get(id)?.nome ?? id);
+  const nome = (id: string) => (id === ID_GESTOR ? "gestor" : agentes.get(id)?.nome ?? id);
 
   const participantes = ids.map((id) => {
     const a = agentes.get(id);
@@ -114,7 +116,7 @@ ${itensPauta(r).map((p, i) => `${i + 1}. ${p}`).join("\n") || "(sem pauta)"}
 # Participantes (ids que podem falar)
 ${participantes}
 
-# Demandas abertas e aguardando o Rafael
+# Demandas abertas e aguardando o gestor
 ${demandas}
 
 # Atas das reuniões recentes
@@ -126,7 +128,7 @@ ${relatorios}`;
   return { contexto, falas, ids, nome };
 }
 
-export async function gerarRespostas(sb: SupabaseClient, r: Reuniao, falaRafael: string | null): Promise<ResultadoIA> {
+export async function gerarRespostas(sb: SupabaseClient, r: Reuniao, falaGestor: string | null): Promise<ResultadoIA> {
   if (!process.env.ANTHROPIC_API_KEY) {
     return { ok: false, motivo: "sem-chave", mensagem: "respostas automáticas desligadas: falta a chave (ANTHROPIC_API_KEY)" };
   }
@@ -134,9 +136,9 @@ export async function gerarRespostas(sb: SupabaseClient, r: Reuniao, falaRafael:
   if (ids.length === 0) return { ok: false, motivo: "erro", mensagem: "a reunião não tem participantes" };
 
   const transcricao = falas.slice(-80).map((f) => `[${HORA.format(new Date(f.ts))}] ${nome(f.agente)} (${f.agente}): ${f.texto}`).join("\n");
-  const pedido = falaRafael
-    ? `O Rafael acabou de dizer: "${falaRafael}"\n\nGere as próximas falas dos participantes, respondendo a ele.`
-    : "O Rafael acabou de entrar na sala. Quem conduz abre a reunião: cumprimenta, lembra a pauta em uma frase e pergunta por onde ele quer começar.";
+  const pedido = falaGestor
+    ? `O gestor acabou de dizer: "${falaGestor}"\n\nGere as próximas falas dos participantes, respondendo a ele.`
+    : "O gestor acabou de entrar na sala. Quem conduz abre a reunião: cumprimenta, lembra a pauta em uma frase e pergunta por onde ele quer começar.";
 
   const client = new Anthropic();
   try {
@@ -185,13 +187,13 @@ export async function gerarRespostas(sb: SupabaseClient, r: Reuniao, falaRafael:
   }
 }
 
-// Ata simples da conversa, para quando o Rafael encerra a reunião pela tela.
+// Ata simples da conversa, para quando o gestor encerra a reunião pela tela.
 export function ataDaConversa(r: Reuniao, falas: Fala[], nome: (id: string) => string) {
   const linhas = falas.map((f) => `- **${nome(f.agente)}** (${HORA.format(new Date(f.ts))}): ${f.texto}`);
   return [
     "## Resumo",
     "",
-    `Reunião com o Rafael pelo Gestor.IA. ${falas.length} falas registradas.`,
+    `Reunião com o gestor pelo Gestor.IA. ${falas.length} falas registradas.`,
     "",
     "## Pauta",
     "",

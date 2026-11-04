@@ -10,6 +10,6 @@ const Escritorio = dynamic(() => import("./Escritorio"), {
   ),
 });
 
-export function EscritorioCliente({ modo }: { modo: "real" | "demo" }) {
-  return <Escritorio modo={modo} />;
+export function EscritorioCliente({ modo, escopo = "grupo" }: { modo: "real" | "demo"; escopo?: string }) {
+  return <Escritorio modo={modo} escopo={escopo} />;
 }

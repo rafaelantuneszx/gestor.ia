@@ -52,7 +52,7 @@ function Pisos() {
         r={[-Math.PI / 2, 0, 0]} m={materialPiso("concreto", ESPINHA.x1 - ESPINHA.x0, ESPINHA.z1 - ESPINHA.z0)} />
       {/* faixas de piso tátil/guia no meio dos corredores */}
       {Object.values(CORREDORES).map((c) => (
-        <Plano key={`g${c.z0}`} p={[cx, 0.004, c.faixa]} s={[w - 1, 0.05]} r={[-Math.PI / 2, 0, 0]} m={emissivo("#22d3ee", 1.7)} />
+        <Plano key={`g${c.z0}`} p={[cx, 0.004, c.faixa]} s={[w - 1, 0.05]} r={[-Math.PI / 2, 0, 0]} m={emissivo("#3dd6f5", 1.7)} />
       ))}
     </group>
   );
@@ -269,7 +269,7 @@ export const Predio = memo(function Predio() {
       {/* paredes entre as salas */}
       {[S.sistemas.x0, S.financeiro.x0, S.custos.x0].map((x) => <ParedeX key={`a${x}`} x={x} z0={S.direcao.z0} z1={S.direcao.z1} />)}
       {[S.suprimentos.x0, S.reuniao.x0, ESPINHA.x0, ESPINHA.x1, S.copa.x0].map((x) => <ParedeX key={`b${x}`} x={x} z0={-4} z1={6} />)}
-      <ParedeX x={S.recepcao.x0} z0={S.rafael.z0} z1={S.rafael.z1} />
+      <ParedeX x={S.recepcao.x0} z0={S.gestor.z0} z1={S.gestor.z1} />
 
       {/* corredor 1: frente das salas do fundo (z = -8) e fundo das salas do meio (z = -4) */}
       <ParedeZ z={CORREDORES.c1.z0} trechos={[S.direcao, S.sistemas, S.financeiro, S.custos].flatMap((s) => trechosDaSala(s, "vidro", true, -1))} />
@@ -289,14 +289,14 @@ export const Predio = memo(function Predio() {
         ...trechosDaSala(S.copa, "vidro", true, -1),
       ]} />
       <ParedeZ z={CORREDORES.c2.z1} trechos={[
-        ...trechosDaSala(S.rafael, "vidro", true, 1, [[-23.2, -14.8]]),
+        ...trechosDaSala(S.gestor, "vidro", true, 1, [[-23.2, -14.8]]),
         ...trechosDaSala(S.datacenter, "vidro", true, 1),
       ]} />
       {/* vidro entre a recepção e o data center */}
       <mesh geometry={plano()} material={vidro()} position={[S.datacenter.x0, H / 2, (S.datacenter.z0 + S.datacenter.z1) / 2]} rotation-y={Math.PI / 2} scale={[S.datacenter.z1 - S.datacenter.z0, H - 0.1, 1]} />
       <Caixa p={[S.datacenter.x0, 0.05, (S.datacenter.z0 + S.datacenter.z1) / 2]} s={[0.08, 0.1, S.datacenter.z1 - S.datacenter.z0]} m={aluminio()} />
       <Caixa p={[S.datacenter.x0, H - 0.04, (S.datacenter.z0 + S.datacenter.z1) / 2]} s={[0.08, 0.08, S.datacenter.z1 - S.datacenter.z0]} m={aluminio()} />
-      <mesh geometry={plano()} material={emissivo("#22d3ee", 1.8)} position={[S.datacenter.x0 + 0.05, 0.13, (S.datacenter.z0 + S.datacenter.z1) / 2]} rotation-y={Math.PI / 2} scale={[S.datacenter.z1 - S.datacenter.z0, 0.03, 1]} />
+      <mesh geometry={plano()} material={emissivo("#3dd6f5", 1.8)} position={[S.datacenter.x0 + 0.05, 0.13, (S.datacenter.z0 + S.datacenter.z1) / 2]} rotation-y={Math.PI / 2} scale={[S.datacenter.z1 - S.datacenter.z0, 0.03, 1]} />
       {/* placas das salas do meio que abrem para o corredor 1, também do lado da câmera */}
       {[S["frota-rh"], S.suprimentos].map((s) => <Placa key={s.id} sala={s} x={(s.x0 + s.x1) / 2} z={CORREDORES.c2.z0} />)}
 

@@ -1,10 +1,11 @@
 "use client";
 
+import { ID_GESTOR } from "@/lib/banco";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import * as THREE from "three";
-import { CADEIRA_RAFAEL, viagemPausa, type EstadoAgente, type LugarReuniao, type Vec2, type Viagem } from "@/lib/escritorio/modelo";
+import { CADEIRA_GESTOR, viagemPausa, type EstadoAgente, type LugarReuniao, type Vec2, type Viagem } from "@/lib/escritorio/modelo";
 import { COR_STATUS, situacaoDe } from "./status";
 import { aparenciaDe, Corpo, poseAndando, poseConversando, poseSentado, type Juntas } from "./Corpo";
 import { mat, materialSombra } from "./materiais";
@@ -331,7 +332,7 @@ export function Boneco({
       {selecionado && mostrar && (
         <mesh ref={anel} position={[0, 0.012, 0]} rotation-x={-Math.PI / 2}>
           <ringGeometry args={[0.45, 0.54, 40]} />
-          <meshBasicMaterial color="#22d3ee" transparent opacity={0.9} toneMapped={false} />
+          <meshBasicMaterial color="#3dd6f5" transparent opacity={0.9} toneMapped={false} />
         </mesh>
       )}
       <group ref={rotulo} position={[0, 1.95, 0]}>
@@ -356,7 +357,7 @@ export function Boneco({
                 <div style={{
                   position: "relative", maxWidth: 260, minWidth: 140, padding: "7px 11px", borderRadius: 14, marginBottom: 2,
                   background: "#0b1220", color: "#f1f5f9", fontSize: 12.5, lineHeight: 1.35, fontWeight: 500,
-                  boxShadow: "0 6px 18px rgba(0,0,0,0.4)", border: "2px solid #22d3ee", order: -1,
+                  boxShadow: "0 6px 18px rgba(0,0,0,0.4)", border: "2px solid #3dd6f5", order: -1,
                   display: "-webkit-box", WebkitLineClamp: 4, WebkitBoxOrient: "vertical", overflow: "hidden",
                 }}>
                   {falando}
@@ -385,16 +386,16 @@ function gesticular(j: Juntas, t: number) {
   if (j.cabeca) j.cabeca.rotation.set(Math.sin(t * 3.3) * 0.06, Math.sin(t * 1.4) * 0.18, 0);
 }
 
-// ---------- o Rafael, na sala dele ----------
+// ---------- o gestor, na sala dele ----------
 
-export function Rafael({ pendentes, onClick, rotulos = true }: { pendentes: number; onClick: () => void; rotulos?: boolean }) {
-  const ap = useMemo(() => aparenciaDe("rafael", "#1f2a44"), []);
+export function Gestor({ pendentes, onClick, rotulos = true }: { pendentes: number; onClick: () => void; rotulos?: boolean }) {
+  const ap = useMemo(() => aparenciaDe(ID_GESTOR, "#1f2a44"), []);
   const juntas = useRef<Juntas>({});
   useFrame(({ clock }) => {
     poseSentado(juntas.current, "lendo", clock.elapsedTime);
   });
   return (
-    <group position={[CADEIRA_RAFAEL[0], 0, CADEIRA_RAFAEL[1]]}
+    <group position={[CADEIRA_GESTOR[0], 0, CADEIRA_GESTOR[1]]}
       onClick={(e) => { e.stopPropagation(); onClick(); }}
       onPointerOver={(e) => { e.stopPropagation(); document.body.style.cursor = "pointer"; }}
       onPointerOut={() => { document.body.style.cursor = ""; }}>
@@ -409,9 +410,9 @@ export function Rafael({ pendentes, onClick, rotulos = true }: { pendentes: numb
             display: rotulos ? "flex" : "none", alignItems: "center", gap: 6, padding: "3px 10px", borderRadius: 999, whiteSpace: "nowrap",
             fontFamily: "system-ui", fontSize: 12.5, fontWeight: 700, cursor: "pointer",
             background: "rgba(8,13,24,0.88)", color: pendentes > 0 ? "#fbbf24" : "#f1f5f9",
-            border: `1px solid ${pendentes > 0 ? "#fbbf24" : "#22d3ee"}`, boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
+            border: `1px solid ${pendentes > 0 ? "#fbbf24" : "#3dd6f5"}`, boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
           }}>
-            Rafael · {pendentes > 0 ? `${pendentes} aguardando você` : "nada pendente"}
+            Você · {pendentes > 0 ? `${pendentes} aguardando você` : "nada pendente"}
           </div>
         </Html>
       </group>

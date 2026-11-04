@@ -4,7 +4,7 @@
 // Quem está em viagem anda pelas mesmas rotas; quem está em reunião aparece na cadeira da sala de reunião.
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  CORREDORES, ESPINHA, MESAS, MESA_RAFAEL, MESA_REUNIAO, PAREDE_RESULTADOS, PREDIO, RACKS, SALAS, TV, cadeira,
+  CORREDORES, ESPINHA, MESAS, MESA_GESTOR, MESA_REUNIAO, PAREDE_RESULTADOS, PREDIO, RACKS, SALAS, TV, cadeira,
   type AgenteInfo, type EstadoAgente, type LugarReuniao, type Vec2, type Viagem,
 } from "@/lib/escritorio/modelo";
 import { COR_STATUS, situacaoDe } from "./status";
@@ -104,12 +104,12 @@ export function Planta2D({
   const comMesa = agentes.filter((a) => MESAS[a.id] || lugares[a.id] || andando[a.id]);
 
   return (
-    <div className="absolute inset-0 overflow-auto bg-[#060a12] pb-3 pt-[104px] lg:pt-[120px]">
+    <div className="absolute inset-0 overflow-auto bg-[#060a12] pb-3 pt-[150px] lg:pt-[120px]">
       <svg viewBox={`${PREDIO.x0 - MARGEM} ${PREDIO.z0 - MARGEM} ${w} ${d}`} role="img" aria-label="Planta baixa do escritório com o status de cada agente"
         className="mx-auto block h-full w-full min-w-[900px]" style={{ fontFamily: "system-ui, -apple-system, 'Segoe UI', sans-serif" }}>
         <defs>
           <pattern id="grade-planta" width="1" height="1" patternUnits="userSpaceOnUse">
-            <path d="M1 0H0V1" fill="none" stroke="#22d3ee" strokeOpacity="0.07" strokeWidth="0.02" />
+            <path d="M1 0H0V1" fill="none" stroke="#3dd6f5" strokeOpacity="0.07" strokeWidth="0.02" />
           </pattern>
         </defs>
         <rect x={PREDIO.x0} y={PREDIO.z0} width={PREDIO.x1 - PREDIO.x0} height={PREDIO.z1 - PREDIO.z0} fill="#0b111c" />
@@ -118,7 +118,7 @@ export function Planta2D({
         {Object.values(CORREDORES).map((c) => (
           <g key={c.z0}>
             <rect x={PREDIO.x0} y={c.z0} width={PREDIO.x1 - PREDIO.x0} height={c.z1 - c.z0} fill="#0d1522" />
-            <line x1={PREDIO.x0 + 0.5} x2={PREDIO.x1 - 0.5} y1={c.faixa} y2={c.faixa} stroke="#22d3ee" strokeOpacity="0.4" strokeWidth="0.05" strokeDasharray="0.5 0.4" />
+            <line x1={PREDIO.x0 + 0.5} x2={PREDIO.x1 - 0.5} y1={c.faixa} y2={c.faixa} stroke="#3dd6f5" strokeOpacity="0.4" strokeWidth="0.05" strokeDasharray="0.5 0.4" />
           </g>
         ))}
         <rect x={ESPINHA.x0} y={ESPINHA.z0} width={ESPINHA.x1 - ESPINHA.x0} height={ESPINHA.z1 - ESPINHA.z0} fill="#0d1522" />
@@ -131,8 +131,8 @@ export function Planta2D({
               <rect x={s.x0} y={s.z0} width={s.x1 - s.x0} height={s.z1 - s.z0} fill={s.cor} fillOpacity={ativos > 0 ? 0.16 : 0.07}
                 stroke={s.cor} strokeOpacity="0.75" strokeWidth="0.09" />
               <Texto x={s.x0 + 0.5} y={alturaRotulo} tam={0.9} cor="#e2e8f0" contorno>{s.nome}</Texto>
-              {ativos > 0 && <Texto x={s.x0 + 0.5} y={s.z1 - 0.5} tam={0.62} cor="#22d3ee" peso={600}>{ativos} trabalhando</Texto>}
-              <rect x={s.porta - 0.5} y={(s.corredor === "c1" ? (s.fileira === "fundo" ? s.z1 : s.z0) : (s.fileira === "frente" ? s.z0 : s.z1)) - 0.08} width="1" height="0.16" fill="#22d3ee" />
+              {ativos > 0 && <Texto x={s.x0 + 0.5} y={s.z1 - 0.5} tam={0.62} cor="#3dd6f5" peso={600}>{ativos} trabalhando</Texto>}
+              <rect x={s.porta - 0.5} y={(s.corredor === "c1" ? (s.fileira === "fundo" ? s.z1 : s.z0) : (s.fileira === "frente" ? s.z0 : s.z1)) - 0.08} width="1" height="0.16" fill="#3dd6f5" />
             </g>
           );
         })}
@@ -148,19 +148,19 @@ export function Planta2D({
         <rect x={MESA_REUNIAO[0] - 3.2} y={MESA_REUNIAO[1] - 0.8} width="6.4" height="1.6" rx="0.3" fill="#1e293b" stroke="#475569" strokeWidth="0.03" />
         <rect x={TV.x - TV.largura / 2} y={TV.z - 0.05} width={TV.largura} height="0.14" fill="#38bdf8" />
         {[PAREDE_RESULTADOS.xResultados, PAREDE_RESULTADOS.xIndependencia].map((x) => (
-          <rect key={x} x={x - PAREDE_RESULTADOS.largura / 2} y={PAREDE_RESULTADOS.z - 0.05} width={PAREDE_RESULTADOS.largura} height="0.14" fill="#22d3ee" />
+          <rect key={x} x={x - PAREDE_RESULTADOS.largura / 2} y={PAREDE_RESULTADOS.z - 0.05} width={PAREDE_RESULTADOS.largura} height="0.14" fill="#3dd6f5" />
         ))}
         {/* servidores */}
         {RACKS.map(([x, z], i) => (
-          <rect key={`${x}|${z}`} x={x - 0.42} y={z - 0.5} width="0.84" height="1" fill="#0f172a" stroke="#22d3ee" strokeOpacity={i % 3 === 0 ? 0.95 : 0.45} strokeWidth="0.04" />
+          <rect key={`${x}|${z}`} x={x - 0.42} y={z - 0.5} width="0.84" height="1" fill="#0f172a" stroke="#3dd6f5" strokeOpacity={i % 3 === 0 ? 0.95 : 0.45} strokeWidth="0.04" />
         ))}
         {/* sua mesa */}
-        <rect x={MESA_RAFAEL[0] - 1.4} y={MESA_RAFAEL[1] - 0.5} width="2.8" height="1" rx="0.08" fill="#1e293b" stroke="#475569" strokeWidth="0.03" />
-        <g transform={`translate(${MESA_RAFAEL[0]} ${MESA_RAFAEL[1] - 0.95})`}>
+        <rect x={MESA_GESTOR[0] - 1.4} y={MESA_GESTOR[1] - 0.5} width="2.8" height="1" rx="0.08" fill="#1e293b" stroke="#475569" strokeWidth="0.03" />
+        <g transform={`translate(${MESA_GESTOR[0]} ${MESA_GESTOR[1] - 0.95})`}>
           <circle r="0.6" fill="#0f172a" stroke={pendentes > 0 ? "#fbbf24" : "#34d399"} strokeWidth="0.13" />
-          <Texto y={0.23} tam={0.62} peso={700} cor="#f8fafc" meio>R</Texto>
+          <Texto y={0.23} tam={0.62} peso={700} cor="#f8fafc" meio>V</Texto>
           <Texto y={-0.82} tam={0.58} cor={pendentes > 0 ? "#fbbf24" : "#e2e8f0"} meio contorno>
-            Rafael{pendentes > 0 ? ` · ${pendentes}` : ""}
+            Você{pendentes > 0 ? ` · ${pendentes}` : ""}
           </Texto>
         </g>
 

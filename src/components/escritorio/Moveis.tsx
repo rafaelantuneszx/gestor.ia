@@ -78,7 +78,7 @@ function partesMesaL(): Parte[] {
     { geo: G.caixa, mat: brancoFosco(), p: [-0.64, 0.3, 0.2], s: [0.46, 0.6, 0.5], sombra: true },
     { geo: G.caixa, mat: mat("#1a2230", 0.5, 0.4), p: [0.1, 0.5, -0.38], s: [1.5, 0.32, 0.02] },
     // fita de LED sob o tampo
-    { geo: G.caixa, mat: emissivo("#22d3ee", 1.5), p: [0.05, 0.715, 0.405], s: [1.7, 0.012, 0.012] },
+    { geo: G.caixa, mat: emissivo("#3dd6f5", 1.5), p: [0.05, 0.715, 0.405], s: [1.7, 0.012, 0.012] },
     // monitor (moldura e pé; a tela é outra malha, com o terminal)
     { geo: G.caixa, mat: mat("#111214", 0.35), p: [0, 1.26, -0.24], s: [1.0, 0.6, 0.025], sombra: true },
     { geo: G.caixa, mat: aluminio(), p: [0, 0.96, -0.28], s: [0.05, 0.36, 0.025] },

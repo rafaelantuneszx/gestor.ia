@@ -85,13 +85,13 @@ export function ParedeResultados({ dados }: { dados: DadosLed }) {
         desenhar={(c, w, h) => desenharResultados(c, w, h, dados)} />
       <TelaLED p={[xIndependencia, y, z]} largura={largura} altura={altura} px={1536} chave={chave}
         desenhar={(c, w, h) => desenharIndependencia(c, w, h, dados)} />
-      <mesh geometry={plano()} material={emissivo("#22d3ee", 1.6)} position={[MESA_REUNIAO[0], 0.03, z + 0.14]} rotation-x={-Math.PI / 2} scale={[14.4, 0.05, 1]} />
+      <mesh geometry={plano()} material={emissivo("#3dd6f5", 1.6)} position={[MESA_REUNIAO[0], 0.03, z + 0.14]} rotation-x={-Math.PI / 2} scale={[14.4, 0.05, 1]} />
     </group>
   );
 }
 
 // ---------- data center ----------
-const COR_LED = [new THREE.Color("#22d3ee"), new THREE.Color("#34d399"), new THREE.Color("#60a5fa"), new THREE.Color("#fbbf24")];
+const COR_LED = [new THREE.Color("#3dd6f5"), new THREE.Color("#34d399"), new THREE.Color("#60a5fa"), new THREE.Color("#fbbf24")];
 const APAGADO = new THREE.Color("#0b1220");
 const LED_POR_RACK = 24;
 const GEO_LED = new THREE.PlaneGeometry(0.04, 0.022);
@@ -145,8 +145,8 @@ function rack() {
     { geo: geometriaCaixa, mat: mat("#0b0f17", 0.35, 0.7), p: [0, 1.05, 0], s: [0.84, 2.1, 1.0], sombra: true },
     { geo: geometriaCaixa, mat: mat("#141b27", 0.25, 0.8), p: [0, 1.05, 0.505], s: [0.76, 1.98, 0.012] },
     { geo: geometriaCaixa, mat: mat("#0b1220", 0.85, 0.1), p: [0, 2.13, 0], s: [0.86, 0.04, 1.02] },
-    { geo: geometriaCaixa, mat: emissivo("#22d3ee", 1.4), p: [0, 2.155, 0.47], s: [0.8, 0.012, 0.03] },
-    { geo: plano(), mat: emissivo("#22d3ee", 1.6), p: [0.36, 1.05, 0.521], s: [0.012, 1.9, 1] },
+    { geo: geometriaCaixa, mat: emissivo("#3dd6f5", 1.4), p: [0, 2.155, 0.47], s: [0.8, 0.012, 0.03] },
+    { geo: plano(), mat: emissivo("#3dd6f5", 1.6), p: [0.36, 1.05, 0.521], s: [0.012, 1.9, 1] },
   ];
   for (let i = 0; i < 8; i++) p.push({ geo: geometriaCaixa, mat: mat("#05080e", 0.45), p: [0, 0.34 + i * 0.2, 0.513], s: [0.72, 0.15, 0.01] });
   kitRack = montarKit(p);
@@ -174,7 +174,7 @@ export function DataCenter({ dados }: { dados: DadosLed }) {
                 px={512} chave={`${nome}${f}`} moldura={false} desenhar={(c, cw, ch) => desenharFaixaSistema(c, cw, ch, nome)} />
             );
           })}
-          <mesh geometry={plano()} material={emissivo("#22d3ee", 1.8)} position={[xMeio, 0.012, z + 0.86]} rotation-x={-Math.PI / 2} scale={[11.4, 0.05, 1]} />
+          <mesh geometry={plano()} material={emissivo("#3dd6f5", 1.8)} position={[xMeio, 0.012, z + 0.86]} rotation-x={-Math.PI / 2} scale={[11.4, 0.05, 1]} />
         </group>
       ))}
       <TelaLED p={[xMeio, 2.28, s.z0 + 0.14]} largura={8.6} altura={1.0} px={1536} chave={chaveDe(dados)}

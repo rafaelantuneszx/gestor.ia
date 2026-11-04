@@ -39,7 +39,7 @@ export function useLeitor({
   falas, pularFala, aoVivoInicial = false, ids = [],
 }: {
   falas: Fala[];
-  pularFala?: (f: Fala) => boolean; // não fala em voz alta (ex.: as falas do próprio Rafael na sala), só mostra
+  pularFala?: (f: Fala) => boolean; // não fala em voz alta (ex.: as falas do próprio gestor na sala), só mostra
   aoVivoInicial?: boolean;
   ids?: string[]; // participantes que podem falar (para distribuir as vozes antes das falas chegarem)
 }): Leitor {

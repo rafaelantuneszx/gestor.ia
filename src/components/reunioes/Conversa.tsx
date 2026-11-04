@@ -3,6 +3,7 @@
 // Aba "Conversa" da reunião: a transcrição em balões (agrupando quem fala) e o "Assistir", que toca a conversa
 // com uma voz por agente. Em reunião em andamento, acompanha as falas novas a cada 3 s; com "Ao vivo" ligado,
 // fala as novas assim que chegam.
+import { ID_GESTOR } from "@/lib/banco";
 import { useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import { Info, LogIn, Radio } from "lucide-react";
@@ -95,7 +96,7 @@ export function Conversa({
         <ol ref={lista} className="space-y-4" aria-label="Transcrição">
           {grupos.map((g) => {
             const p = mapa.get(g.agente);
-            const eu = g.agente === "rafael";
+            const eu = g.agente === ID_GESTOR;
             return (
               <li key={g.itens[0].f.id} className={`flex gap-3 ${eu ? "flex-row-reverse" : ""}`}>
                 <Avatar id={g.agente} nome={p?.nome ?? g.agente} setor={p?.setor} tamanho={40}

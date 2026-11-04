@@ -1,5 +1,5 @@
 // Escolhe uma voz humana em português do Brasil da biblioteca da ElevenLabs para cada agente, adiciona as vozes à
-// conta do Rafael e grava o mapa em src/lib/vozes-reais.json (ids de voz não são segredo; a chave não é gravada).
+// conta do gestor e grava o mapa em src/lib/vozes-reais.json (ids de voz não são segredo; a chave não é gravada).
 //
 //   ELEVENLABS_API_KEY=... node scripts/vozes-elevenlabs.mjs            escolhe e grava
 //   ELEVENLABS_API_KEY=... node scripts/vozes-elevenlabs.mjs --listar   só mostra as opções, com o link da amostra
@@ -38,7 +38,7 @@ const AGENTES = [
   ["beatriz-fiscal", "Beatriz", "female", "young"],
   ["henrique-analise-custos", "Henrique", "male", "middle_aged"],
   ["laura-calculos-custos", "Laura", "female", "young"],
-  ["rafael", "Rafael", "male", "middle_aged"],
+  ["gestor", "Gestor", "male", "middle_aged"],
 ];
 
 async function api(caminho, opcoes = {}) {

@@ -1,10 +1,11 @@
+import { ID_GESTOR } from "@/lib/banco";
 import { notFound } from "next/navigation";
 import { pessoasDe } from "@/components/reunioes/Reunioes";
 import { SalaMeeting } from "@/components/reunioes/SalaMeeting";
 import { DEMO_AGENTES, demoFalas, demoReunioes } from "@/lib/escritorio/demo";
 import type { Agente } from "@/lib/dados";
 import { itensPauta } from "@/lib/reunioes";
-import { PADRAO_REUNIAO_RAFAEL } from "@/lib/pessoas";
+import { PADRAO_REUNIAO_GESTOR } from "@/lib/pessoas";
 
 export const dynamic = "force-dynamic";
 
@@ -22,10 +23,10 @@ export default async function DemoSala({
   const agentes = new Map<string, Agente>(DEMO_AGENTES.map((a) => [a.id, a]));
   const pessoas = pessoasDe(agentes);
   if (id === "nova") {
-    const part = (q.p?.split(",") ?? PADRAO_REUNIAO_RAFAEL).filter((x) => agentes.has(x));
+    const part = (q.p?.split(",") ?? PADRAO_REUNIAO_GESTOR).filter((x) => agentes.has(x));
     return (
       <SalaMeeting modo="demo" demoBase={base} voltar="/reunioes/demo" pessoas={pessoas} falasIniciais={[]}
-        reuniao={{ id: 99, titulo: q.titulo || "Reunião com o Rafael", estado: "em_andamento", convocada_por: "rafael",
+        reuniao={{ id: 99, titulo: q.titulo || "Reunião com você", estado: "em_andamento", convocada_por: ID_GESTOR,
           participantes: part, pauta: (q.pauta ?? "").split("|").filter(Boolean), iniciada_em: new Date(base).toISOString() }} />
     );
   }

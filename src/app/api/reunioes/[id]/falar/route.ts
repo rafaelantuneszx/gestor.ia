@@ -1,6 +1,7 @@
-// O Rafael fala na reunião: grava a fala dele (RPC central_reuniao_falar), pede ao Claude as respostas dos
+// O gestor fala na reunião: grava a fala dele (RPC central_reuniao_falar), pede ao Claude as respostas dos
 // participantes e grava cada uma pela mesma RPC. A tela também pega as falas pelo polling de 1,5 s.
 // Sem texto: só gera a abertura da reunião (quem conduz cumprimenta).
+import { ID_GESTOR } from "@/lib/banco";
 import { NextResponse } from "next/server";
 import { supabaseServidor } from "@/lib/supabase/server";
 import { CAMPOS_EVENTO, falaDoEvento, type Fala } from "@/lib/falas";
@@ -26,7 +27,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   const ids: number[] = [];
   if (texto) {
-    const { data, error } = await sb.rpc("central_reuniao_falar", { p_reuniao_id: reuniao.id, p_agente: "rafael", p_texto: texto });
+    const { data, error } = await sb.rpc("central_reuniao_falar", { p_reuniao_id: reuniao.id, p_agente: ID_GESTOR, p_texto: texto });
     if (error) return NextResponse.json({ erro: explicarErro(error.message) }, { status: 400 });
     ids.push(Number(data));
   }

@@ -1,4 +1,4 @@
-// Avatar ilustrado de cada agente e do Rafael, desenhado em SVG (sem imagens de fora): fundo na cor do setor,
+// Avatar ilustrado de cada agente e do gestor, desenhado em SVG (sem imagens de fora): fundo na cor do setor,
 // rosto estilizado com o cabelo e o tom de pele do boneco 3D, e um selo com o ícone da função.
 // Sem hooks: serve em componentes do servidor e do navegador.
 import {

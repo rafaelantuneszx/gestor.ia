@@ -1,6 +1,6 @@
 "use client";
 
-// Corpo humano articulado, usado pelos agentes e pelo boneco do Rafael. Cada junta é um grupo que gira
+// Corpo humano articulado, usado pelos agentes e pelo boneco do gestor. Cada junta é um grupo que gira
 // (quadril, tronco, cabeça, ombros, cotovelos, coxas e joelhos); as poses ficam nas funções `pose*`.
 // O corpo olha para +z. Em pé, a origem fica no chão, entre os pés.
 import type { ReactNode, RefObject } from "react";

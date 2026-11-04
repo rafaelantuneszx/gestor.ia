@@ -1,3 +1,4 @@
+import { ID_GESTOR } from "@/lib/banco";
 // Quem é quem no Gestor.IA: aparência (avatar e boneco 3D), voz, ícone da função e o tom de cada um nas reuniões.
 // São tabelas editáveis à mão, por id de agente. Nada aqui é deduzido do nome ou do cargo.
 
@@ -11,12 +12,12 @@ export type Aparencia = {
   camisa: string;
   calca: string;
   sapato: string;
-  terno?: boolean; // paletó e gravata (o Rafael)
+  terno?: boolean; // paletó e gravata (o gestor)
 };
 
 // Aparência de cada um. É só visual: troque cores e estilos à vontade.
 export const APARENCIA: Record<string, Partial<Aparencia>> = {
-  rafael: { pele: "#e2b08a", cabelo: "#241a14", estilo: "curto", camisa: "#1f2a44", calca: "#1f2a44", sapato: "#16120f", terno: true },
+  [ID_GESTOR]: { pele: "#e2b08a", cabelo: "#241a14", estilo: "curto", camisa: "#1f2a44", calca: "#1f2a44", sapato: "#16120f", terno: true },
   helena: { pele: "#e8b896", cabelo: "#3b2418", estilo: "longo", calca: "#2a2f3a" },
   "clara-assistente": { pele: "#f1c7a5", cabelo: "#8a5a2b", estilo: "coque", calca: "#3d3a4a" },
   "ricardo-diretor-sistemas": { pele: "#c68a62", cabelo: "#1a1410", estilo: "curto", calca: "#2f3542" },
@@ -36,7 +37,7 @@ export const APARENCIA: Record<string, Partial<Aparencia>> = {
 
 // Voz de cada um: feminina ou masculina. Tabela fixa por id; quem não está aqui usa qualquer voz em português.
 export const VOZ_GENERO: Record<string, Genero> = {
-  rafael: "m",
+  [ID_GESTOR]: "m",
   helena: "f",
   "clara-assistente": "f",
   "ricardo-diretor-sistemas": "m",
@@ -60,7 +61,7 @@ export type IconeFuncao =
   | "arrows" | "filecheck" | "sheet" | "chart" | "sigma" | "truck" | "package" | "crown" | "user";
 
 export const FUNCAO_ICONE: Record<string, IconeFuncao> = {
-  rafael: "crown",
+  [ID_GESTOR]: "crown",
   helena: "compass",
   "clara-assistente": "calendar",
   "ricardo-diretor-sistemas": "network",
@@ -88,17 +89,17 @@ export const COR_SETOR: Record<string, string> = {
   agenda: "#639922",
   reunioes: "#64748b",
 };
-export const COR_RAFAEL = "#b8875a";
+export const COR_GESTOR = "#b8875a";
 
 export function corDoAgente(id: string, setor: string | null | undefined) {
-  if (id === "rafael") return COR_RAFAEL;
+  if (id === ID_GESTOR) return COR_GESTOR;
   return (setor && COR_SETOR[setor]) || "#888780";
 }
 
 // Como cada um fala nas reuniões (vai no contexto da IA da sala de reunião).
 export const PERSONA: Record<string, { area: string; tom: string }> = {
   helena: { area: "Operações e rotinas; conduz as reuniões", tom: "calma, organiza a pauta, resume e distribui os próximos passos" },
-  "clara-assistente": { area: "Agenda, pautas e e-mails do Rafael", tom: "cordial, objetiva, confirma datas e prepara rascunhos" },
+  "clara-assistente": { area: "Agenda, pautas e e-mails do gestor", tom: "cordial, objetiva, confirma datas e prepara rascunhos" },
   "ricardo-diretor-sistemas": { area: "Sistemas do grupo e integrações", tom: "direto, técnico sem jargão, prioriza e confere se os números batem" },
   "otavio-pavimax": { area: "PaviMax ERP: obras, medições, compras, estoque, frota", tom: "pragmático, cita tela e tabela do ERP" },
   "lucia-financeiro": { area: "FPAV Financeiro e finanças do grupo", tom: "precisa, fala de caixa, vencimentos e valores com fonte" },
@@ -114,8 +115,8 @@ export const PERSONA: Record<string, { area: string; tom: string }> = {
   "caio-suprimentos": { area: "Suprimentos e logística", tom: "rápido, fala de pedidos, EPIs e fornecedores" },
 };
 
-// Participantes padrão de uma reunião convocada pelo Rafael.
-export const PADRAO_REUNIAO_RAFAEL = ["helena", "ricardo-diretor-sistemas", "otavio-pavimax", "lucia-financeiro", "paulo-rh"];
+// Participantes padrão de uma reunião convocada pelo gestor.
+export const PADRAO_REUNIAO_GESTOR = ["helena", "ricardo-diretor-sistemas", "otavio-pavimax", "lucia-financeiro", "paulo-rh"];
 
 export function iniciais(nome: string) {
   const p = nome.trim().split(/\s+/);

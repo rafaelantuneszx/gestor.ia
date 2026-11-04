@@ -22,7 +22,7 @@ export function useFalas({
   const [estado, setEstado] = useState<EstadoReuniao>(estadoInicial);
   const [erro, setErro] = useState<string | null>(null);
   const ultimo = useRef(inicial.reduce((m, f) => Math.max(m, f.id), 0));
-  const extras = useRef<Fala[]>([]); // falas locais da demonstração (as do Rafael e as respostas fixas)
+  const extras = useRef<Fala[]>([]); // falas locais da demonstração (as do gestor e as respostas fixas)
 
   const juntar = useCallback((novas: Fala[]) => {
     if (!novas.length) return;

@@ -1,3 +1,4 @@
+import { ESTADO_AGUARDANDO_GESTOR } from "@/lib/banco";
 // Indicadores do escritório: só contagens reais do banco, sem estimativa. Cada número diz de onde vem na tela de Resultados.
 // Funções puras: servem na tela, no painel de LED e nos testes.
 
@@ -18,7 +19,7 @@ export type Indicadores = {
   eventos24h: number;
   sincronizacoes: Fracao | null; // null: sem acesso ou sem dado
   ultimaSincronizacao: string | null;
-  agentesSemVoce: Fracao; // demandas feitas que não precisaram de decisão do Rafael
+  agentesSemVoce: Fracao; // demandas feitas que não precisaram de decisão do gestor
   rotinasSemErro: Fracao; // rotinas terminadas sem erro
   porAgente: Record<string, { concluidas: number; comErro: number }>;
 };
@@ -62,8 +63,8 @@ export function calcularIndicadores({
     entregues: documentosTotal,
     entreguesHoje: documentosHoje,
     feitas: feitas.length,
-    aFazer: demandas.filter((d) => ["aberta", "andamento", "aguardando-rafael"].includes(d.estado)).length,
-    aguardandoVoce: demandas.filter((d) => d.estado === "aguardando-rafael").length,
+    aFazer: demandas.filter((d) => ["aberta", "andamento", ESTADO_AGUARDANDO_GESTOR].includes(d.estado)).length,
+    aguardandoVoce: demandas.filter((d) => d.estado === ESTADO_AGUARDANDO_GESTOR).length,
     rotinasCriadas: new Set(validas.map((r) => r.rotina)).size,
     rotinasConcluidas: validas.length,
     eventos24h,
