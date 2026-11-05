@@ -21,7 +21,7 @@ export async function middleware(req: NextRequest) {
   const publica = req.nextUrl.pathname.startsWith("/login") ||
     // demonstrações com dados fictícios, só fora de produção
     (process.env.NODE_ENV !== "production" &&
-      (req.nextUrl.pathname === "/escritorio/demo" || req.nextUrl.pathname === "/escritorio/infra/demo" || req.nextUrl.pathname.startsWith("/reunioes/demo")));
+      (req.nextUrl.pathname === "/escritorio/demo" || req.nextUrl.pathname === "/escritorio/infra/demo" || req.nextUrl.pathname === "/escritorio/emails/demo" || req.nextUrl.pathname.startsWith("/reunioes/demo")));
   if (!user && !publica) {
     const url = req.nextUrl.clone();
     url.pathname = "/login";
