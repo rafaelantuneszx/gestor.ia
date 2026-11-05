@@ -84,7 +84,7 @@ export const PECAS: Peca[] = [
   // ---------- memória ----------
   {
     id: "banco", camada: "memoria", nome: "Banco da central",
-    oQueE: "A memória compartilhada: demandas, eventos, reuniões, decisões e cartões de e-mail.",
+    oQueE: "A memória compartilhada: demandas, eventos, reuniões, decisões e os e-mails dos últimos 30 dias.",
     comoFunciona: "Os agentes gravam por funções protegidas por token. O site lê com o seu login, e só quem está liberado vê.",
     comoOperar: "Fica no Supabase, no mesmo projeto do PaviMax. Mudança de estrutura só com aprovação.",
     seParar: "Sem banco, o site fica sem dados e os agentes não conseguem registrar nada.",
@@ -106,8 +106,8 @@ export const PECAS: Peca[] = [
   {
     id: "indice", camada: "memoria", nome: "Índice de e-mails",
     oQueE: "Uma cópia para consulta das 3 caixas, guardada só no notebook: 4.724 mensagens em 03/11/2026.",
-    comoFunciona: "Lê as caixas sem marcar como lido, mover ou apagar. Para o site vão só remetente, assunto, data e número de anexos dos últimos 7 dias.",
-    comoOperar: "Atualizado a cada hora pelo plantão. O texto dos e-mails nunca sai do notebook.",
+    comoFunciona: "Lê as caixas sem marcar como lido, mover ou apagar. Para a caixa de e-mail do site vão o texto, os endereços e os nomes dos anexos. Os arquivos anexos não saem do servidor de e-mail.",
+    comoOperar: "Atualizado a cada hora pelo plantão. O texto publicado fica no banco por 30 dias, com autorização sua de 04/11/2026.",
     seParar: "Os agentes deixam de ver e-mails novos e os cartões ficam parados.",
   },
   {
