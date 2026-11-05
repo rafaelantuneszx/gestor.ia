@@ -481,3 +481,16 @@ body:has(.ios-abas) {
   50% { transform: scaleY(1); }
 }
 .motion-safe\:animate-\[onda_0\.9s_ease-in-out_infinite\] { transform-origin: bottom; }
+
+/* Nomes sobre os robôs do escritório */
+.rotulo-robo { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; will-change: transform; }
+.rotulo-robo[data-compacto="1"] .boneco-extra { display: none; }
+.rotulo-chip { display: inline-flex; align-items: center; gap: 5px; min-height: 24px; padding: 2px 9px; border: 1px solid #3dd6f5; border-radius: 999px; background: rgba(8, 13, 24, 0.9); color: #f1f5f9; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.rotulo-chip[data-selecionado="true"] { background: #0a6fdc; }
+.rotulo-robo:focus-visible .rotulo-chip { outline: 2px solid #fff; outline-offset: 2px; }
+.rotulo-numero { padding: 0 5px; border-radius: 999px; background: #a78bfa; color: #0b111c; font-size: 10.5px; font-weight: 700; }
+.rotulo-detalhe { max-width: 200px; overflow: hidden; padding: 1px 7px; border-radius: 6px; background: rgba(8, 13, 24, 0.9); color: #7dd3fc; font-size: 10.5px; text-overflow: ellipsis; white-space: nowrap; }
+.rotulo-fala { display: -webkit-box; max-width: 260px; min-width: 140px; overflow: hidden; padding: 7px 11px; border: 2px solid #3dd6f5; border-radius: 14px; background: #0b1220; color: #f1f5f9; font-size: 12.5px; font-weight: 500; line-height: 1.35; text-align: left; white-space: normal; -webkit-box-orient: vertical; -webkit-line-clamp: 4; }
+@media (max-width: 640px) {
+  .rotulo-fala { max-width: 170px; min-width: 0; font-size: 11.5px; -webkit-line-clamp: 3; }
+}

@@ -14,7 +14,7 @@ export const COR_STATUS: Record<TipoStatus, string> = {
 
 export function situacaoDe(estado: EstadoAgente | undefined, emReuniao: boolean, andando: boolean, pausa = false): { tipo: TipoStatus; texto: string } {
   if (emReuniao) return { tipo: "reuniao", texto: "em reunião" };
-  if (pausa) return { tipo: "pausa", texto: "na copa" };
+  if (pausa) return { tipo: "pausa", texto: "recarregando" };
   if (andando) return { tipo: "andando", texto: "entregando" };
   if (estado?.status === "trabalhando") return { tipo: "trabalhando", texto: "trabalhando" };
   if (estado?.status === "erro") return { tipo: "atencao", texto: "atenção" };

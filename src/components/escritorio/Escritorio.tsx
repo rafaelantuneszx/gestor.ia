@@ -5,15 +5,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { AdaptiveDpr, CameraControls, Environment, Lightformer, PerformanceMonitor } from "@react-three/drei";
+import { CameraControls, Environment, Lightformer } from "@react-three/drei";
 import * as THREE from "three";
 import {
-  Archive, Bot, Box, Building2, Cctv, ChartColumn, ConciergeBell, Coffee, Compass, Crown, Eye, FileSpreadsheet, Gauge, Grid2x2, Headphones, Landmark,
-  LogIn, Mail, Map as MapaIcone, Package, Pause, Play, Presentation, Radio, Server, Truck, X, type LucideIcon,
+  Archive, BatteryCharging, Bot, Box, Building2, Cctv, ChartColumn, Compass, Crown, Eye, FileSpreadsheet, Gauge, Grid2x2, Headphones, Landmark,
+  LogIn, Map as MapaIcone, Package, Pause, Play, Presentation, Radio, Server, Truck, X, type LucideIcon,
 } from "lucide-react";
 import {
-  CAMERA, CAMERAS, MESAS, MOSAICO, PREDIO, aplicarEvento, casa, conferirTravadas, estadoVazio, hora, lugaresReuniao,
-  viagemDoEvento, GRUPO_COR,
+  CAMERA, CAMERAS, MESAS, MOSAICO, POSTOS, PREDIO, SETOR_COR, aplicarEvento, conferirTravadas, estadoVazio, hora, lugaresReuniao,
+  viagemDoEvento, vistaDoPosto,
   type AgenteInfo, type DemandaResumo, type EstadoAgente, type EventoCentral, type SetorInfo, type Viagem, type Vista,
 } from "@/lib/escritorio/modelo";
 import { DEMO_AGENTES, DEMO_CONTAGEM, DEMO_DEMANDAS, DEMO_SETORES, demoEventos, demoReunioes } from "@/lib/escritorio/demo";
@@ -21,20 +21,17 @@ import { CAMPOS_RESUMO, eventoDeReuniao, itensPauta, proximaAgendada, type Reuni
 import { falaDoEvento, tempoLeitura, type Fala } from "@/lib/falas";
 import { horaComSegundos } from "@/lib/horario";
 import { supabaseNavegador } from "@/lib/supabase/browser";
-import { Avatar } from "@/components/Avatar";
 import { Controles, Legenda } from "@/components/reunioes/Controles";
 import { useLeitor } from "@/components/reunioes/useLeitor";
-import { Arquivo, Copa, DetalhesSalas, MesaAgente, Mobilia, Recepcao, SalaGestor, SalaReuniao } from "./Cena";
-import { Predio } from "./Predio";
-import { Boneco, Gestor } from "./Boneco";
-import { Efeitos } from "./Efeitos";
+import { Arquivo, Estrutura, LedsDosServidores, MesaDoGestor, MesasDaEquipe, ParedeDeTelas } from "./Central";
+import { Frota, criarRegistro } from "./Robos";
+import { Projetor, Rotulos, type Elementos } from "./Rotulos";
 import { Mosaico, layoutMosaico } from "./Mosaico";
 import type { PainelTV } from "./tv";
 import { Logo } from "@/components/marca/Logo";
 import { SecoesEscritorio } from "@/components/SecoesEscritorio";
-import { DataCenter, PainelSuspenso, ParedeResultados } from "./Tech";
 import { Planta2D } from "./Planta2D";
-import { TelaEmails, TelaEquipe, TelaResultados } from "./Telas";
+import { TelaEquipe, TelaResultados } from "./Telas";
 import { useIndicadores } from "./useIndicadores";
 import { COR_STATUS } from "./status";
 import type { DadosLed } from "./paineis";
@@ -45,12 +42,12 @@ const PASSO_REPRODUCAO_MS = 1100;
 const ALTURA_TOPO = 57;
 
 const ICONE_CAMERA: Record<string, LucideIcon> = {
-  geral: Eye, direcao: Compass, sistemas: Server, financeiro: Landmark, custos: FileSpreadsheet, "frota-rh": Truck,
-  suprimentos: Package, reuniao: Presentation, gestor: Crown, arquivo: Archive, recepcao: ConciergeBell, cima: Grid2x2,
-  copa: Coffee, datacenter: Server, parede: Gauge,
+  geral: Eye, frente: Bot, direcao: Compass, sistemas: Server, financeiro: Landmark, custos: FileSpreadsheet, "frota-rh": Truck,
+  suprimentos: Package, reuniao: Presentation, gestor: Crown, arquivo: Archive, cima: Grid2x2,
+  recarga: BatteryCharging, datacenter: Server, parede: Gauge,
 };
 
-// Placa de vídeo integrada ou emulada: sem sombras e sem pós-processamento, para o escritório continuar fluido.
+// Placa de vídeo integrada ou emulada: o chão usa uma textura menor e a resolução tem um teto mais baixo.
 function placaFraca() {
   try {
     const gl = document.createElement("canvas").getContext("webgl2");
@@ -64,30 +61,38 @@ function placaFraca() {
   }
 }
 
-// Ritmo do desenho: 30 quadros por segundo bastam para o escritório ao vivo (metade do trabalho da placa de vídeo);
-// 60 enquanto o gestor gira ou aproxima a câmera. Com a aba escondida o navegador já para tudo.
-function Ritmo({ rapido, ativo = true }: { rapido: boolean; ativo?: boolean }) {
+// Ritmo do desenho: 15 quadros por segundo com todos nas mesas, 30 com alguém andando e 60 enquanto você mexe na câmera.
+// Com a aba escondida o navegador já para tudo.
+function Ritmo({ interagindo, ativo, movendo }: { interagindo: boolean; ativo: boolean; movendo: () => boolean }) {
   const invalidate = useThree((s) => s.invalidate);
+  const rapido = useRef(interagindo);
+  rapido.current = interagindo;
   useEffect(() => {
     if (!ativo) return; // planta 2D na tela: o 3D fica parado e não gasta placa de vídeo
-    const t = setInterval(() => invalidate(), rapido ? 1000 / 60 : 1000 / 30);
-    return () => clearInterval(t);
-  }, [invalidate, rapido, ativo]);
+    let t: ReturnType<typeof setTimeout>;
+    const passo = () => {
+      invalidate();
+      t = setTimeout(passo, 1000 / (rapido.current ? 60 : movendo() ? 30 : 15));
+    };
+    passo();
+    return () => clearTimeout(t);
+  }, [invalidate, ativo, movendo]);
   return null;
 }
 
-// Sombras recalculadas a cada 3 quadros (os bonecos andam devagar; refazer o mapa de sombra todo quadro era caro).
-function SombrasEspacadas({ ativo }: { ativo: boolean }) {
-  const gl = useThree((s) => s.gl);
-  const n = useRef(0);
-  useEffect(() => {
-    if (!ativo) return;
-    gl.shadowMap.autoUpdate = false;
-    gl.shadowMap.needsUpdate = true;
-    return () => { gl.shadowMap.autoUpdate = true; };
-  }, [gl, ativo]);
+// Se o aparelho não acompanhar enquanto você mexe na câmera, baixa a resolução uma vez. Medir parado não serve: o ritmo é 15 de propósito.
+function AjusteDeResolucao({ interagindo, baixar }: { interagindo: boolean; baixar: () => void }) {
+  const medida = useRef({ quadros: 0, inicio: 0 });
   useFrame(() => {
-    if (ativo && n.current++ % 3 === 0) gl.shadowMap.needsUpdate = true;
+    const m = medida.current;
+    if (!interagindo) { m.inicio = 0; return; }
+    const agora = performance.now();
+    if (m.inicio === 0) { m.inicio = agora; m.quadros = 0; return; }
+    m.quadros += 1;
+    if (agora - m.inicio > 1500) {
+      if ((m.quadros * 1000) / (agora - m.inicio) < 24) baixar();
+      m.inicio = 0;
+    }
   });
   return null;
 }
@@ -105,16 +110,17 @@ function PrimeiroQuadro({ onPronto }: { onPronto: () => void }) {
 // Enquadramento geral: em telas estreitas (celular) a câmera sobe e se afasta para caber o prédio inteiro.
 function visaoGeralPara(largura: number, altura: number): Vista {
   const aspecto = largura / Math.max(altura, 1);
-  const k = aspecto >= 1.5 ? 1 : Math.min(2.6, 1.5 / Math.max(aspecto, 0.45));
+  // em pé, fecha na equipe: as zonas das laterais ficam a um arrasto de dedo
+  const k = aspecto >= 1.5 ? 1 : Math.min(1.5, 1.5 / Math.max(aspecto, 0.45));
   const [x, y, z, tx, ty, tz] = CAMERA.geral.vista;
-  return [x, y * k, z * (0.75 + k * 0.25), tx, ty, tz - (k - 1) * 2];
+  return [x, y * k, z * (0.75 + k * 0.25), tx, ty - (k - 1) * 3, tz - (k - 1) * 2];
 }
 function vistaDe(id: string, largura: number, altura: number): Vista {
   if (id === "geral") return visaoGeralPara(largura, altura);
   if (id === "cima") {
     // no celular (tela em pé), gira a planta para o lado comprido ficar na vertical
     const emPe = largura < altura;
-    const k = emPe ? 1.25 : largura / altura < 1.45 ? 1.15 : 0.9;
+    const k = emPe ? 1.1 : largura / altura < 1.45 ? 1.0 : 0.82;
     const cx = (PREDIO.x0 + PREDIO.x1) / 2;
     const cz = (PREDIO.z0 + PREDIO.z1) / 2;
     return emPe ? [cx + 0.01, 64 * k, cz, cx, 0, cz] : [cx, 64 * k, cz + 0.01, cx, 0, cz];
@@ -221,7 +227,10 @@ export default function Escritorio({ modo, escopo = "grupo" }: { modo: "real" | 
     camera.current?.setLookAt(0, -14, 8, 0, -40, 0, true);
     setTimeout(() => router.push(modo === "demo" ? "/escritorio/infra/demo" : "/escritorio/infra"), 750);
   };
-  const [tela2, setTela2] = useState<"emails" | "equipe" | "resultados" | null>(null);
+  const [tela2, setTela2] = useState<"equipe" | "resultados" | null>(null);
+  const [registro] = useState(criarRegistro);
+  const [elementos] = useState<Elementos>(() => new Map());
+  const movendo = useCallback(() => registro.movendo, [registro]);
   const indicadores = useIndicadores(modo);
   const [interagindo, setInteragindo] = useState(false);
   const [assistindo, setAssistindo] = useState<number | null>(null);
@@ -378,14 +387,8 @@ export default function Escritorio({ modo, escopo = "grupo" }: { modo: "real" | 
     setTela2(null);
     setMosaico(false);
     setCameraAtual("");
-    const m = MESAS[id];
-    if (!m || !camera.current) return;
-    // Tela larga: o painel fica à direita, então o monitor vai para a esquerda do centro.
-    // Tela estreita: o painel fica embaixo, então o monitor sobe no quadro.
-    const largo = window.innerWidth >= 900;
-    const dx = largo ? 1.1 : 0;
-    const dy = largo ? 0 : -0.55;
-    camera.current.setLookAt(m[0] + dx + 0.1, 2.75, m[1] + 3.7, m[0] + dx, 1.3 + dy, m[1] - 0.3, true);
+    const v = vistaDoPosto(id, window.innerWidth >= 900);
+    if (v) camera.current?.setLookAt(...v, true);
   };
 
   // enquadra quando a janela muda de tamanho
@@ -467,7 +470,7 @@ export default function Escritorio({ modo, escopo = "grupo" }: { modo: "real" | 
   const dadosLed = useMemo<DadosLed>(() => ({
     ind: indicadores, trabalhando, emReuniao, total: (dados?.agentes ?? []).length,
   }), [indicadores, trabalhando, emReuniao, dados?.agentes]);
-  const abrirTela = (t: "emails" | "equipe" | "resultados") => {
+  const abrirTela = (t: "equipe" | "resultados") => {
     setSelecionado(null);
     setMosaico(false);
     setTela2((a) => (a === t ? null : t));
@@ -562,11 +565,10 @@ export default function Escritorio({ modo, escopo = "grupo" }: { modo: "real" | 
     };
   }, [dados, estados, pendentes, reproduzindo, reunioesAtivas, falaAgora]);
 
-  // Qualidade: começa alta em tela grande e baixa sozinha se o aparelho não der conta.
+  // Qualidade: a imagem começa nítida na resolução da tela e só baixa se o aparelho não acompanhar.
   const [fraca] = useState(placaFraca);
-  const [qualidade, setQualidade] = useState<"alta" | "baixa">(() => (window.innerWidth >= 900 && !fraca ? "alta" : "baixa"));
-  // teto de resolução: numa tela Retina grande, 1,75 desenhava ~7 milhões de pixels por quadro com AO e bloom
-  const [dpr, setDpr] = useState(() => (fraca ? 1 : Math.min(window.devicePixelRatio || 1, window.innerWidth >= 900 ? 1.25 : 1.2)));
+  const [dpr, setDpr] = useState(() => Math.min(window.devicePixelRatio || 1, fraca ? 1.5 : 2));
+  const baixarResolucao = useCallback(() => setDpr((d) => Math.max(1, d - 0.25)), []);
   const [pronto, setPronto] = useState(false);
   const marcarPronto = useCallback(() => setPronto(true), []);
   const agSel = selecionado ? agentesMap.get(selecionado) : null;
@@ -577,71 +579,51 @@ export default function Escritorio({ modo, escopo = "grupo" }: { modo: "real" | 
   const base = modo === "demo" ? "/reunioes/demo" : "/reunioes";
 
   const botao = "tech-vidro inline-flex h-10 shrink-0 items-center gap-1.5 rounded-xl px-3 text-sm font-medium transition hover:border-sinal";
-  const botaoTela = (t: "emails" | "equipe" | "resultados") => `${botao} ${tela2 === t ? "!bg-accent-fill !border-accent-fill text-white" : ""}`;
+  const botaoTela = (t: "equipe" | "resultados") => `${botao} ${tela2 === t ? "!bg-accent-fill !border-accent-fill text-white" : ""}`;
 
   return (
     <div className="tech-escuro relative h-[calc(100dvh-var(--altura-barras))] w-full overflow-hidden bg-[#060a12]">
-      <Canvas shadows={fraca ? false : "soft"} dpr={dpr} frameloop="demand" style={{ visibility: planta2D ? "hidden" : "visible" }}
-        camera={{ position: [inicial[0], inicial[1], inicial[2]], fov: 40, near: 0.1, far: 400 }}
-        gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.0, powerPreference: "high-performance" }}
+      <Canvas dpr={dpr} frameloop="demand" style={{ visibility: planta2D ? "hidden" : "visible" }}
+        camera={{ position: [inicial[0], inicial[1], inicial[2]], fov: 40, near: 0.5, far: 220 }}
+        gl={{ antialias: true, toneMapping: THREE.NeutralToneMapping, toneMappingExposure: 1.05, powerPreference: "high-performance" }}
         onPointerMissed={() => setSelecionado(null)}>
-        <Ritmo rapido={interagindo} ativo={!planta2D} />
-        <SombrasEspacadas ativo={!mosaico && !fraca} />
-        <PerformanceMonitor bounds={() => [22, 30]} flipflops={3}
-          onIncline={() => setDpr((d) => Math.min(d + 0.25, fraca ? 1 : largo ? 1.25 : 1.2))}
-          onDecline={() => { setQualidade("baixa"); setDpr((d) => Math.max(0.75, d - 0.25)); }} />
-        <AdaptiveDpr pixelated={false} />
+        <Ritmo interagindo={interagindo} ativo={!planta2D} movendo={movendo} />
+        <AjusteDeResolucao interagindo={interagindo} baixar={baixarResolucao} />
         <PrimeiroQuadro onPronto={marcarPronto} />
         <color attach="background" args={["#060a12"]} />
-        <fog attach="fog" args={["#060a12", 95, 230]} />
-        <hemisphereLight args={["#bcd3f5", "#0a1220", 0.85]} />
-        {/* sol entrando pela frente, com sombras suaves e justas no prédio */}
-        <directionalLight position={[-16, 30, 22]} intensity={2.1} color="#dbe9ff" castShadow={!fraca}
-          shadow-mapSize={qualidade === "alta" ? [2048, 2048] : [1024, 1024]} shadow-bias={-0.0003} shadow-normalBias={0.03}
-          shadow-radius={4}
-          shadow-camera-left={-34} shadow-camera-right={34} shadow-camera-top={26} shadow-camera-bottom={-26}
-          shadow-camera-near={5} shadow-camera-far={90} />
-        <directionalLight position={[14, 10, -26]} intensity={0.55} color="#3dd6f5" />
-        {/* reflexos: painéis de luz como num teto de escritório e as janelas */}
-        <Environment resolution={fraca ? 64 : 256} frames={1} environmentIntensity={0.42}>
-          <Lightformer form="rect" intensity={2.2} color="#dbeafe" position={[0, 9, 0]} rotation-x={Math.PI / 2} scale={[52, 36, 1]} />
-          <Lightformer form="rect" intensity={1.6} color="#3dd6f5" position={[0, 3, PREDIO.z0 - 6]} scale={[52, 5, 1]} />
-          <Lightformer form="rect" intensity={1.0} color="#3b82f6" position={[0, 3, PREDIO.z1 + 8]} rotation-y={Math.PI} scale={[52, 5, 1]} />
-          <Lightformer form="rect" intensity={0.8} color="#818cf8" position={[PREDIO.x1 + 6, 3, 0]} rotation-y={-Math.PI / 2} scale={[36, 5, 1]} />
+        <hemisphereLight args={["#cfe0ff", "#101a2c", 1.15]} />
+        <directionalLight position={[-14, 26, 20]} intensity={1.9} color="#e8f1ff" />
+        <directionalLight position={[10, 8, -14]} intensity={0.7} color="#3dd6f5" />
+        {/* reflexos no metal: a parede de telas e os painéis de luz do teto, calculados uma vez só */}
+        <Environment resolution={128} frames={1} environmentIntensity={0.55}>
+          <Lightformer form="rect" intensity={2.4} color="#dbeafe" position={[0, 12, 0]} rotation-x={Math.PI / 2} scale={[40, 24, 1]} />
+          <Lightformer form="rect" intensity={2.2} color="#3dd6f5" position={[0, 4, PREDIO.z0 - 2]} scale={[30, 8, 1]} />
+          <Lightformer form="rect" intensity={0.9} color="#3b82f6" position={[0, 3, PREDIO.z1 + 8]} rotation-y={Math.PI} scale={[52, 5, 1]} />
         </Environment>
-        <CameraControls ref={camera} minDistance={1.5} maxDistance={110} maxPolarAngle={Math.PI / 2.05} smoothTime={0.55}
+        <CameraControls ref={camera} minDistance={1.5} maxDistance={90} maxPolarAngle={Math.PI / 2.05} smoothTime={0.55}
           onStart={() => { setInteragindo(true); setCameraAtual((c) => (c === "geral" || c === "cima" ? c : "")); }}
           onRest={() => setInteragindo(false)} />
-        <Predio />
-        <Mobilia />
-        <DetalhesSalas />
-        <Copa />
-        <Recepcao />
-        <PainelSuspenso dados={dadosLed} />
-        <ParedeResultados dados={dadosLed} />
-        <DataCenter dados={dadosLed} />
+        <Estrutura alta={!fraca} />
+        <ParedeDeTelas dados={dadosLed} painel={painel} />
+        <LedsDosServidores atividade={trabalhando + emReuniao} />
         {dados && (
           <>
-            {dados.agentes.filter((a) => MESAS[a.id]).map((a) => (
-              <MesaAgente key={`mesa-${a.id}`} posicao={MESAS[a.id]} nome={a.nome}
-                estado={estados[a.id] ?? estadoVazio()} selecionado={selecionado === a.id} onClick={() => focar(a.id)} />
-            ))}
-            {dados.agentes.map((a) => (
-              <Boneco key={a.id} id={a.id} nome={a.nome} cor={GRUPO_COR[a.grupo] ?? "#888780"}
-                cadeira={casa(a.id)} temMesa={!!MESAS[a.id]} estado={estados[a.id] ?? estadoVazio()}
-                viagem={filas[a.id]?.[0] ?? null} reuniao={lugares[a.id] ?? null} selecionado={selecionado === a.id}
-                falando={falaAgora?.agente === a.id ? falaAgora.texto : null} rotulos={!mosaico && !planta2D} demandas={demandasPorAgente[a.id] ?? 0}
-                onClick={() => focar(a.id)} onViagemFim={(vid) => fimViagem(a.id, vid)} />
-            ))}
-            <Arquivo setores={dados.setores} contagem={dados.contagem} rotulos={!mosaico && !planta2D}
-              onAbrir={(s) => modo === "real" && router.push(`/arquivo/${s}`)} />
-            <SalaGestor pendentes={pendentes} onClick={() => modo === "real" && router.push("/")} />
-            <Gestor pendentes={pendentes} onClick={() => modo === "real" && router.push("/")} rotulos={!mosaico && !planta2D} />
-            <SalaReuniao painel={painel} />
+            <MesasDaEquipe agentes={dados.agentes} estados={estados} pendentes={pendentes} onClick={focar} onGestor={() => modo === "real" && router.push("/")} />
+            <MesaDoGestor pendentes={pendentes} onClick={() => modo === "real" && router.push("/")} />
+            <Arquivo setores={dados.setores} contagem={dados.contagem} onAbrir={(s) => modo === "real" && router.push(`/arquivo/${s}`)} />
+            <Frota agentes={dados.agentes} estados={estados} filas={filas} lugares={lugares} selecionado={selecionado}
+              falando={falaAgora?.agente ?? null} registro={registro} onClick={focar} onViagemFim={fimViagem} />
+            <Projetor elementos={elementos} registro={registro} />
           </>
         )}
-        {mosaico ? <Mosaico visoes={visoesMosaico} topo={topoMosaico} porQuadro={largo ? 2 : 1} /> : qualidade === "alta" && <Efeitos />}
+        {mosaico && <Mosaico visoes={visoesMosaico} topo={topoMosaico} porQuadro={largo ? 2 : 1} />}
       </Canvas>
+
+      {dados && (
+        <Rotulos agentes={dados.agentes} estados={estados} lugares={lugares} selecionado={selecionado} falandoId={falaAgora?.agente ?? null} falandoTexto={falaAgora?.texto ?? null}
+          demandas={demandasPorAgente} pendentes={pendentes} setores={dados.setores} contagem={dados.contagem} registro={registro} elementos={elementos}
+          visivel={!mosaico && !planta2D} onRobo={focar} onGestor={() => modo === "real" && router.push("/")} onSetor={(s) => modo === "real" && router.push(`/arquivo/${s}`)} />
+      )}
 
       {planta2D && dados && (
         <Planta2D agentes={dados.agentes} estados={estados} filas={filas} lugares={lugares} selecionado={selecionado}
@@ -698,7 +680,6 @@ export default function Escritorio({ modo, escopo = "grupo" }: { modo: "real" | 
                 </select>
               </label>
             )}
-            <button type="button" onClick={() => abrirTela("emails")} aria-pressed={tela2 === "emails"} aria-label="E-mails" className={botaoTela("emails")}><Mail size={16} /> <span className="hidden sm:inline">E-mails</span></button>
             <button type="button" onClick={() => abrirTela("equipe")} aria-pressed={tela2 === "equipe"} aria-label="Falar com a equipe" className={botaoTela("equipe")}><Bot size={16} /> <span className="hidden sm:inline">Falar com a equipe</span></button>
             <button type="button" onClick={() => abrirTela("resultados")} aria-pressed={tela2 === "resultados"} aria-label="Resultados" className={botaoTela("resultados")}><ChartColumn size={16} /> <span className="hidden sm:inline">Resultados</span></button>
             {reuniaoParaAssistir && !assistindo && (
@@ -720,7 +701,7 @@ export default function Escritorio({ modo, escopo = "grupo" }: { modo: "real" | 
         </div>
         {/* legenda das cores */}
         <div className="tech-vidro pointer-events-none fixed bottom-3 right-3 hidden w-fit items-center gap-3 rounded-lg px-2.5 py-1 text-[11px] text-muted xl:flex">
-          {([["trabalhando", COR_STATUS.trabalhando], ["livre", COR_STATUS.livre], ["em reunião", COR_STATUS.reuniao], ["entregando", COR_STATUS.andando], ["na copa", COR_STATUS.pausa], ["atenção", COR_STATUS.atencao]] as const).map(([t, c]) => (
+          {([["trabalhando", COR_STATUS.trabalhando], ["livre", COR_STATUS.livre], ["em reunião", COR_STATUS.reuniao], ["entregando", COR_STATUS.andando], ["recarregando", COR_STATUS.pausa], ["atenção", COR_STATUS.atencao]] as const).map(([t, c]) => (
             <span key={t} className="inline-flex items-center gap-1"><span className="size-2 rounded-full" style={{ background: c }} />{t}</span>
           ))}
         </div>
@@ -732,13 +713,14 @@ export default function Escritorio({ modo, escopo = "grupo" }: { modo: "real" | 
           <div className="tech-vidro flex gap-1 overflow-x-auto rounded-2xl p-1.5 [scrollbar-width:none]">
             {dados.agentes.filter((a) => MESAS[a.id]).map((a) => {
               const e = estados[a.id];
+              const corSetor = SETOR_COR[POSTOS[a.id]?.setor ?? ""] ?? "#64748b";
               const cor = e?.status === "trabalhando" ? "bg-sinal" : e?.status === "erro" ? "bg-bad" : "bg-ok";
               return (
                 <button key={a.id} type="button" onClick={() => focar(a.id)} title={`${a.nome} · ${a.cargo}`}
                   className={`relative flex shrink-0 flex-col items-center gap-0.5 rounded-xl px-1.5 py-1 text-[11px] font-medium transition ${
                     selecionado === a.id ? "bg-accent-soft text-accent" : "hover:bg-bg"}`}>
                   <span className="relative">
-                    <Avatar id={a.id} nome={a.nome} setor={a.setor} tamanho={34} selo={false} falando={falaAgora?.agente === a.id} />
+                    <span className="flex size-[34px] items-center justify-center rounded-full text-white" style={{ background: corSetor }}><Bot size={20} aria-hidden /></span>
                     <span className={`absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full ring-2 ring-card ${cor} ${e?.status === "trabalhando" ? "animate-pulse" : ""}`} />
                   </span>
                   {a.nome}
@@ -747,7 +729,7 @@ export default function Escritorio({ modo, escopo = "grupo" }: { modo: "real" | 
             })}
           </div>
           <div className="hidden px-1 text-[11px] text-muted sm:block">
-            Toque num agente para ver o terminal · V troca entre planta 3D e 2D · D data center · P parede de resultados · M mosaico
+            Toque num robô para ver o terminal · V troca entre planta 3D e 2D · P parede de telas · F de frente · 2 sua mesa · M mosaico
           </div>
         </div>
       )}
@@ -782,7 +764,7 @@ export default function Escritorio({ modo, escopo = "grupo" }: { modo: "real" | 
       {agSel && estSel && !mosaico && (
         <aside className="tech-vidro absolute inset-x-2 bottom-2 z-40 flex h-[46%] flex-col overflow-hidden rounded-2xl min-[900px]:inset-x-auto min-[900px]:bottom-3 min-[900px]:right-3 min-[900px]:top-28 min-[900px]:h-auto min-[900px]:w-[440px]">
           <div className="flex items-start gap-3 border-b border-line px-4 py-3">
-            <Avatar id={agSel.id} nome={agSel.nome} setor={agSel.setor} tamanho={48} />
+            <span className="flex size-12 shrink-0 items-center justify-center rounded-full text-white" style={{ background: SETOR_COR[POSTOS[agSel.id]?.setor ?? ""] ?? "#64748b" }}><Bot size={28} aria-hidden /></span>
             <div className="min-w-0 flex-1">
               <div className="font-semibold">{agSel.nome}</div>
               <div className="text-xs text-muted">{agSel.cargo} · {agSel.grupo}</div>
@@ -797,9 +779,9 @@ export default function Escritorio({ modo, escopo = "grupo" }: { modo: "real" | 
               </div>
               {indicadores.porAgente[agSel.id] && (
                 <div className="mt-1 text-xs text-muted">
-                  {indicadores.porAgente[agSel.id].concluidas} rotinas em 30 dias
+                  {indicadores.porAgente[agSel.id].concluidas} {indicadores.porAgente[agSel.id].concluidas === 1 ? "rotina" : "rotinas"} em 30 dias
                   {indicadores.porAgente[agSel.id].comErro > 0 ? ` · ${indicadores.porAgente[agSel.id].comErro} com erro` : " · nenhuma com erro"}
-                  {demandasPorAgente[agSel.id] ? ` · ${demandasPorAgente[agSel.id]} demandas abertas` : ""}
+                  {demandasPorAgente[agSel.id] ? ` · ${demandasPorAgente[agSel.id]} ${demandasPorAgente[agSel.id] === 1 ? "demanda aberta" : "demandas abertas"}` : ""}
                 </div>
               )}
             </div>
@@ -837,7 +819,6 @@ export default function Escritorio({ modo, escopo = "grupo" }: { modo: "real" | 
       )}
 
       {/* telas suspensas */}
-      {dados && tela2 === "emails" && <TelaEmails modo={modo} agentes={agentesMap} onFechar={() => setTela2(null)} />}
       {dados && tela2 === "equipe" && (
         <TelaEquipe modo={modo} agentes={dados.agentes} reunioes={dados.reunioes} falasDoBanco={falasTodas} onFechar={() => setTela2(null)} />
       )}
@@ -846,7 +827,7 @@ export default function Escritorio({ modo, escopo = "grupo" }: { modo: "real" | 
       {(!dados || !pronto) && !erro && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[#060a12] text-sm text-muted">
           <Building2 size={28} className="animate-pulse" />
-          Montando o escritório…
+          Montando a central
         </div>
       )}
     </div>

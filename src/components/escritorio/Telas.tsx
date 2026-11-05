@@ -1,9 +1,9 @@
 "use client";
 
-// Telas suspensas do escritório: supervisão de e-mails, fala com a equipe (voz ou texto) e resultados.
-import { CONTA_GESTOR, ID_GESTOR } from "@/lib/banco";
+// Telas suspensas do escritório: fala com a equipe (voz ou texto) e resultados.
+import { ID_GESTOR } from "@/lib/banco";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { Bot, Loader2, Mail, Mic, Paperclip, Send, Square, Volume2, VolumeX, X } from "lucide-react";
+import { Bot, Loader2, Mic, Send, Square, Volume2, VolumeX, X } from "lucide-react";
 import { Avatar } from "@/components/Avatar";
 import { useLeitor } from "@/components/reunioes/useLeitor";
 import { useMicrofone } from "@/components/reunioes/useMicrofone";
@@ -12,7 +12,6 @@ import type { Fracao, Indicadores } from "@/lib/escritorio/indicadores";
 import type { AgenteInfo } from "@/lib/escritorio/modelo";
 import type { Fala } from "@/lib/falas";
 import type { ReuniaoResumo } from "@/lib/reunioes";
-import { supabaseNavegador } from "@/lib/supabase/browser";
 
 // ---------- moldura ----------
 export function TelaSuspensa({ titulo, subtitulo, icone, onFechar, children, rodape }: {
@@ -45,114 +44,6 @@ export function TelaSuspensa({ titulo, subtitulo, icone, onFechar, children, rod
         {rodape && <div className="border-t border-line p-3">{rodape}</div>}
       </div>
     </aside>
-  );
-}
-
-// ---------- supervisão de e-mails ----------
-type CartaoEmail = {
-  id: string;
-  conta: string;
-  pasta: string | null;
-  data: string | null;
-  remetente: string | null;
-  assunto: string | null;
-  anexos: number;
-  agente: string | null;
-  situacao: string | null;
-};
-
-const CONTAS: Record<string, string> = {
-  [CONTA_GESTOR]: "Sua caixa",
-  "faturamento@fpav.com.br": "Faturamento FPAV",
-  "faturamento@bractos.com.br": "Faturamento BRACTOS",
-};
-const QUANDO = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" });
-const DEMO_EMAILS: CartaoEmail[] = [
-  { id: "1", conta: "faturamento@fpav.com.br", pasta: "INBOX", data: new Date(Date.now() - 18 * 60_000).toISOString(), remetente: "Fornecedor Exemplo", assunto: "Exemplo fictício: nota fiscal de outubro", anexos: 2, agente: "bruno-financeiro", situacao: "novo" },
-  { id: "2", conta: CONTA_GESTOR, pasta: "INBOX", data: new Date(Date.now() - 66 * 60_000).toISOString(), remetente: "Cliente Exemplo", assunto: "Exemplo fictício: medição da obra para conferir", anexos: 1, agente: "otavio-pavimax", situacao: "com-agente" },
-  { id: "3", conta: "faturamento@bractos.com.br", pasta: "INBOX", data: new Date(Date.now() - 140 * 60_000).toISOString(), remetente: "Empresa Exemplo", assunto: "Exemplo fictício: boleto com vencimento na sexta", anexos: 1, agente: "davi-faturas", situacao: "com-agente" },
-];
-
-export function TelaEmails({ modo, agentes, onFechar }: { modo: "real" | "demo"; agentes: Map<string, AgenteInfo>; onFechar: () => void }) {
-  const [cartoes, setCartoes] = useState<CartaoEmail[] | null>(modo === "demo" ? DEMO_EMAILS : null);
-  const [semTabela, setSemTabela] = useState(false);
-  const [erro, setErro] = useState<string | null>(null);
-  const [conta, setConta] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (modo === "demo") return;
-    let vivo = true;
-    const carregar = async () => {
-      const { data, error } = await supabaseNavegador().from("central_emails")
-        .select("id, conta, pasta, data, remetente, assunto, anexos, agente, situacao").order("data", { ascending: false }).limit(80);
-      if (!vivo) return;
-      if (error) {
-        const falta = error.code === "42P01" || error.code === "PGRST205" || /central_emails/.test(error.message);
-        setSemTabela(falta);
-        setErro(falta ? null : error.message);
-        setCartoes([]);
-      } else {
-        setSemTabela(false);
-        setErro(null);
-        setCartoes((data ?? []) as CartaoEmail[]);
-      }
-    };
-    carregar();
-    const t = setInterval(carregar, 60_000);
-    return () => { vivo = false; clearInterval(t); };
-  }, [modo]);
-
-  const visiveis = (cartoes ?? []).filter((c) => !conta || c.conta === conta);
-  return (
-    <TelaSuspensa titulo="Supervisão de e-mails" subtitulo={modo === "demo" ? "Demonstração com e-mails fictícios" : "As 3 caixas, só com leitura. Sem o texto das mensagens."}
-      icone={<Mail size={18} />} onFechar={onFechar}>
-      {!semTabela && (cartoes?.length ?? 0) > 0 && (
-        <div role="group" aria-label="Filtrar por caixa" className="flex gap-1.5 overflow-x-auto border-b border-line px-3 py-2 [scrollbar-width:none]">
-          {[null, ...Object.keys(CONTAS)].map((c) => {
-            const n = (cartoes ?? []).filter((x) => !c || x.conta === c).length;
-            return (
-              <button key={c ?? "todas"} type="button" onClick={() => setConta(c)} aria-pressed={conta === c}
-                className={`min-h-9 shrink-0 rounded-full px-3 text-xs font-semibold ${conta === c ? "bg-accent-fill text-white" : "bg-fill text-muted"}`}>
-                {c ? CONTAS[c] : "Todas"} · {n}
-              </button>
-            );
-          })}
-        </div>
-      )}
-      <div className="space-y-2 p-3">
-        {cartoes === null && <p className="py-8 text-center text-sm text-muted"><Loader2 size={18} className="mx-auto mb-2 animate-spin" />Carregando…</p>}
-        {semTabela && (
-          <div className="rounded-xl bg-warn-soft p-4 text-sm text-warn">
-            <p className="font-semibold">A publicação dos e-mails ainda não foi ligada.</p>
-            <p className="mt-1 text-text">Os agentes já leem as caixas neste computador. Para os cartões aparecerem aqui, falta autorizar a tabela que guarda remetente e assunto no banco.</p>
-          </div>
-        )}
-        {erro && <p className="rounded-xl bg-bad-soft p-3 text-sm text-bad">Não foi possível ler os e-mails ({erro}).</p>}
-        {cartoes && !semTabela && !erro && visiveis.length === 0 && <p className="py-8 text-center text-sm text-muted">Nenhum e-mail publicado.</p>}
-        {visiveis.map((c) => {
-          const ag = c.agente ? agentes.get(c.agente) : null;
-          return (
-            <article key={c.id} className="rounded-xl border border-line bg-card p-3">
-              <div className="flex items-center gap-2 text-[11px] text-muted">
-                <span className="truncate rounded-full bg-accent-soft px-2 py-0.5 font-semibold text-accent">{CONTAS[c.conta] ?? c.conta}</span>
-                {c.data && <span className="ml-auto shrink-0 tabular-nums">{QUANDO.format(new Date(c.data))}</span>}
-              </div>
-              <h3 className="mt-1.5 line-clamp-2 text-sm font-semibold leading-snug">{c.assunto || "(sem assunto)"}</h3>
-              <p className="mt-0.5 truncate text-xs text-muted">{c.remetente || "remetente não informado"}</p>
-              <div className="mt-2 flex items-center gap-2 text-xs text-muted">
-                {ag ? (
-                  <span className="inline-flex min-w-0 items-center gap-1.5">
-                    <Avatar id={ag.id} nome={ag.nome} setor={ag.setor} tamanho={22} selo={false} />
-                    <span className="truncate">{ag.nome} supervisiona</span>
-                  </span>
-                ) : <span>Sem agente definido</span>}
-                {c.anexos > 0 && <span className="ml-auto inline-flex shrink-0 items-center gap-1"><Paperclip size={12} />{c.anexos}</span>}
-              </div>
-            </article>
-          );
-        })}
-      </div>
-    </TelaSuspensa>
   );
 }
 
